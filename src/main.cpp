@@ -2,47 +2,54 @@
 #include <GLFW/glfw3.h>
 #include <bits/stdc++.h>
 #include <stdio.h>
+#include <glm/glm.hpp>
 
 #include <iostream>
-
+// 4.6 (Core Profile) Mesa 25.1.3-arch1.3
 void framebuffer_size_callback (GLFWwindow *window, int width, int height);
 void processInput (GLFWwindow *window);
+void error_callback( GLenum source,
+                 GLenum type,
+                 GLuint id,
+                 GLenum severity,
+                 GLsizei length,
+                 const GLchar* message,
+                 const void* userParam );
 
 // settings
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
- 
+char *
+readFile (FILE *file)
+{
+    char *buffer;
+    if (file != NULL)
+        {
+            fseek (file, 0L, SEEK_END);
+            short sz = ftell (file);
+            fseek (file, 0, SEEK_SET);
+            buffer = (char *)malloc (sz * sizeof (char));
+            fread (buffer, sizeof (char), sz, file);
+        }
+    else
+        {
+            printf ("Not able to open the file.");
+        }
+    fclose (file);
+    return buffer;
+}
+
 int
 main ()
 {
-    FILE *f[2];
-    f[0] = fopen ("vShaders.glsl", "r");
-    f[1] = fopen ("fShaders.glsl", "r");
-    char *shadersbuffers[2];
-    for (int i = 0; i < 2; i++)
-        {
-            if (f[i] != NULL)
-                {
-                    fseek (f[i], 0L, SEEK_END);
-                    short sz = ftell (f[i]);
-                    fseek (f[i], 0, SEEK_SET);
-                    shadersbuffers[i] = (char *)malloc (sz*sizeof(char));
-                    fread(shadersbuffers[i],sizeof(char),sz,f[i] );
-                }
-            else
-                {
-                    printf ("Not able to open the file.");
-                }
-            fclose (f[i]);
-        }
+    char *shadersbuffers[2] = { readFile (fopen ("vShaders.glsl", "r")),
+                                readFile (fopen ("fShaders.glsl", "r")) };
 
     glfwInit ();
     glfwWindowHint (GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint (GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint (GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    // glfw window creation
-    // --------------------
     GLFWwindow *window
         = glfwCreateWindow (SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", NULL, NULL);
     if (window == NULL)
@@ -54,13 +61,13 @@ main ()
     glfwMakeContextCurrent (window);
     glfwSetFramebufferSizeCallback (window, framebuffer_size_callback);
 
-    // glad: load all OpenGL function pointers
-    // ---------------------------------------
     if (glewInit ())
         {
             std::cout << "Failed to initialize GLEW" << std::endl;
             return -1;
         }
+    glEnable(GL_DEBUG_OUTPUT);
+    glDebugMessageCallback(&error_callback, 0);
 
     unsigned int vertexShader = glCreateShader (GL_VERTEX_SHADER);
     glShaderSource (vertexShader, 1, &shadersbuffers[0], NULL);
@@ -98,25 +105,29 @@ main ()
                       << infoLog << std::endl;
         }
 
-
-    // set up vertex data (and buffer(s)) and configure vertex attributes
-    // ------------------------------------------------------------------
     float vertices[] = {
         -0.5f, -0.5f, 0.0f, // left
         0.5f,  -0.5f, 0.0f, // right
         0.0f,  0.5f,  0.0f  // top
     };
 
+    // A Vertex Array Object (VAO) is an object which contains one or more
+    // Vertex Buffer Objects A Vertex Buffer Object (VBO) is a memory buffer in
+    // the high speed memory of your video card designed to hold information
+    // about vertices
     unsigned int VBO, VAO;
     glGenVertexArrays (1, &VAO);
-    glBindVertexArray (VAO);
-
+    /* Bind our Vertex Array Object as the current used object */
+    glBindVertexArray (VAO); // After this all VAO operations will be do inside
     glGenBuffers (1, &VBO);
     glBindBuffer (GL_ARRAY_BUFFER, VBO);
     glBufferData (GL_ARRAY_BUFFER, sizeof (vertices), vertices,
                   GL_STATIC_DRAW);
+    /* Specify that our coordinate data is going into attribute index 0, and
+     * contains three floats per vertex */
     glVertexAttribPointer (0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof (float),
                            (void *)0);
+    /* Enable attribute index 0 as being used */
     glEnableVertexAttribArray (0);
 
     // note that this is allowed, the call to glVertexAttribPointer registered
@@ -130,40 +141,23 @@ main ()
     // (nor VBOs) when it's not directly necessary.
     glBindVertexArray (0);
 
-    // uncomment this call to draw in wireframe polygons.
-    // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
-    // render loop
-    // -----------
+    glClearColor (0.2f, 0.3f, 0.3f, 1.0f);
+    glUseProgram (shaderProgram);
+    glBindVertexArray (VAO);
     while (!glfwWindowShouldClose (window))
         {
-            // input
-            // -----
+           
             processInput (window);
 
-            // render
-            // ------
-            glClearColor (0.2f, 0.3f, 0.3f, 1.0f);
             glClear (GL_COLOR_BUFFER_BIT);
 
-            // draw our first triangle
-            glUseProgram (shaderProgram);
-            glBindVertexArray (
-                VAO); // seeing as we only have a single VAO there's no need to
-                      // bind it every time, but we'll do so to keep things a
-                      // bit more organized
             glDrawArrays (GL_TRIANGLES, 0, 3);
-            // glBindVertexArray(0); // no need to unbind it every time
-
-            // glfw: swap buffers and poll IO events (keys pressed/released,
-            // mouse moved etc.)
-            // -------------------------------------------------------------------------------
             glfwSwapBuffers (window);
             glfwPollEvents ();
         }
 
-    glDeleteShader(vertexShader);
-    glDeleteShader(fragmentShader);
+    glDeleteShader (vertexShader);
+    glDeleteShader (fragmentShader);
     glDeleteVertexArrays (1, &VAO);
     glDeleteBuffers (1, &VBO);
     glDeleteProgram (shaderProgram);
@@ -171,8 +165,18 @@ main ()
     return 0;
 }
 
-// process all input: query GLFW whether relevant keys are pressed/released
-// this frame and react accordingly
+void error_callback( GLenum source,
+                 GLenum type,
+                 GLuint id,
+                 GLenum severity,
+                 GLsizei length,
+                 const GLchar* message,
+                 const void* userParam )
+{
+  fprintf( stderr, "GL CALLBACK: %s type = 0x%x, severity = 0x%x, message = %s\n",
+           ( type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR **" : "" ),
+            type, severity, message );
+}
 void
 processInput (GLFWwindow *window)
 {
@@ -180,12 +184,8 @@ processInput (GLFWwindow *window)
         glfwSetWindowShouldClose (window, true);
 }
 
-// glfw: whenever the window size changed (by OS or user resize) this callback
 void
 framebuffer_size_callback (GLFWwindow *window, int width, int height)
 {
-    // make sure the viewport matches the new window dimensions; note that
-    // width and height will be significantly larger than specified on retina
-    // displays.
     glViewport (0, 0, width, height);
 }
