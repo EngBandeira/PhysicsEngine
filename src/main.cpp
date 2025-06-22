@@ -17,8 +17,8 @@ void error_callback( GLenum source,
                  const void* userParam );
 
 // settings
-const unsigned int SCR_WIDTH = 800;
-const unsigned int SCR_HEIGHT = 600;
+const unsigned int SCR_X = 800;
+const unsigned int SCR_Y = 600;
 char *
 readFile (FILE *file)
 {
@@ -51,7 +51,7 @@ main ()
     glfwWindowHint (GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     GLFWwindow *window
-        = glfwCreateWindow (SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", NULL, NULL);
+        = glfwCreateWindow (SCR_X, SCR_Y, "LearnOpenGL", NULL, NULL);
     if (window == NULL)
         {
             std::cout << "Failed to create GLFW window" << std::endl;
@@ -59,7 +59,8 @@ main ()
             return -1;
         }
     glfwMakeContextCurrent (window);
-    glfwSetFramebufferSizeCallback (window, framebuffer_size_callback);
+    glfwSetFramebufferSizeCallback (
+        window, [] (GLFWwindow *window, int width, int height) { glViewport (0, 0, width, height); });
 
     if (glewInit ())
         {
@@ -72,6 +73,7 @@ main ()
     unsigned int vertexShader = glCreateShader (GL_VERTEX_SHADER);
     glShaderSource (vertexShader, 1, &shadersbuffers[0], NULL);
     glCompileShader (vertexShader);
+
     int success;
     char infoLog[512];
     glGetShaderiv (vertexShader, GL_COMPILE_STATUS, &success);
@@ -98,6 +100,8 @@ main ()
     glAttachShader (shaderProgram, fragmentShader);
     glLinkProgram (shaderProgram);
     glGetProgramiv (shaderProgram, GL_LINK_STATUS, &success);
+    glUseProgram (shaderProgram);
+
     if (!success)
         {
             glGetProgramInfoLog (shaderProgram, 512, NULL, infoLog);
@@ -130,15 +134,8 @@ main ()
     /* Enable attribute index 0 as being used */
     glEnableVertexAttribArray (0);
 
-    // note that this is allowed, the call to glVertexAttribPointer registered
-    // VBO as the vertex attribute's bound vertex buffer object so afterwards
-    // we can safely unbind
     glBindBuffer (GL_ARRAY_BUFFER, 0);
 
-    // You can unbind the VAO afterwards so other VAO calls won't accidentally
-    // modify this VAO, but this rarely happens. Modifying other VAOs requires
-    // a call to glBindVertexArray anyways so we generally don't unbind VAOs
-    // (nor VBOs) when it's not directly necessary.
     glBindVertexArray (0);
 
     glClearColor (0.2f, 0.3f, 0.3f, 1.0f);
