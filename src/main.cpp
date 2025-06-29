@@ -1,49 +1,32 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <bits/stdc++.h>
-#include <stdio.h>
 #include <glm/glm.hpp>
-
 #include <iostream>
+#include <stdio.h>
+
+#include "models.hpp"
+#include "shader.hpp"
+#include "utils.hpp"
+#define PI 3.14
+#define VERTEX_SHADERS_LOCALPATH "vShaders.glsl"
+#define FRAGMENT_SHADERS_LOCALPATH "fShaders.glsl"
+
 // 4.6 (Core Profile) Mesa 25.1.3-arch1.3
 void framebuffer_size_callback (GLFWwindow *window, int width, int height);
 void processInput (GLFWwindow *window);
-void error_callback( GLenum source,
-                 GLenum type,
-                 GLuint id,
-                 GLenum severity,
-                 GLsizei length,
-                 const GLchar* message,
-                 const void* userParam );
+void error_callback (GLenum source, GLenum type, GLuint id, GLenum severity,
+                     GLsizei length, const GLchar *message,
+                     const void *userParam);
 
 // settings
 const unsigned int SCR_X = 800;
 const unsigned int SCR_Y = 600;
-char *
-readFile (FILE *file)
-{
-    char *buffer;
-    if (file != NULL)
-        {
-            fseek (file, 0L, SEEK_END);
-            short sz = ftell (file);
-            fseek (file, 0, SEEK_SET);
-            buffer = (char *)malloc (sz * sizeof (char));
-            fread (buffer, sizeof (char), sz, file);
-        }
-    else
-        {
-            printf ("Not able to open the file.");
-        }
-    fclose (file);
-    return buffer;
-}
 
 int
 main ()
 {
-    char *shadersbuffers[2] = { readFile (fopen ("vShaders.glsl", "r")),
-                                readFile (fopen ("fShaders.glsl", "r")) };
+    // model m((char*)"assets/3dmodels/Cubo.obj");
 
     glfwInit ();
     glfwWindowHint (GLFW_CONTEXT_VERSION_MAJOR, 4);
@@ -54,125 +37,93 @@ main ()
         = glfwCreateWindow (SCR_X, SCR_Y, "LearnOpenGL", NULL, NULL);
     if (window == NULL)
         {
-            std::cout << "Failed to create GLFW window" << std::endl;
+            sendError ("failed to crate a Glfw Window");
             glfwTerminate ();
             return -1;
         }
     glfwMakeContextCurrent (window);
     glfwSetFramebufferSizeCallback (
-        window, [] (GLFWwindow *window, int width, int height) { glViewport (0, 0, width, height); });
+        window, [] (GLFWwindow *window, int width, int height) {
+            glViewport (0, 0, width, height);
+        });
 
     if (glewInit ())
         {
-            std::cout << "Failed to initialize GLEW" << std::endl;
+            sendError ("cannot init glew");
             return -1;
         }
-    glEnable(GL_DEBUG_OUTPUT);
-    glDebugMessageCallback(&error_callback, 0);
+    glEnable (GL_DEBUG_OUTPUT);
+    glDebugMessageCallback (&error_callback, 0);
 
-    unsigned int vertexShader = glCreateShader (GL_VERTEX_SHADER);
-    glShaderSource (vertexShader, 1, &shadersbuffers[0], NULL);
-    glCompileShader (vertexShader);
-
-    int success;
-    char infoLog[512];
-    glGetShaderiv (vertexShader, GL_COMPILE_STATUS, &success);
-    if (!success)
-        {
-            glGetShaderInfoLog (vertexShader, 512, NULL, infoLog);
-            std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n"
-                      << infoLog << std::endl;
-        }
-
-    unsigned int fragmentShader = glCreateShader (GL_FRAGMENT_SHADER);
-    glShaderSource (fragmentShader, 1, &shadersbuffers[1], NULL);
-    glCompileShader (fragmentShader);
-    glGetShaderiv (fragmentShader, GL_COMPILE_STATUS, &success);
-    if (!success)
-        {
-            glGetShaderInfoLog (fragmentShader, 512, NULL, infoLog);
-            std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n"
-                      << infoLog << std::endl;
-        }
+    Shader vertexShader (VERTEX_SHADERS_LOCALPATH, GL_VERTEX_SHADER);
+    Shader fragmentShader (FRAGMENT_SHADERS_LOCALPATH, GL_FRAGMENT_SHADER);
 
     unsigned int shaderProgram = glCreateProgram ();
-    glAttachShader (shaderProgram, vertexShader);
-    glAttachShader (shaderProgram, fragmentShader);
+    vertexShader.attach (shaderProgram);
+    fragmentShader.attach (shaderProgram);
     glLinkProgram (shaderProgram);
-    glGetProgramiv (shaderProgram, GL_LINK_STATUS, &success);
+
     glUseProgram (shaderProgram);
 
-    if (!success)
-        {
-            glGetProgramInfoLog (shaderProgram, 512, NULL, infoLog);
-            std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n"
-                      << infoLog << std::endl;
-        }
+    float vertices[] = {1.0, 1.0, 5.0, 0.0, 1.0, 5.0,
+                        0.0, 0.0, 5.0 ,1.0, 0.0, 5.0 };
+    unsigned int indeces[] = { 0, 1, 2, 1, 2, 3 };
+    unsigned int buffer, VAO, ibo;
 
-    float vertices[] = {
-        -0.5f, -0.5f, 0.0f, // left
-        0.5f,  -0.5f, 0.0f, // right
-        0.0f,  0.5f,  0.0f  // top
-    };
-
-    // A Vertex Array Object (VAO) is an object which contains one or more
-    // Vertex Buffer Objects A Vertex Buffer Object (VBO) is a memory buffer in
-    // the high speed memory of your video card designed to hold information
-    // about vertices
-    unsigned int VBO, VAO;
     glGenVertexArrays (1, &VAO);
-    /* Bind our Vertex Array Object as the current used object */
-    glBindVertexArray (VAO); // After this all VAO operations will be do inside
-    glGenBuffers (1, &VBO);
-    glBindBuffer (GL_ARRAY_BUFFER, VBO);
+    glGenBuffers (1, &buffer);
+    glGenBuffers (1, &ibo);
+
+    glBindVertexArray (VAO);
+    glBindBuffer (GL_ARRAY_BUFFER, buffer);
     glBufferData (GL_ARRAY_BUFFER, sizeof (vertices), vertices,
                   GL_STATIC_DRAW);
-    /* Specify that our coordinate data is going into attribute index 0, and
-     * contains three floats per vertex */
+
+    glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, ibo);
+    glBufferData (GL_ELEMENT_ARRAY_BUFFER, sizeof (indeces), indeces,
+                  GL_STATIC_DRAW);
+
+    glEnableVertexAttribArray (0);
     glVertexAttribPointer (0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof (float),
                            (void *)0);
-    /* Enable attribute index 0 as being used */
-    glEnableVertexAttribArray (0);
 
+    glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, 0);
     glBindBuffer (GL_ARRAY_BUFFER, 0);
-
     glBindVertexArray (0);
 
     glClearColor (0.2f, 0.3f, 0.3f, 1.0f);
-    glUseProgram (shaderProgram);
-    glBindVertexArray (VAO);
     while (!glfwWindowShouldClose (window))
         {
-           
-            processInput (window);
+
 
             glClear (GL_COLOR_BUFFER_BIT);
-
-            glDrawArrays (GL_TRIANGLES, 0, 3);
+            glUseProgram (shaderProgram);
+            glBindVertexArray (VAO);
+            processInput (window);
+            // glDrawArrays(GL_TRIANGLES,0,3);
+            glDrawElements (GL_TRIANGLES, 6, GL_UNSIGNED_INT, NULL);
             glfwSwapBuffers (window);
             glfwPollEvents ();
         }
-
-    glDeleteShader (vertexShader);
-    glDeleteShader (fragmentShader);
     glDeleteVertexArrays (1, &VAO);
-    glDeleteBuffers (1, &VBO);
+    glDeleteBuffers (1, &buffer);
+    glDeleteBuffers (1, &ibo);
     glDeleteProgram (shaderProgram);
     glfwTerminate ();
     return 0;
 }
-
-void error_callback( GLenum source,
-                 GLenum type,
-                 GLuint id,
-                 GLenum severity,
-                 GLsizei length,
-                 const GLchar* message,
-                 const void* userParam )
+void
+error_callback (GLenum source, GLenum type, GLuint id, GLenum severity,
+                GLsizei length, const GLchar *message, const void *userParam)
 {
-  fprintf( stderr, "GL CALLBACK: %s type = 0x%x, severity = 0x%x, message = %s\n",
-           ( type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR **" : "" ),
-            type, severity, message );
+    if (type == GL_DEBUG_TYPE_ERROR)
+        {
+            fprintf (
+                stderr,
+                "GL CALLBACK: %s type = 0x%x, severity = 0x%x, message = %s\n",
+                (type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR **" : ""), type,
+                severity, message);
+        }
 }
 void
 processInput (GLFWwindow *window)
@@ -186,3 +137,8 @@ framebuffer_size_callback (GLFWwindow *window, int width, int height)
 {
     glViewport (0, 0, width, height);
 }
+// GL CALLBACK:  type = 0x8251, severity = 0x826b, message = Shader Stats:
+// SGPRS: 16 VGPRS: 8 Code Size: 52 LDS: 0 Scratch: 0 Max Waves: 20 Spilled
+// SGPRs: 0 Spilled VGPRs: 0 PrivMem VGPRs: 0 LSOutputs: 0 HSOutputs: 0
+// HSPatchOuts: 0 ESOutputs: 0 GSOutputs: 0 VSOutputs: 0 PSOutputs: 1
+// InlineUniforms: 0 DivergentLoop: 0 (PS, W32)

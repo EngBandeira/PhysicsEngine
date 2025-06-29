@@ -1,0 +1,2 @@
+g++ -Wall -I../include t1.cpp ../src/utils.cpp -o t1
+./t1
