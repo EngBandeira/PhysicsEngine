@@ -4,9 +4,6 @@
 
 #include "utils.hpp"
 
-void
-getKeywordsId ();
-
 struct triangle{
   unsigned int t[3];//first sencond third
   triangle(unsigned int t_[3]){

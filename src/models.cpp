@@ -5,31 +5,31 @@
 #define BUFFER_LENGHT 64
 #define KEYWORDS_LENGTH 8
 
-#define LARGE_CONSTANT 100000
+// #define LARGE_CONSTANT 100000
 
-const char *keywords[KEYWORDS_LENGTH]
-    = { "v", "vn", "vt", "f", "o", "s", "mtllib", "usemtl" };
-unsigned int keywordsID[KEYWORDS_LENGTH];
+// const char *keywords[KEYWORDS_LENGTH]
+//     = { "v", "vn", "vt", "f", "o", "s", "mtllib", "usemtl" };
+// unsigned int keywordsID[KEYWORDS_LENGTH];
 
-unsigned int
-getId (const char *str)
-{
-    unsigned int rt = 0;
-    for (__uint8_t x = 0; x < strlen (str); x++)
-        {
-            rt += ((int)str[x]);
-        }
-    rt += (LARGE_CONSTANT * strlen (str));
-    return rt;
-}
-void
-getKeywordsId ()
-{
-    for (__uint8_t i = 0; i < KEYWORDS_LENGTH; i++)
-        {
-            keywordsID[i] = getId (keywords[i]);
-        }
-}
+// unsigned int
+// getId (const char *str)
+// {
+//     unsigned int rt = 0;
+//     for (__uint8_t x = 0; x < strlen (str); x++)
+//         {
+//             rt += ((int)str[x]);
+//         }
+//     rt += (LARGE_CONSTANT * strlen (str));
+//     return rt;
+// }
+// void
+// getKeywordsId ()
+// {
+//     for (__uint8_t i = 0; i < KEYWORDS_LENGTH; i++)
+//         {
+//             keywordsID[i] = getId (keywords[i]);
+//         }
+// }
 // y =0.00535x+2.958
 model::model (const char *localPath)
 {
