@@ -28,7 +28,7 @@ unsigned char DOUBLE_OPERATORS[DOUBLE_OPERATORS_LENGHT][2]
 char
 isAnOperator (char c[2])
 {
-    for (char i = 0; i < SIMPLE_OPERATORS_LENGHT; i++)
+    for (int i = 0; i < SIMPLE_OPERATORS_LENGHT; i++)
         {
             if (c[0] == SIMPLE_OPERATORS[i])
                 {
@@ -84,15 +84,15 @@ sendToken (Shader *shader)
 }
 
 void
-parseShaders (char *buffer, unsigned int fileLenght, Shader *shader)
+parseShaders (char *file, unsigned int fileLenght, Shader *shader)
 {
     char c, isOp;
     for (unsigned short i = 0; i < fileLenght; i++)
         {
-            c = buffer[i];
-            if (c == '/' && buffer[i + 1] == '/')
+            c = file[i];
+            if (c == '/' && file[i + 1] == '/')
                 {
-                    while (buffer[i] != '\n')
+                    while (file[i] != '\n')
                         {
                             i++;
                         }
@@ -108,7 +108,7 @@ parseShaders (char *buffer, unsigned int fileLenght, Shader *shader)
                         }
                     continue;
                 }
-            if ((isOp = isAnOperator ((char[2]){ c, buffer[i + 1] })) != 0)
+            if ((isOp = isAnOperator ((char[2]){ c, file[i + 1] })) != 0)
                 {
                     if (tokenBufferLenght != 0)
                         {
@@ -123,7 +123,7 @@ parseShaders (char *buffer, unsigned int fileLenght, Shader *shader)
                     else
                         {
                             tokenBuffer[tokenBufferLenght++] = c;
-                            tokenBuffer[tokenBufferLenght++] = buffer[i + 1];
+                            tokenBuffer[tokenBufferLenght++] = file[i + 1];
                             sendToken (shader);
                             continue;
                         }
@@ -137,13 +137,13 @@ parseShaders (char *buffer, unsigned int fileLenght, Shader *shader)
 Shader::Shader (char *localPath, GLenum shadersType)
 {
     unsigned int fileLenght;
-    char *buffer = readFile (localPath, &fileLenght);
-    parseShaders (buffer, fileLenght, this);
+    char *file = readFile (localPath, &fileLenght);
+    parseShaders (file, fileLenght, this);
 
     shader = glCreateShader (shadersType);
-    glShaderSource (shader, 1, &buffer, NULL);
+    glShaderSource (shader, 1, &file, NULL);
     glCompileShader (shader);
-    free (buffer);
+    free (file);
 }
 void
 Shader::attach (unsigned int program)

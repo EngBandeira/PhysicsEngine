@@ -24,11 +24,11 @@ struct vec3{
    vec3 operator -(vec3 other){
     return vec3(x-other.x, y - other.y, z - other.z);
   }
-  float operator[](int i){
+  float& operator[](int i){
     if(i <3 && i >=0)
       return ((float*)this)[i];
     sendError("vec3[x>2]");
-    return 0;
+    return x;
   }
 };
 
@@ -49,11 +49,11 @@ struct vec2{
    vec2 operator -(vec2 other){
     return vec2(x-other.x, y - other.y);
   }
-  float operator[](int i){
+  float& operator[](int i){
     if(i <2 && i >=0)
       return ((float*)this)[i];
     sendError("vec2[x>1]");
-    return 0;
+    return x;
   }
 };
 
