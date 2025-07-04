@@ -23,29 +23,37 @@ void error_callback (GLenum source, GLenum type, unsigned int id,
 const unsigned int SCR_X = 800;
 const unsigned int SCR_Y = 600;
 
-float *vertices;
+float vertices[] = {
+    // positions          // texture coords
+    0.5f,  0.5f,  0.0f, // top right
+    0.5f,  -0.5f, 0.0f, // bottom right
+    -0.5f, -0.5f, 0.0f, // bottom left
+    -0.5f, 0.5f,  0.0f, // top left
+};
 
 int
 main ()
 {
     // getKeywordsId ();
-    model cubo ("assets/3dmodels/Cubo.obj");
-    unsigned int vertexSize = 3 * sizeof (float) * cubo.vertex.size ();
-    unsigned int triangleSize = 3 * sizeof (int) * cubo.triangles.size ();
-    vertices = (float *)malloc (vertexSize);
-    for (int i = 0; i < cubo.vertex.size (); i++)
-        {
-            vertices[3 * i] = cubo.vertex[i][0];
-            vertices[3 * i + 1] = cubo.vertex[i][1];
-            vertices[3 * i + 2] = cubo.vertex[i][2];
-        }
-    unsigned int *indices = (unsigned int *)malloc (triangleSize);
-    memcpy ((void *)indices, cubo.triangles.data (), triangleSize);
-
-    for(int i = 0; i < 1; i ++)
-    {
-        printf(" %d ", (int)indices[i]);
-    }
+    // model cubo ("assets/3dmodels/Cubo.obj");
+    // unsigned int vertexSize = 3 * sizeof (float) * cubo.vertex.size ();
+    // unsigned int triangleSize = 3 * sizeof (int) * cubo.triangles.size ();
+    // vertices = (float *)malloc (vertexSize);
+    // for (int i = 0; i < cubo.vertex.size (); i++)
+    //     {
+    //         vertices[3 * i] = cubo.vertex[i][0];
+    //         vertices[3 * i + 1] = cubo.vertex[i][1];
+    //         vertices[3 * i + 2] = cubo.vertex[i][2];
+    //     }
+    // unsigned int *indices = (unsigned int *)malloc (triangleSize);
+    // memcpy ((void *)indices, cubo.triangles.data (), triangleSize);
+    unsigned int indices[] = {
+        0, 1, 3, // first triangle
+        1, 2, 3  // second triangle
+    };
+    unsigned int indexSize = sizeof (indices);
+    unsigned int indexCount = sizeof (indices) / sizeof (int);
+    unsigned int vertexSize = sizeof (vertices);
 
     glfwInit ();
     glfwWindowHint (GLFW_CONTEXT_VERSION_MAJOR, 4);
@@ -80,26 +88,36 @@ main ()
     unsigned int shaderProgram = glCreateProgram ();
     vertexShader.attach (shaderProgram);
     fragmentShader.attach (shaderProgram);
+
+    const GLchar *feedbackVaryings[] = { "outValue" };
+    glTransformFeedbackVaryings (shaderProgram, 1, feedbackVaryings,
+                                 GL_INTERLEAVED_ATTRIBS);
+
     glLinkProgram (shaderProgram);
 
     glUseProgram (shaderProgram);
 
-    unsigned int VBO, VAO, EBO;
+    unsigned int VBO, VAO, EBO, TBO, Query;
     glGenVertexArrays (1, &VAO);
     glGenBuffers (1, &VBO);
     glGenBuffers (1, &EBO);
+    glGenBuffers (1, &TBO);
 
     glBindVertexArray (VAO);
+
+    glBindBuffer (GL_ARRAY_BUFFER, TBO);
+    glBufferData (GL_ARRAY_BUFFER, sizeof(float) * indexCount, nullptr, GL_STATIC_READ);
 
     glBindBuffer (GL_ARRAY_BUFFER, VBO);
     glBufferData (GL_ARRAY_BUFFER, vertexSize, vertices, GL_DYNAMIC_DRAW);
 
     glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData (GL_ELEMENT_ARRAY_BUFFER, triangleSize, indices,
-                  GL_STATIC_DRAW);
+    glBufferData (GL_ELEMENT_ARRAY_BUFFER, indexSize, indices, GL_STATIC_DRAW);
     glVertexAttribPointer (0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof (float),
                            (void *)0); // set vec4 position
     glEnableVertexAttribArray (0);
+
+    glGenQueries (1, &Query);
 
     glBindBuffer (GL_ARRAY_BUFFER, 0);
     glBindVertexArray (0);
@@ -107,22 +125,42 @@ main ()
     // glClipControl(GL_LOWER_LEFT,GL_ZERO_TO_ONE);
     while (!glfwWindowShouldClose (window))
         {
-
+            glBindBufferBase(GL_TRANSFORM_FEEDBACK_BUFFER, 0, TBO);
             glBindBuffer (GL_ARRAY_BUFFER, VBO);
             glBufferSubData (GL_ARRAY_BUFFER, 0, vertexSize, vertices);
             glClearColor (0.07f, 0.13f, 0.17f, 1.0f);
             glClear (GL_COLOR_BUFFER_BIT);
-            glUseProgram (shaderProgram);
+            // glUseProgram (shaderProgram);
             glBindVertexArray (VAO);
 
-            glDrawElements (GL_TRIANGLES, 3 * cubo.triangles.size (),
-                            GL_UNSIGNED_INT, 0);
+            glBeginQuery (GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN, Query);
+            glBeginTransformFeedback (GL_TRIANGLES);
+            glDrawElements (GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, 0);
+                    glEndTransformFeedback();
+            glEndQuery (GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN);
+
+            glFlush ();
+
+            GLuint primitives;
+            glGetQueryObjectuiv (Query, GL_QUERY_RESULT, &primitives);
+
+            GLfloat feedback[indexCount];
+            glGetBufferSubData (GL_TRANSFORM_FEEDBACK_BUFFER, 0,
+                                sizeof (feedback), feedback);
+
+            printf ("%u primitives written!\n\n", primitives);
+
+            for (int i = 0; i < indexCount; i++)
+                {
+                    printf ("%f\n", feedback[i]);
+                }
+
             glfwSwapBuffers (window);
             glfwPollEvents ();
             processInput (window);
-            // sleep (1);
+            sleep (1);
         }
-
+    glDeleteQueries(1, &Query);
     glDeleteVertexArrays (1, &VAO);
     glDeleteBuffers (1, &VBO);
     glDeleteBuffers (1, &EBO);

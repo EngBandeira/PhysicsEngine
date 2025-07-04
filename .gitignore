@@ -1,2 +1,3 @@
-build/final
-build/main.o
+build/*
+cap
+a.c
