@@ -1,16 +1,19 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <bits/stdc++.h>
-#include <glm/glm.hpp>
 #include <iostream>
 #include <stdio.h>
+
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 #include "models.hpp"
 #include "shader.hpp"
 #include "utils.hpp"
 #define PI 3.14
-#define VERTEX_SHADERS_LOCALPATH "vShaders.glsl"
-#define FRAGMENT_SHADERS_LOCALPATH "fShaders.glsl"
+#define VERTEX_SHADERS_LOCALPATH "vShaders.vert"
+#define FRAGMENT_SHADERS_LOCALPATH "fShaders.frag"
 
 // 4.6 (Core Profile) Mesa 25.1.3-arch1.3
 void framebuffer_size_callback (GLFWwindow *window, int width, int height);
@@ -89,35 +92,39 @@ main ()
     vertexShader.attach (shaderProgram);
     fragmentShader.attach (shaderProgram);
 
+
+
     const GLchar *feedbackVaryings[] = { "outValue" };
     glTransformFeedbackVaryings (shaderProgram, 1, feedbackVaryings,
                                  GL_INTERLEAVED_ATTRIBS);
 
     glLinkProgram (shaderProgram);
-
     glUseProgram (shaderProgram);
+
+    glm::mat4 proj = glm::perspective(glm::radians(45.0f), (float)SCR_X/(float)SCR_Y, 0.1f, 100.0f);
+    glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "projection"),1, GL_FALSE,glm::value_ptr(proj));
 
     unsigned int VBO, VAO, EBO, TBO, Query;
     glGenVertexArrays (1, &VAO);
     glGenBuffers (1, &VBO);
     glGenBuffers (1, &EBO);
     glGenBuffers (1, &TBO);
+    glGenQueries (1, &Query);
 
     glBindVertexArray (VAO);
 
     glBindBuffer (GL_ARRAY_BUFFER, TBO);
-    glBufferData (GL_ARRAY_BUFFER, sizeof(float) * indexCount, nullptr, GL_STATIC_READ);
+    glBufferData (GL_ARRAY_BUFFER, sizeof(float) * indexCount*4, nullptr, GL_STATIC_READ);
 
     glBindBuffer (GL_ARRAY_BUFFER, VBO);
     glBufferData (GL_ARRAY_BUFFER, vertexSize, vertices, GL_DYNAMIC_DRAW);
+    glEnableVertexAttribArray (0);
 
     glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, EBO);
     glBufferData (GL_ELEMENT_ARRAY_BUFFER, indexSize, indices, GL_STATIC_DRAW);
     glVertexAttribPointer (0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof (float),
                            (void *)0); // set vec4 position
-    glEnableVertexAttribArray (0);
 
-    glGenQueries (1, &Query);
 
     glBindBuffer (GL_ARRAY_BUFFER, 0);
     glBindVertexArray (0);
@@ -125,6 +132,7 @@ main ()
     // glClipControl(GL_LOWER_LEFT,GL_ZERO_TO_ONE);
     while (!glfwWindowShouldClose (window))
         {
+
             glBindBufferBase(GL_TRANSFORM_FEEDBACK_BUFFER, 0, TBO);
             glBindBuffer (GL_ARRAY_BUFFER, VBO);
             glBufferSubData (GL_ARRAY_BUFFER, 0, vertexSize, vertices);
@@ -144,7 +152,7 @@ main ()
             GLuint primitives;
             glGetQueryObjectuiv (Query, GL_QUERY_RESULT, &primitives);
 
-            GLfloat feedback[indexCount];
+            GLfloat feedback[4*indexCount];
             glGetBufferSubData (GL_TRANSFORM_FEEDBACK_BUFFER, 0,
                                 sizeof (feedback), feedback);
 
@@ -152,13 +160,13 @@ main ()
 
             for (int i = 0; i < indexCount; i++)
                 {
-                    printf ("%f\n", feedback[i]);
+                    printf ("{%f , %f , %f,%f}\n", feedback[4*i],feedback[4*i+1],feedback[4*i+2],feedback[4*i+3]);
                 }
 
             glfwSwapBuffers (window);
             glfwPollEvents ();
             processInput (window);
-            sleep (1);
+            // sleep (1);
         }
     glDeleteQueries(1, &Query);
     glDeleteVertexArrays (1, &VAO);
