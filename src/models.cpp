@@ -88,7 +88,7 @@ model::model (const char *localPath)
                                             while (file[g] != '/')
                                                 g++;
                                             file[g] = 0;
-                                            unsigned int rt = atoi(file + beta);
+                                            unsigned int rt = atoi(file + beta)-1;
                                             while (1)
                                                 {
                                                     if (g >= k)

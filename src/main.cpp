@@ -72,7 +72,7 @@ main ()
             sendError ("cannot init glew");
             return -1;
         }
-    // glEnable (GL_DEPTH_TEST);
+    glEnable (GL_DEPTH_TEST);
     glEnable (GL_DEBUG_OUTPUT);
     glDebugMessageCallback (&error_callback, 0);
 
