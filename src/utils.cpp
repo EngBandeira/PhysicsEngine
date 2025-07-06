@@ -28,6 +28,8 @@ sendError (const char *str)
 {
     fprintf (stderr, "error: %s\n", str);
 }
+
+
 std::ostream &
 operator<< (std::ostream &os, vec3 v)
 {

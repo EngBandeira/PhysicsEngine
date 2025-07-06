@@ -26,37 +26,27 @@ void error_callback (GLenum source, GLenum type, unsigned int id,
 const unsigned int SCR_X = 800;
 const unsigned int SCR_Y = 600;
 
-float vertices[] = {
-    // positions          // texture coords
-    0.5f,  0.5f,  0.0f, // top right
-    0.5f,  -0.5f, 0.0f, // bottom right
-    -0.5f, -0.5f, 0.0f, // bottom left
-    -0.5f, 0.5f,  0.0f, // top left
-};
-
+float *vertices;
+glm::mat4 proj;
+glm::mat4 view;
 int
 main ()
 {
-    // getKeywordsId ();
-    // model cubo ("assets/3dmodels/Cubo.obj");
-    // unsigned int vertexSize = 3 * sizeof (float) * cubo.vertex.size ();
-    // unsigned int triangleSize = 3 * sizeof (int) * cubo.triangles.size ();
-    // vertices = (float *)malloc (vertexSize);
-    // for (int i = 0; i < cubo.vertex.size (); i++)
-    //     {
-    //         vertices[3 * i] = cubo.vertex[i][0];
-    //         vertices[3 * i + 1] = cubo.vertex[i][1];
-    //         vertices[3 * i + 2] = cubo.vertex[i][2];
-    //     }
-    // unsigned int *indices = (unsigned int *)malloc (triangleSize);
-    // memcpy ((void *)indices, cubo.triangles.data (), triangleSize);
-    unsigned int indices[] = {
-        0, 1, 3, // first triangle
-        1, 2, 3  // second triangle
-    };
-    unsigned int indexSize = sizeof (indices);
-    unsigned int indexCount = sizeof (indices) / sizeof (int);
-    unsigned int vertexSize = sizeof (vertices);
+    model cubo ("assets/3dmodels/Cubo.obj");
+    unsigned int vertexCount = cubo.vertex.size ();
+    unsigned int vertexSize = 3 * sizeof (float) * vertexCount;
+
+    unsigned int indexCount = 3 * cubo.triangles.size ();
+    vertices = (float *)malloc (vertexSize);
+    for (int i = 0; i < cubo.vertex.size (); i++)
+        {
+            vertices[3 * i] = cubo.vertex[i][0];
+            vertices[3 * i + 1] = cubo.vertex[i][1];
+            vertices[3 * i + 2] = cubo.vertex[i][2];
+        }
+    unsigned int *indices = (unsigned int *)malloc (indexCount * sizeof (int));
+    memcpy ((void *)indices, cubo.triangles.data (),
+            indexCount * sizeof (int));
 
     glfwInit ();
     glfwWindowHint (GLFW_CONTEXT_VERSION_MAJOR, 4);
@@ -82,6 +72,7 @@ main ()
             sendError ("cannot init glew");
             return -1;
         }
+    // glEnable (GL_DEPTH_TEST);
     glEnable (GL_DEBUG_OUTPUT);
     glDebugMessageCallback (&error_callback, 0);
 
@@ -92,8 +83,6 @@ main ()
     vertexShader.attach (shaderProgram);
     fragmentShader.attach (shaderProgram);
 
-
-
     const GLchar *feedbackVaryings[] = { "outValue" };
     glTransformFeedbackVaryings (shaderProgram, 1, feedbackVaryings,
                                  GL_INTERLEAVED_ATTRIBS);
@@ -101,50 +90,61 @@ main ()
     glLinkProgram (shaderProgram);
     glUseProgram (shaderProgram);
 
-    glm::mat4 proj = glm::perspective(glm::radians(45.0f), (float)SCR_X/(float)SCR_Y, 0.1f, 100.0f);
-    glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "projection"),1, GL_FALSE,glm::value_ptr(proj));
+    // note that we're translating the scene in the reverse direction of where
+    // we want to move
+    proj = glm::perspective (glm::radians (45.0f), (float)SCR_X / (float)SCR_Y,
+                             0.1f, 100.0f);
+    view = glm::mat4 (1);
+    view = glm::translate (view, glm::vec3 (0.0f, 0.0f, -5.0f));
 
     unsigned int VBO, VAO, EBO, TBO, Query;
     glGenVertexArrays (1, &VAO);
     glGenBuffers (1, &VBO);
     glGenBuffers (1, &EBO);
-    glGenBuffers (1, &TBO);
     glGenQueries (1, &Query);
 
     glBindVertexArray (VAO);
 
+    glGenBuffers (1, &TBO);
     glBindBuffer (GL_ARRAY_BUFFER, TBO);
-    glBufferData (GL_ARRAY_BUFFER, sizeof(float) * indexCount*4, nullptr, GL_STATIC_READ);
+    glBufferData (GL_ARRAY_BUFFER, sizeof (float) * indexCount * 4, nullptr,
+                  GL_STATIC_READ);
 
     glBindBuffer (GL_ARRAY_BUFFER, VBO);
     glBufferData (GL_ARRAY_BUFFER, vertexSize, vertices, GL_DYNAMIC_DRAW);
     glEnableVertexAttribArray (0);
 
     glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData (GL_ELEMENT_ARRAY_BUFFER, indexSize, indices, GL_STATIC_DRAW);
+    glBufferData (GL_ELEMENT_ARRAY_BUFFER, sizeof (float) * indexCount,
+                  indices, GL_STATIC_DRAW);
     glVertexAttribPointer (0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof (float),
                            (void *)0); // set vec4 position
-
 
     glBindBuffer (GL_ARRAY_BUFFER, 0);
     glBindVertexArray (0);
     glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, 0);
+    glUniformMatrix4fv (glGetUniformLocation (shaderProgram, "projection"), 1,
+                        GL_FALSE, glm::value_ptr (proj));
     // glClipControl(GL_LOWER_LEFT,GL_ZERO_TO_ONE);
     while (!glfwWindowShouldClose (window))
         {
 
-            glBindBufferBase(GL_TRANSFORM_FEEDBACK_BUFFER, 0, TBO);
+            glBindBufferBase (GL_TRANSFORM_FEEDBACK_BUFFER, 0, TBO);
+
+            // Used to update the vbo but without change the n of Vertex
             glBindBuffer (GL_ARRAY_BUFFER, VBO);
             glBufferSubData (GL_ARRAY_BUFFER, 0, vertexSize, vertices);
+
             glClearColor (0.07f, 0.13f, 0.17f, 1.0f);
-            glClear (GL_COLOR_BUFFER_BIT);
+            glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             // glUseProgram (shaderProgram);
             glBindVertexArray (VAO);
 
             glBeginQuery (GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN, Query);
             glBeginTransformFeedback (GL_TRIANGLES);
             glDrawElements (GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, 0);
-                    glEndTransformFeedback();
+
+            glEndTransformFeedback ();
             glEndQuery (GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN);
 
             glFlush ();
@@ -152,23 +152,27 @@ main ()
             GLuint primitives;
             glGetQueryObjectuiv (Query, GL_QUERY_RESULT, &primitives);
 
-            GLfloat feedback[4*indexCount];
+            GLfloat feedback[4 * indexCount];
             glGetBufferSubData (GL_TRANSFORM_FEEDBACK_BUFFER, 0,
                                 sizeof (feedback), feedback);
 
-            printf ("%u primitives written!\n\n", primitives);
+            // printf ("%u primitives written!\n\n", primitives);
 
-            for (int i = 0; i < indexCount; i++)
-                {
-                    printf ("{%f , %f , %f,%f}\n", feedback[4*i],feedback[4*i+1],feedback[4*i+2],feedback[4*i+3]);
-                }
+            // for (int i = 0; i < indexCount; i++)
+            //     {
+            //         printf ("{%f , %f , %f , %f}\n", feedback[4 * i],
+            //                 feedback[4 * i + 1], feedback[4 * i + 2],
+            //                 feedback[4 * i + 3]);
+            //     }
 
             glfwSwapBuffers (window);
             glfwPollEvents ();
             processInput (window);
+            glUniformMatrix4fv (glGetUniformLocation (shaderProgram, "view"),
+                                1, GL_FALSE, glm::value_ptr (view));
             // sleep (1);
         }
-    glDeleteQueries(1, &Query);
+    glDeleteQueries (1, &Query);
     glDeleteVertexArrays (1, &VAO);
     glDeleteBuffers (1, &VBO);
     glDeleteBuffers (1, &EBO);
@@ -190,40 +194,34 @@ error_callback (GLenum source, GLenum type, unsigned int id, GLenum severity,
                 severity, message);
         }
 }
+// Matrizes do open gl são acessadas [coluna][linha] ao inverso da notação normal
+// A = a[0][0] , a[1][0] , a[2][0], a[3][0]
+//     a[0][1] , a[1][1] , a[2][1], a[3][1]
+//     a[0][2] , a[1][2] , a[2][2], a[3][2]
+//     a[0][3] , a[1][3] , a[2][3], a[3][3]
 void
 processInput (GLFWwindow *window)
 {
     if (glfwGetKey (window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose (window, true);
-
+    // glm::vec4 offset (0);
     if (glfwGetKey (window, GLFW_KEY_W) == GLFW_PRESS)
         {
-            for (int i = 0; i < 4; i++)
-                {
-                    vertices[3 * i + 2] += .1;
-                }
+            view[3][2] += .2;
         }
     if (glfwGetKey (window, GLFW_KEY_S) == GLFW_PRESS)
         {
-            for (int i = 0; i < 4; i++)
-                {
-                    vertices[3 * i + 2] -= .1;
-                }
+            view[3][2] -= .2;
         }
     if (glfwGetKey (window, GLFW_KEY_D) == GLFW_PRESS)
         {
-            for (int i = 0; i < 4; i++)
-                {
-                    vertices[3 * i] += 0.1;
-                }
-        }
+            view[3][0] += .2;
+            }
     if (glfwGetKey (window, GLFW_KEY_A) == GLFW_PRESS)
         {
-            for (int i = 0; i < 4; i++)
-                {
-                    vertices[3 * i] -= 0.1;
-                }
+            view[3][0] -= .2;
         }
+    // view[4] += offset;
 }
 
 void
