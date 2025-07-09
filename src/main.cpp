@@ -1,21 +1,22 @@
-   #define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_IMPLEMENTATION
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <bits/stdc++.h>
 #include <iostream>
 #include <stdio.h>
 
+#include "models.hpp"
+#include "shader.hpp"
+#include "stb_image/stb_image.h"
+#include "texture.hpp"
+#include "utils.hpp"
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-   #include "stb_image/stb_image.h"
-#include "texture.hpp"
-#include "models.hpp"
-#include "shader.hpp"
-#include "utils.hpp"
 #define PI 3.14
 #define VERTEX_SHADERS_LOCALPATH "vShaders.vert"
 #define FRAGMENT_SHADERS_LOCALPATH "fShaders.frag"
+#define GEOMETRY_SHADERS_LOCALPATH "gShaders.geom"
 
 // 4.6 (Core Profile) Mesa 25.1.3-arch1.3
 void framebuffer_size_callback (GLFWwindow *window, int width, int height);
@@ -38,7 +39,7 @@ main ()
     unsigned int vertexCount = cubo.vertex.size ();
     unsigned int vertexSize = 3 * sizeof (float) * vertexCount;
 
-    unsigned int indexCount = 3 * cubo.trianglesVertex.size ();
+    unsigned int indexCount = 3 * cubo.vertexIndex.size ();
     vertices = (float *)malloc (vertexSize);
     for (int i = 0; i < cubo.vertex.size (); i++)
         {
@@ -47,11 +48,11 @@ main ()
             vertices[3 * i + 2] = cubo.vertex[i][2];
             // vertices[3 * i + 3] = cubo.texture[i][0];
             // vertices[3 * i + 4] = cubo.texture[i][1];
-            printf("{%f, %f, %f}\n",cubo.vertex[i][0],cubo.vertex[i][1],cubo.vertex[i][2]);
-
+            printf ("{%f, %f, %f}\n", cubo.vertex[i][0], cubo.vertex[i][1],
+                    cubo.vertex[i][2]);
         }
     unsigned int *indices = (unsigned int *)malloc (indexCount * sizeof (int));
-    memcpy ((void *)indices, cubo.trianglesVertex.data (),
+    memcpy ((void *)indices, cubo.vertexIndex.data (),
             indexCount * sizeof (int));
 
     glfwInit ();
@@ -85,14 +86,16 @@ main ()
 
     Shader vertexShader (VERTEX_SHADERS_LOCALPATH, GL_VERTEX_SHADER);
     Shader fragmentShader (FRAGMENT_SHADERS_LOCALPATH, GL_FRAGMENT_SHADER);
+    // Shader geometryShader(GEOMETRY_SHADERS_LOCALPATH, GL_GEOMETRY_SHADER);
 
     unsigned int shaderProgram = glCreateProgram ();
     vertexShader.attach (shaderProgram);
     fragmentShader.attach (shaderProgram);
+    // geometryShader.attach(shaderProgram);
 
-    const GLchar *feedbackVaryings[] = { "outValue" };
-    glTransformFeedbackVaryings (shaderProgram, 1, feedbackVaryings,
-                                 GL_INTERLEAVED_ATTRIBS);
+    // const GLchar *feedbackVaryings[] = { "outValue" };
+    // glTransformFeedbackVaryings (shaderProgram, 1, feedbackVaryings,
+                                //  GL_INTERLEAVED_ATTRIBS);
 
     glLinkProgram (shaderProgram);
     glUseProgram (shaderProgram);
@@ -104,13 +107,27 @@ main ()
     view = glm::mat4 (1);
     view = glm::translate (view, glm::vec3 (0.0f, 0.0f, -5.0f));
 
-    unsigned int VBO, VAO, EBO, TBO, Query;
+    unsigned int VBO, VAO, EBO, TBO, Query, texSSBO,texIndexSSBO;
     glGenVertexArrays (1, &VAO);
     glGenBuffers (1, &VBO);
     glGenBuffers (1, &EBO);
     glGenQueries (1, &Query);
 
     glBindVertexArray (VAO);
+
+    // glGenBuffers (1, &texSSBO);
+    // glBindBuffer (GL_SHADER_STORAGE_BUFFER, texSSBO);
+    // glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (data), data​,
+    //               GL_DYNAMIC_READ);
+    //     glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 3, texSSBO);
+    // glBindBuffer (GL_SHADER_STORAGE_BUFFER, 0); // unbind
+    
+    // glGenBuffers (1, &texIndexSSBO);
+    // glBindBuffer (GL_SHADER_STORAGE_BUFFER, texIndexSSBO);
+    // glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (data), data​,
+    //               GL_DYNAMIC_READ);
+    // glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 4, texSSBO);
+    // glBindBuffer (GL_SHADER_STORAGE_BUFFER, 0); // unbind
 
     glGenBuffers (1, &TBO);
     glBindBuffer (GL_ARRAY_BUFFER, TBO);
@@ -133,7 +150,9 @@ main ()
     glUniformMatrix4fv (glGetUniformLocation (shaderProgram, "projection"), 1,
                         GL_FALSE, glm::value_ptr (proj));
     // texture.Bind(0);
-    glUniform1i(glGetUniformLocation(shaderProgram,"Texture"),0);
+
+    // glUniform1i (glGetUniformLocation (shaderProgram, "Texture"), 0);
+
     // glClipControl(GL_LOWER_LEFT,GL_ZERO_TO_ONE);
     while (!glfwWindowShouldClose (window))
         {
@@ -149,21 +168,21 @@ main ()
             // glUseProgram (shaderProgram);
             glBindVertexArray (VAO);
 
-            glBeginQuery (GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN, Query);
-            glBeginTransformFeedback (GL_TRIANGLES);
+            // glBeginQuery (GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN, Query);
+            // glBeginTransformFeedback (GL_TRIANGLES);
             glDrawElements (GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, 0);
 
-            glEndTransformFeedback ();
-            glEndQuery (GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN);
+            // glEndTransformFeedback ();
+            // glEndQuery (GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN);
 
-            glFlush ();
+            // glFlush ();
 
-            GLuint primitives;
-            glGetQueryObjectuiv (Query, GL_QUERY_RESULT, &primitives);
+            // GLuint primitives;
+            // glGetQueryObjectuiv (Query, GL_QUERY_RESULT, &primitives);
 
-            GLfloat feedback[4 * indexCount];
-            glGetBufferSubData (GL_TRANSFORM_FEEDBACK_BUFFER, 0,
-                                sizeof (feedback), feedback);
+            // GLfloat feedback[4 * indexCount];
+            // glGetBufferSubData (GL_TRANSFORM_FEEDBACK_BUFFER, 0,
+            //                     sizeof (feedback), feedback);
 
             // printf ("%u primitives written!\n\n", primitives);
 
@@ -203,8 +222,8 @@ error_callback (GLenum source, GLenum type, unsigned int id, GLenum severity,
                 severity, message);
         }
 }
-// Matrizes do open gl são acessadas [coluna][linha] ao inverso da notação normal
-// A = a[0][0] , a[1][0] , a[2][0], a[3][0]
+// Matrizes do open gl são acessadas [coluna][linha] ao inverso da notação
+// normal A = a[0][0] , a[1][0] , a[2][0], a[3][0]
 //     a[0][1] , a[1][1] , a[2][1], a[3][1]
 //     a[0][2] , a[1][2] , a[2][2], a[3][2]
 //     a[0][3] , a[1][3] , a[2][3], a[3][3]
@@ -225,7 +244,7 @@ processInput (GLFWwindow *window)
     if (glfwGetKey (window, GLFW_KEY_D) == GLFW_PRESS)
         {
             view[3][0] += .2;
-            }
+        }
     if (glfwGetKey (window, GLFW_KEY_A) == GLFW_PRESS)
         {
             view[3][0] -= .2;

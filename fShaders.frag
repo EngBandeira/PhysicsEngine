@@ -10,7 +10,8 @@ void main()
     // float d = sqrt(gl_PointCoord.x*gl_PointCoord.x + gl_PointCoord.y * gl_PointCoord.y)*1000;
     // float d = gl_Position.x;
     // fragColor = vec4(d,d,d,1.0);     
-    // fragColor = texture(Texture,v_texCoord);
     fragColor = vec4(inColor,1);
+    // fragColor = texture(Texture,v_texCoord);
+    // fragColor = vec4(inColor,1);
 }
 
