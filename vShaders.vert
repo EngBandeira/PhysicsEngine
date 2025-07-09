@@ -1,13 +1,18 @@
 
 #version 450 core
 layout (location = 0) in vec4 position;
+layout (location = 0) in vec2 texCoord;
+
 layout (location = 0) out vec3 outColor;
 out vec4 outValue;
+out vec2 v_texCoord;
+
 uniform int caseta;
 uniform mat4 projection;
 uniform mat4 view;
 void main()
 {
+   v_texCoord = texCoord;
 // m v p
    // gl_Position = projection *position;
    gl_Position = (projection * view * position);

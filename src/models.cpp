@@ -56,7 +56,7 @@ model::model (const char *localPath)
                                     vec3 v;
                                     for (int k = 0; k < 3; k++)
                                         {
-                                        unsigned int b = i;
+                                            unsigned int b = i;
                                             while (1)
                                                 {
                                                     if (file[i] == ' '
@@ -75,49 +75,99 @@ model::model (const char *localPath)
                                 }
                             else if (file[i] == 'f')
                                 {
-                                    unsigned int first, prev, index = 0;
+                                    unsigned int first[3], prev[3], index = 0;
                                     i += 2;
                                     unsigned int k = i;
                                     while (file[k] != '\n')
                                         k++;
-                                    for (int g = i; g < k; g++)
-                                        { // começa o loop no primeiro  1/14/16
-                                          // no 1
-                                            unsigned int beta = g;
-                                            g++;
-                                            while (file[g] != '/')
-                                                g++;
-                                            file[g] = 0;
-                                            unsigned int rt = atoi(file + beta)-1;
-                                            while (1)
+                                    while (i < k)
+                                        {
+                                            // começa o for no index do
+                                            // primeiro valor
+                                            unsigned int value[3];
+                                            char c;
+                                            for (int j = 0; j < 3; j++)
                                                 {
-                                                    if (g >= k)
-                                                        break;
-                                                    if (file[g] != ' ')
-                                                        {
-                                                            g++;
-                                                            continue;
-                                                        }
+                                                    unsigned int i0 = i;
+                                                    i++;
+                                                    while (file[i] != '/'
+                                                           && file[i] != ' '
+                                                           && file[i] != '\n')
+                                                        i++;
+                                                    c = file[i];
+                                                    file[i] = 0;
+                                                    value[j]
+                                                        = atoi (file + i0)-1;
+                                                    file[i] = c;
+                                                    i++;
+                                                }
+                                            printf (" %d/%d/%d ", value[0] + 1,
+                                                    value[1] + 1,
+                                                    value[2] + 1);
+
+                                            // i++;
+                                           
+                                            switch (index)
+                                                {
+                                                case 0:
+                                                    first[0] = value[0];
+                                                    first[1] = value[1];
+                                                    first[2] = value[2];
+                                                    break;
+                                                case 1:
+                                                    prev[0] = value[0];
+                                                    prev[1] = value[1];
+                                                    prev[2] = value[2];
+                                                    break;
+                                                default:
+                                                    trianglesVertex.push_back (
+                                                        triangle( (unsigned int[3]){
+                                                            first[0], prev[0],
+                                                            value[0] }));
+                                                    trianglesTextureVertex
+                                                        .push_back (triangle((
+                                                            unsigned int[3]){
+                                                            first[1], prev[1],
+                                                            value[1] }));
+                                                    prev[0] = value[0];
+                                                    prev[1] = value[1];
+                                                    prev[2] = value[2];
                                                     break;
                                                 }
-                                            if (index == 0)
+                                                 if (c == '\n')
                                                 {
-                                                    first = rt;
-                                                    index++;
-                                                    continue;
+                                                    i--;
+                                                    break;
                                                 }
-                                            else if (index == 1)
-                                                {
-                                                    prev = rt;
-                                                    index++;
-                                                    continue;
-                                                }
-                                            triangle tr ((unsigned int[3]){first, prev, rt});
-                                            triangles.push_back (tr);
-                                            prev = rt;
-                                            // g++;
+                                            index++;
                                         }
+                                    printf ("\n");
                                 }
+                        }
+                    else if (file[i] == 'v' && file[i + 1] == 't'
+                             && file[i + 2] == ' ')
+                        {
+                            i += 3;
+                            unsigned int j = i;
+                            vec2 v;
+                            for (int k = 0; k < 2; k++)
+                                {
+                                    unsigned int b = i;
+                                    while (1)
+                                        {
+                                            if (file[i] == ' '
+                                                || file[i] == '\n')
+                                                break;
+                                            i++;
+                                        }
+                                    char c = file[i];
+                                    file[i] = 0;
+                                    v[k] = (float)atof (file + b);
+                                    file[i] = c;
+                                    i++;
+                                }
+                            texture.push_back (v);
+                            i--;
                         }
                 }
             else if (file[i] == '\n')
@@ -132,6 +182,46 @@ model::~model ()
 {
     // free(vertex);
 }
+
+//  for (int g = i; g < k; g++)
+// { // começa o loop no primeiro  1/14/16
+//   // no 1
+//     unsigned int beta = g;
+//     g++;
+//     while (file[g] != '/')
+//         g++;
+//     file[g] = 0;
+//     unsigned int rt
+//         = atoi (file + beta) - 1;
+//     while (1)
+//         {
+//             if (g >= k)
+//                 break;
+//             if (file[g] != ' ')
+//                 {
+//                     g++;
+//                     continue;
+//                 }
+//             break;
+//         }
+//     if (index == 0)
+//         {
+//             first = rt;
+//             index++;
+//             continue;
+//         }
+//     else if (index == 1)
+//         {
+//             prev = rt;
+//             index++;
+//             continue;
+//         }
+//     triangle tr ((unsigned int[3]){
+//         first, prev, rt },nullptr);
+//     triangles.push_back (tr);
+//     prev = rt;
+//     // g++;
+// }
 
 // while ((c = fgetc (file)) != EOF)
 //         {

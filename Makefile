@@ -1,10 +1,11 @@
 buildP = build
 includeP = include
+vendorP = vendor
 srcP = src
 
 executable = $(buildP)/final
 
-source = $(shell find ./$(srcP) -path ./src/steps/utils/dontcompile -prune -o -name '*.cpp' -print)
+source = $(shell find ./$(srcP) ./$(vendorP) -path ./src/steps/utils/dontcompile -prune -o -name '*.cpp' -print)
 
 #objects = $(addprefix $(buildP), $(basename $(addprefix  $(dir $(source)), $(addsuffix .o , $(basename $(notdir $(source)))))))
 objects = $(subst $(srcP),$(buildP),$(addsuffix .o ,$(basename $(source))))
@@ -12,9 +13,9 @@ objects = $(subst $(srcP),$(buildP),$(addsuffix .o ,$(basename $(source))))
 
 libs = GL GLU glfw GLEW pthread
 
-flagsF = -Wall -I./$(includeP) -g -ggdb $(addprefix -l, $(libs))
+flagsF = -Wall -I./$(includeP) -I./$(vendorP) -g -ggdb $(addprefix -l, $(libs))
 
-flagsI = -Wall -I./$(includeP) -I./$(includeP)/modules -g -ggdb $(addprefix -l, $(libs))
+flagsI = -Wall -I./$(includeP) -I./$(vendorP) -I./$(includeP)/modules -g -ggdb $(addprefix -l, $(libs))
 
 CC = g++
 

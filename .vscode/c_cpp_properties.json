@@ -5,6 +5,7 @@
             "includePath": [
                 "${workspaceFolder}/**",
                 "${workspaceFolder}/include"
+                "${workspaceFolder}/vendor"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/clang",

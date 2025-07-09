@@ -1,22 +1,25 @@
-#pragma once 
+#pragma once
 
 #include <vector>
 
 #include "utils.hpp"
 
-struct triangle{
-  unsigned int t[3];//first sencond third
-  triangle(unsigned int t_[3]){
-    t[0] = t_[0];
-    t[1] = t_[1];
-    t[2] = t_[2];
-  }
-};
-struct model
+struct triangle
 {
-  std::vector<vec3> vertex;
-  std::vector<triangle> triangles;
-  model();
-  model(const char* localPath);
-  ~model();
+    unsigned int v[3];
+    triangle(    unsigned int v_[3]){
+      v[0] = v_[0];
+      v[1] = v_[1];
+      v[2] = v_[2];
+    }
 };
+    struct model
+    {
+        std::vector<vec3> vertex;
+        std::vector<vec2> texture;
+        std::vector<triangle> trianglesVertex, trianglesTextureVertex;
+
+        model ();
+        model (const char *localPath);
+        ~model ();
+    };

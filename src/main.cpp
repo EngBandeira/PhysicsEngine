@@ -1,3 +1,4 @@
+   #define STB_IMAGE_IMPLEMENTATION
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <bits/stdc++.h>
@@ -7,7 +8,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-
+   #include "stb_image/stb_image.h"
+#include "texture.hpp"
 #include "models.hpp"
 #include "shader.hpp"
 #include "utils.hpp"
@@ -32,20 +34,24 @@ glm::mat4 view;
 int
 main ()
 {
-    model cubo ("assets/3dmodels/Cubo.obj");
+    model cubo ("assets/3dmodels/Cube.obj");
     unsigned int vertexCount = cubo.vertex.size ();
     unsigned int vertexSize = 3 * sizeof (float) * vertexCount;
 
-    unsigned int indexCount = 3 * cubo.triangles.size ();
+    unsigned int indexCount = 3 * cubo.trianglesVertex.size ();
     vertices = (float *)malloc (vertexSize);
     for (int i = 0; i < cubo.vertex.size (); i++)
         {
             vertices[3 * i] = cubo.vertex[i][0];
             vertices[3 * i + 1] = cubo.vertex[i][1];
             vertices[3 * i + 2] = cubo.vertex[i][2];
+            // vertices[3 * i + 3] = cubo.texture[i][0];
+            // vertices[3 * i + 4] = cubo.texture[i][1];
+            printf("{%f, %f, %f}\n",cubo.vertex[i][0],cubo.vertex[i][1],cubo.vertex[i][2]);
+
         }
     unsigned int *indices = (unsigned int *)malloc (indexCount * sizeof (int));
-    memcpy ((void *)indices, cubo.triangles.data (),
+    memcpy ((void *)indices, cubo.trianglesVertex.data (),
             indexCount * sizeof (int));
 
     glfwInit ();
@@ -75,6 +81,7 @@ main ()
     glEnable (GL_DEPTH_TEST);
     glEnable (GL_DEBUG_OUTPUT);
     glDebugMessageCallback (&error_callback, 0);
+    // Texture texture("assets/3dmodels/CubeTexture2.jpg");
 
     Shader vertexShader (VERTEX_SHADERS_LOCALPATH, GL_VERTEX_SHADER);
     Shader fragmentShader (FRAGMENT_SHADERS_LOCALPATH, GL_FRAGMENT_SHADER);
@@ -113,18 +120,20 @@ main ()
     glBindBuffer (GL_ARRAY_BUFFER, VBO);
     glBufferData (GL_ARRAY_BUFFER, vertexSize, vertices, GL_DYNAMIC_DRAW);
     glEnableVertexAttribArray (0);
+    glVertexAttribPointer (0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof (float),
+                           (void *)0); // set vec4 position
 
     glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, EBO);
     glBufferData (GL_ELEMENT_ARRAY_BUFFER, sizeof (float) * indexCount,
                   indices, GL_STATIC_DRAW);
-    glVertexAttribPointer (0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof (float),
-                           (void *)0); // set vec4 position
 
     glBindBuffer (GL_ARRAY_BUFFER, 0);
     glBindVertexArray (0);
     glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, 0);
     glUniformMatrix4fv (glGetUniformLocation (shaderProgram, "projection"), 1,
                         GL_FALSE, glm::value_ptr (proj));
+    // texture.Bind(0);
+    glUniform1i(glGetUniformLocation(shaderProgram,"Texture"),0);
     // glClipControl(GL_LOWER_LEFT,GL_ZERO_TO_ONE);
     while (!glfwWindowShouldClose (window))
         {
