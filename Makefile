@@ -5,10 +5,10 @@ srcP = src
 
 executable = $(buildP)/final
 
-source = $(shell find ./$(srcP) ./$(vendorP) -path ./src/steps/utils/dontcompile -prune -o -name '*.cpp' -print)
-
-#objects = $(addprefix $(buildP), $(basename $(addprefix  $(dir $(source)), $(addsuffix .o , $(basename $(notdir $(source)))))))
-objects = $(subst $(srcP),$(buildP),$(addsuffix .o ,$(basename $(source))))
+sourceCPP = $(shell find ./$(srcP) ./$(vendorP) -path ./src/steps/utils/dontcompile -prune -o -name '*.cpp' -print) 
+sourceC = $(shell find ./$(srcP) ./$(vendorP) -path ./src/steps/utils/dontcompile -prune -o -name '*.c' -print)
+#objects = $(addprefix $(buildP), $(basename $(addprefix  $(dir $(sourceCPP)), $(addsuffix .o , $(basename $(notdir $(sourceCPP)))))))
+objects = $(subst $(srcP),$(buildP),$(addsuffix .o ,$(basename $(sourceCPP))))
 
 
 libs = GL GLU glfw GLEW pthread
@@ -33,7 +33,8 @@ all: $(executable)
 
 create:
 	$(shell mkdir -p $(dir $(objects)))
-	$(shell mkdir -p $(dir $(subst $(srcP),$(includeP), $(source))))
+	$(shell mkdir -p $(dir $(subst $(srcP),$(includeP), $(sourceCPP
+))))
 
 init:
 	$(shell mkdir -p $(srcP) $(includeP) $(buildP))

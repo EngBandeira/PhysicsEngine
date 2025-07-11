@@ -1,6 +1,6 @@
 #include "texture.hpp"
 #include "stb_image/stb_image.h"
-#include <GL/gl.h>
+#include "glad/glad.h"
 Texture::Texture(const char *path): localBuffer(nullptr), localPath(path), width(0),height(0),BPP(0)
 {
   glGenTextures(1,&renderID);

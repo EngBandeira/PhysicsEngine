@@ -1,5 +1,5 @@
 #define STB_IMAGE_IMPLEMENTATION
-#include <GL/glew.h>
+#include "glad/glad.h"
 #include <GLFW/glfw3.h>
 #include <bits/stdc++.h>
 #include <iostream>
@@ -13,10 +13,10 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#define PI 3.14
-#define VERTEX_SHADERS_LOCALPATH "vShaders.vert"
-#define FRAGMENT_SHADERS_LOCALPATH "fShaders.frag"
-#define GEOMETRY_SHADERS_LOCALPATH "gShaders.geom"
+// #define PI 3.14
+#define VERTEX_SHADERS_LOCALPATH "vShader.vert"
+#define FRAGMENT_SHADERS_LOCALPATH "fShader.frag"
+#define GEOMETRY_SHADERS_LOCALPATH "gShader.geom"
 
 // 4.6 (Core Profile) Mesa 25.1.3-arch1.3
 void framebuffer_size_callback (GLFWwindow *window, int width, int height);
@@ -57,7 +57,7 @@ main ()
 
     glfwInit ();
     glfwWindowHint (GLFW_CONTEXT_VERSION_MAJOR, 4);
-    glfwWindowHint (GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint (GLFW_CONTEXT_VERSION_MINOR, 4);
     glfwWindowHint (GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     GLFWwindow *window
@@ -74,9 +74,9 @@ main ()
             glViewport (0, 0, width, height);
         });
 
-    if (glewInit ())
+    if (gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
         {
-            sendError ("cannot init glew");
+            sendError ("cannot init glad");
             return -1;
         }
     glEnable (GL_DEPTH_TEST);
@@ -84,21 +84,21 @@ main ()
     glDebugMessageCallback (&error_callback, 0);
     // Texture texture("assets/3dmodels/CubeTexture2.jpg");
 
-    Shader vertexShader (VERTEX_SHADERS_LOCALPATH, GL_VERTEX_SHADER);
-    Shader fragmentShader (FRAGMENT_SHADERS_LOCALPATH, GL_FRAGMENT_SHADER);
-    // Shader geometryShader(GEOMETRY_SHADERS_LOCALPATH, GL_GEOMETRY_SHADER);
+    Shader shader((const char *[3]){VERTEX_SHADERS_LOCALPATH,FRAGMENT_SHADERS_LOCALPATH,GEOMETRY_SHADERS_LOCALPATH});
+
 
     unsigned int shaderProgram = glCreateProgram ();
-    vertexShader.attach (shaderProgram);
-    fragmentShader.attach (shaderProgram);
-    // geometryShader.attach(shaderProgram);
+    shader.attach(shaderProgram);
 
     // const GLchar *feedbackVaryings[] = { "outValue" };
     // glTransformFeedbackVaryings (shaderProgram, 1, feedbackVaryings,
                                 //  GL_INTERLEAVED_ATTRIBS);
 
     glLinkProgram (shaderProgram);
+    // shader.~Shader();
     glUseProgram (shaderProgram);
+
+ 
 
     // note that we're translating the scene in the reverse direction of where
     // we want to move
@@ -129,10 +129,10 @@ main ()
     // glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 4, texSSBO);
     // glBindBuffer (GL_SHADER_STORAGE_BUFFER, 0); // unbind
 
-    glGenBuffers (1, &TBO);
-    glBindBuffer (GL_ARRAY_BUFFER, TBO);
-    glBufferData (GL_ARRAY_BUFFER, sizeof (float) * indexCount * 4, nullptr,
-                  GL_STATIC_READ);
+    // glGenBuffers (1, &TBO);
+    // glBindBuffer (GL_ARRAY_BUFFER, TBO);
+    // glBufferData (GL_ARRAY_BUFFER, sizeof (float) * indexCount * 4, nullptr,
+    //               GL_STATIC_READ);
 
     glBindBuffer (GL_ARRAY_BUFFER, VBO);
     glBufferData (GL_ARRAY_BUFFER, vertexSize, vertices, GL_DYNAMIC_DRAW);
@@ -156,8 +156,11 @@ main ()
     // glClipControl(GL_LOWER_LEFT,GL_ZERO_TO_ONE);
     while (!glfwWindowShouldClose (window))
         {
+    glUseProgram (shaderProgram);
+glUniformMatrix4fv (glGetUniformLocation (shaderProgram, "view"),
+                                1, GL_FALSE, glm::value_ptr (view));
 
-            glBindBufferBase (GL_TRANSFORM_FEEDBACK_BUFFER, 0, TBO);
+            // glBindBufferBase (GL_TRANSFORM_FEEDBACK_BUFFER, 0, TBO);
 
             // Used to update the vbo but without change the n of Vertex
             glBindBuffer (GL_ARRAY_BUFFER, VBO);
@@ -196,8 +199,7 @@ main ()
             glfwSwapBuffers (window);
             glfwPollEvents ();
             processInput (window);
-            glUniformMatrix4fv (glGetUniformLocation (shaderProgram, "view"),
-                                1, GL_FALSE, glm::value_ptr (view));
+            
             // sleep (1);
         }
     glDeleteQueries (1, &Query);

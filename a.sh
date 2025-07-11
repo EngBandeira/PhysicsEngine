@@ -1,12 +1,10 @@
 #!/bin/bash
-vert=$(glslang vShaders.vert)
-frag=$(glslang fShaders.frag)
-geom=$(glslang gShaders.geom)
+vert=$(glslang vShader.vert)
+frag=$(glslang fShader.frag)
+geom=$(glslang gShader.geom)
 
 if [[ "$vert" = "" && "$frag" = ""  && "$geom" = ""  ]]; then
-  rm build/*
-  make
-  ./build/final
+  ./a
 else 
   echo $vert
   echo $frag

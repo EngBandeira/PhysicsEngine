@@ -20,6 +20,7 @@ readFile (const char *localPath, unsigned int *fileLenght)
     buffer[sz-1] = EOF;
     fread (buffer, sizeof (char), sz, file);
     fclose (file);
+    if(fileLenght != nullptr)
     *fileLenght = sz;
     return buffer;
 }
