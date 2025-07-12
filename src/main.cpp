@@ -30,31 +30,26 @@ const unsigned int SCR_X = 800;
 const unsigned int SCR_Y = 600;
 
 float *vertices;
-glm::mat4 proj;
-glm::mat4 view;
+glm::mat4 projMatrix;
+glm::mat4 viewMatrix;
+glm::mat4 modelMatrix;
+
 int
 main ()
 {
-    model cubo ("assets/3dmodels/Cube.obj");
-    unsigned int vertexCount = cubo.vertex.size ();
-    unsigned int vertexSize = 3 * sizeof (float) * vertexCount;
+    Model cube ("assets/3dmodels/Cube.obj");
 
-    unsigned int indexCount = 3 * cubo.vertexIndex.size ();
-    vertices = (float *)malloc (vertexSize);
-    for (int i = 0; i < cubo.vertex.size (); i++)
-        {
-            vertices[3 * i] = cubo.vertex[i][0];
-            vertices[3 * i + 1] = cubo.vertex[i][1];
-            vertices[3 * i + 2] = cubo.vertex[i][2];
-            // vertices[3 * i + 3] = cubo.texture[i][0];
-            // vertices[3 * i + 4] = cubo.texture[i][1];
-            printf ("{%f, %f, %f}\n", cubo.vertex[i][0], cubo.vertex[i][1],
-                    cubo.vertex[i][2]);
-        }
-    unsigned int *indices = (unsigned int *)malloc (indexCount * sizeof (int));
-    memcpy ((void *)indices, cubo.vertexIndex.data (),
-            indexCount * sizeof (int));
-
+    // per face we have the same number of index and tex ind
+    unsigned int verticesCount, textureVerticesCount, verticesIndexCount,
+        textureIndexCount;
+    vertices = cube.exportVertices (&verticesCount);
+    float *textureVertices = cube.exportTexture (&textureVerticesCount);
+    unsigned int *verticesIndex
+        = cube.exportVerticesIndex (&verticesIndexCount);
+    unsigned int *textureIndex = cube.exportTextureIndex (&textureIndexCount);
+    for(int i = 0;i <textureIndexCount/4  ;i++){
+        printf("%d %d %d %d\n",textureIndex[3*i],textureIndex[3*i+1],textureIndex[3*i+2],textureIndex[3*i+3]);
+    }
     glfwInit ();
     glfwWindowHint (GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint (GLFW_CONTEXT_VERSION_MINOR, 4);
@@ -74,106 +69,115 @@ main ()
             glViewport (0, 0, width, height);
         });
 
-    if (gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
+    if (!gladLoadGLLoader ((GLADloadproc)glfwGetProcAddress))
         {
             sendError ("cannot init glad");
             return -1;
         }
     glEnable (GL_DEPTH_TEST);
     glEnable (GL_DEBUG_OUTPUT);
+    glEnable (GL_DEBUG_OUTPUT_SYNCHRONOUS);
     glDebugMessageCallback (&error_callback, 0);
-    // Texture texture("assets/3dmodels/CubeTexture2.jpg");
+    glDebugMessageControl (GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0,
+                           nullptr, GL_TRUE);
+    Texture texture ("assets/3dmodels/CubeTexture2.jpg");
 
-    Shader shader((const char *[3]){VERTEX_SHADERS_LOCALPATH,FRAGMENT_SHADERS_LOCALPATH,GEOMETRY_SHADERS_LOCALPATH});
-
+    Shader shader ((const char *[3]){ VERTEX_SHADERS_LOCALPATH,
+                                      FRAGMENT_SHADERS_LOCALPATH,
+                                      GEOMETRY_SHADERS_LOCALPATH });
 
     unsigned int shaderProgram = glCreateProgram ();
-    shader.attach(shaderProgram);
+    shader.attach (shaderProgram);
 
     // const GLchar *feedbackVaryings[] = { "outValue" };
     // glTransformFeedbackVaryings (shaderProgram, 1, feedbackVaryings,
-                                //  GL_INTERLEAVED_ATTRIBS);
+    //                              GL_INTERLEAVED_ATTRIBS);
 
     glLinkProgram (shaderProgram);
     // shader.~Shader();
     glUseProgram (shaderProgram);
 
- 
-
     // note that we're translating the scene in the reverse direction of where
     // we want to move
-    proj = glm::perspective (glm::radians (45.0f), (float)SCR_X / (float)SCR_Y,
-                             0.1f, 100.0f);
-    view = glm::mat4 (1);
-    view = glm::translate (view, glm::vec3 (0.0f, 0.0f, -5.0f));
+    projMatrix = glm::perspective (glm::radians (45.0f),
+                                   (float)SCR_X / (float)SCR_Y, 0.1f, 100.0f);
+    viewMatrix = glm::mat4 (1);
+    modelMatrix = glm::mat4 (1);
+    viewMatrix = glm::translate (viewMatrix, glm::vec3 (0.0f, 0.0f, -5.0f));
 
-    unsigned int VBO, VAO, EBO, TBO, Query, texSSBO,texIndexSSBO;
+    unsigned int VBO, VAO, EBO, TBO, Query, texSSBO, texIndexSSBO;
     glGenVertexArrays (1, &VAO);
     glGenBuffers (1, &VBO);
     glGenBuffers (1, &EBO);
     glGenQueries (1, &Query);
+    glGenBuffers (1, &texSSBO);
+    glGenBuffers (1, &texIndexSSBO);
 
     glBindVertexArray (VAO);
 
-    // glGenBuffers (1, &texSSBO);
-    // glBindBuffer (GL_SHADER_STORAGE_BUFFER, texSSBO);
-    // glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (data), data​,
-    //               GL_DYNAMIC_READ);
-    //     glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 3, texSSBO);
-    // glBindBuffer (GL_SHADER_STORAGE_BUFFER, 0); // unbind
-    
-    // glGenBuffers (1, &texIndexSSBO);
-    // glBindBuffer (GL_SHADER_STORAGE_BUFFER, texIndexSSBO);
-    // glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (data), data​,
-    //               GL_DYNAMIC_READ);
-    // glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 4, texSSBO);
-    // glBindBuffer (GL_SHADER_STORAGE_BUFFER, 0); // unbind
-
-    // glGenBuffers (1, &TBO);
-    // glBindBuffer (GL_ARRAY_BUFFER, TBO);
-    // glBufferData (GL_ARRAY_BUFFER, sizeof (float) * indexCount * 4, nullptr,
-    //               GL_STATIC_READ);
-
     glBindBuffer (GL_ARRAY_BUFFER, VBO);
-    glBufferData (GL_ARRAY_BUFFER, vertexSize, vertices, GL_DYNAMIC_DRAW);
+    glBufferData (GL_ARRAY_BUFFER, sizeof (float) * verticesCount, vertices,
+                  GL_DYNAMIC_DRAW);
     glEnableVertexAttribArray (0);
     glVertexAttribPointer (0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof (float),
                            (void *)0); // set vec4 position
 
     glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData (GL_ELEMENT_ARRAY_BUFFER, sizeof (float) * indexCount,
-                  indices, GL_STATIC_DRAW);
+    glBufferData (GL_ELEMENT_ARRAY_BUFFER, sizeof (unsigned int) * verticesIndexCount,
+                  verticesIndex, GL_STATIC_DRAW);
+
+    glBindBuffer (GL_SHADER_STORAGE_BUFFER, texSSBO);
+    glBufferData (GL_SHADER_STORAGE_BUFFER,
+                  sizeof (float) * textureVerticesCount, textureVertices,
+                  GL_DYNAMIC_DRAW);
+    glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 2, texSSBO);
+    glBindBuffer (GL_SHADER_STORAGE_BUFFER, 0); // unbind
+
+    glBindBuffer (GL_SHADER_STORAGE_BUFFER, texIndexSSBO);
+    glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (unsigned int) * textureIndexCount,
+                  textureIndex, GL_DYNAMIC_DRAW);
+    glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 3, texIndexSSBO);
+    glBindBuffer (GL_SHADER_STORAGE_BUFFER, 0); // unbind
+
+    // glGenBuffers (1, &TBO);
+    // glBindBuffer (GL_ARRAY_BUFFER, TBO);
+    // glBufferData (GL_ARRAY_BUFFER, sizeof (float) * indexCount * 4 /3 ,
+    // nullptr,
+    //               GL_STATIC_READ);
 
     glBindBuffer (GL_ARRAY_BUFFER, 0);
     glBindVertexArray (0);
     glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, 0);
     glUniformMatrix4fv (glGetUniformLocation (shaderProgram, "projection"), 1,
-                        GL_FALSE, glm::value_ptr (proj));
-    // texture.Bind(0);
+                        GL_FALSE, glm::value_ptr (projMatrix));
+    texture.Bind (0);
 
-    // glUniform1i (glGetUniformLocation (shaderProgram, "Texture"), 0);
+    glUniform1i (glGetUniformLocation (shaderProgram, "Texture"), 0);
 
     // glClipControl(GL_LOWER_LEFT,GL_ZERO_TO_ONE);
     while (!glfwWindowShouldClose (window))
         {
-    glUseProgram (shaderProgram);
-glUniformMatrix4fv (glGetUniformLocation (shaderProgram, "view"),
-                                1, GL_FALSE, glm::value_ptr (view));
+            glUseProgram (shaderProgram);
+            glUniformMatrix4fv (glGetUniformLocation (shaderProgram, "view"),
+                                1, GL_FALSE, glm::value_ptr (viewMatrix));
+            glUniformMatrix4fv (glGetUniformLocation (shaderProgram, "model"),
+                                1, GL_FALSE, glm::value_ptr (modelMatrix));
 
             // glBindBufferBase (GL_TRANSFORM_FEEDBACK_BUFFER, 0, TBO);
 
             // Used to update the vbo but without change the n of Vertex
             glBindBuffer (GL_ARRAY_BUFFER, VBO);
-            glBufferSubData (GL_ARRAY_BUFFER, 0, vertexSize, vertices);
+            glBufferSubData (GL_ARRAY_BUFFER, 0,
+                             sizeof (float) * verticesCount, vertices);
 
             glClearColor (0.07f, 0.13f, 0.17f, 1.0f);
             glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-            // glUseProgram (shaderProgram);
             glBindVertexArray (VAO);
 
             // glBeginQuery (GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN, Query);
             // glBeginTransformFeedback (GL_TRIANGLES);
-            glDrawElements (GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, 0);
+            glDrawElements (GL_TRIANGLES, verticesIndexCount, GL_UNSIGNED_INT,
+                            0);
 
             // glEndTransformFeedback ();
             // glEndQuery (GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN);
@@ -183,13 +187,13 @@ glUniformMatrix4fv (glGetUniformLocation (shaderProgram, "view"),
             // GLuint primitives;
             // glGetQueryObjectuiv (Query, GL_QUERY_RESULT, &primitives);
 
-            // GLfloat feedback[4 * indexCount];
+            // GLfloat feedback[4 * indexCount/3];
             // glGetBufferSubData (GL_TRANSFORM_FEEDBACK_BUFFER, 0,
             //                     sizeof (feedback), feedback);
 
             // printf ("%u primitives written!\n\n", primitives);
 
-            // for (int i = 0; i < indexCount; i++)
+            // for (int i = 0; i < indexCount/3; i++)
             //     {
             //         printf ("{%f , %f , %f , %f}\n", feedback[4 * i],
             //                 feedback[4 * i + 1], feedback[4 * i + 2],
@@ -199,7 +203,7 @@ glUniformMatrix4fv (glGetUniformLocation (shaderProgram, "view"),
             glfwSwapBuffers (window);
             glfwPollEvents ();
             processInput (window);
-            
+
             // sleep (1);
         }
     glDeleteQueries (1, &Query);
@@ -235,23 +239,43 @@ processInput (GLFWwindow *window)
     if (glfwGetKey (window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose (window, true);
     // glm::vec4 offset (0);
+    if (glfwGetKey (window, GLFW_KEY_UP) == GLFW_PRESS)
+        {
+            modelMatrix = glm::rotate (modelMatrix, glm::radians (-2.0f),
+                                       glm::vec3 (1, 0, 0));
+        }
+    if (glfwGetKey (window, GLFW_KEY_DOWN) == GLFW_PRESS)
+        {
+            modelMatrix = glm::rotate (modelMatrix, glm::radians (2.0f),
+                                       glm::vec3 (1, 0, 0));
+        }
+    if (glfwGetKey (window, GLFW_KEY_RIGHT) == GLFW_PRESS)
+        {
+            modelMatrix = glm::rotate (modelMatrix, glm::radians (2.0f),
+                                       glm::vec3 (0, 1, 0));
+        }
+    if (glfwGetKey (window, GLFW_KEY_LEFT) == GLFW_PRESS)
+        {
+            modelMatrix = glm::rotate (modelMatrix, glm::radians (-2.0f),
+                                       glm::vec3 (0, 1, 0));
+        }
     if (glfwGetKey (window, GLFW_KEY_W) == GLFW_PRESS)
         {
-            view[3][2] += .2;
+            viewMatrix[3][2] += .2;
         }
     if (glfwGetKey (window, GLFW_KEY_S) == GLFW_PRESS)
         {
-            view[3][2] -= .2;
+            viewMatrix[3][2] -= .2;
         }
     if (glfwGetKey (window, GLFW_KEY_D) == GLFW_PRESS)
         {
-            view[3][0] += .2;
+            viewMatrix[3][0] += .2;
         }
     if (glfwGetKey (window, GLFW_KEY_A) == GLFW_PRESS)
         {
-            view[3][0] -= .2;
+            viewMatrix[3][0] -= .2;
         }
-    // view[4] += offset;
+    // viewMatrix[4] += offset;
 }
 
 void

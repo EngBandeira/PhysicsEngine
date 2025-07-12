@@ -1,6 +1,7 @@
 
 #version 460 core 
 layout (location = 0) in vec4 position;
+layout (location = 1) in vec2 txPosition;
 // layout (location = 0) out vec3 outColor;
 // layout(std430, binding = 3) buffer tex{
 //    vec2 texCoord[];
@@ -9,16 +10,17 @@ layout (location = 0) in vec4 position;
 //    int texIndex[];
 // };
 // out vec3 vColor;
-// out vec2 v_texCoord;
 
 // uniform int caseta;
 uniform mat4 projection;
 uniform mat4 view;
+uniform mat4 model;
+
 void main()
 {
    // m v p
    // gl_Position = projection *position;
-   gl_Position = (projection * view * position);
+   gl_Position = (projection * view * model* position);
    // gl_Position = projection * position;
    // outValue = vec4(gl_Position.xyz,gl_VertexID);
    // outValue = gl_Position;

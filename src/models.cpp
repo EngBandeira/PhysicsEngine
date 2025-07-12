@@ -31,7 +31,7 @@
 //         }
 // }
 // y =0.00535x+2.958
-model::model (const char *localPath)
+Model::Model (const char *localPath)
 {
     char buffer[512];
     unsigned int fileLenght, bufferLenght = 0;
@@ -97,16 +97,12 @@ model::model (const char *localPath)
                                                     c = file[i];
                                                     file[i] = 0;
                                                     value[j]
-                                                        = atoi (file + i0)-1;
+                                                        = atoi (file + i0) - 1;
                                                     file[i] = c;
                                                     i++;
                                                 }
-                                            printf (" %d/%d/%d ", value[0] + 1,
-                                                    value[1] + 1,
-                                                    value[2] + 1);
-
                                             // i++;
-                                           
+
                                             switch (index)
                                                 {
                                                 case 0:
@@ -120,12 +116,14 @@ model::model (const char *localPath)
                                                     prev[2] = value[2];
                                                     break;
                                                 default:
+                                                
                                                     vertexIndex.push_back (
-                                                        Index( (unsigned int[3]){
+                                                        Index ((
+                                                            unsigned int[3]){
                                                             first[0], prev[0],
                                                             value[0] }));
                                                     textureVertexIndex
-                                                        .push_back (Index((
+                                                        .push_back (Index ((
                                                             unsigned int[3]){
                                                             first[1], prev[1],
                                                             value[1] }));
@@ -134,14 +132,14 @@ model::model (const char *localPath)
                                                     prev[2] = value[2];
                                                     break;
                                                 }
-                                                 if (c == '\n')
+                                            if (c == '\n')
                                                 {
                                                     i--;
                                                     break;
                                                 }
                                             index++;
                                         }
-                                    printf ("\n");
+                                        printf("\n");
                                 }
                         }
                     else if (file[i] == 'v' && file[i + 1] == 't'
@@ -178,7 +176,49 @@ model::model (const char *localPath)
         }
     free (file);
 }
-model::~model ()
+Model::~Model () {}
+float *
+Model::exportVertices (unsigned int *count)
 {
+    float *vert = (float *)malloc (3 * sizeof (float) * vertex.size ());
+    for (int i = 0; i < vertex.size (); i++)
+        {
+            vert[3 * i] = vertex[i][0];
+            vert[3 * i + 1] = vertex[i][1];
+            vert[3 * i + 2] = vertex[i][2];
+        }
+    *count = 3 * vertex.size ();
+    return vert;
+}
 
+float *
+Model::exportTexture (unsigned int *count)
+{
+    float *tex = (float *)malloc (2 * sizeof (float) * texture.size ());
+    for (int i = 0; i < texture.size (); i++)
+        {
+            tex[2 * i] = texture[i][0];
+            tex[2 * i + 1] = texture[i][1];
+        }
+    *count = 2 * texture.size ();
+    return tex;
+}
+unsigned int *
+Model::exportVerticesIndex (unsigned int *count)
+{
+    *count = vertexIndex.size ()*3;
+    return (unsigned int *)vertexIndex.data ();
+}
+unsigned int *
+Model::exportTextureIndex (unsigned int *count)
+{
+    *count = textureVertexIndex.size ()*4;
+    unsigned int *rt = (unsigned int *)malloc(sizeof(unsigned int) * *count);
+    for(int i = 0; i < textureVertexIndex.size(); i++){
+        rt[4*i] = textureVertexIndex.data()[i].v[0];
+        rt[4*i+1] = textureVertexIndex.data()[i].v[1];
+        rt[4*i+2] = textureVertexIndex.data()[i].v[2];
+        rt[4*i+3] = 0;
+    }
+    return rt;
 }

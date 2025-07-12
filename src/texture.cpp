@@ -12,7 +12,7 @@ Texture::Texture(const char *path): localBuffer(nullptr), localPath(path), width
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
   glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA8,width,height,
-  0,GL_RGBA,GL_UNSIGNED_INT, localBuffer);
+  0,GL_RGBA,GL_UNSIGNED_BYTE, localBuffer);
 
   glBindTexture(GL_TEXTURE_2D,0);
 
