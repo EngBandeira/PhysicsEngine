@@ -5,6 +5,9 @@
 #include <iostream>
 #include <stdio.h>
 
+#include "imgui/imgui.h"
+#include "imgui/imgui_impl_glfw.h"
+#include "imgui/imgui_impl_opengl3.h"
 #include "models.hpp"
 #include "shader.hpp"
 #include "stb_image/stb_image.h"
@@ -20,7 +23,8 @@
 
 // 4.6 (Core Profile) Mesa 25.1.3-arch1.3
 void framebuffer_size_callback (GLFWwindow *window, int width, int height);
-void processInput (GLFWwindow *window);
+void processInput (GLFWwindow *window, int key, int scancode, int action,
+                   int mods);
 void error_callback (GLenum source, GLenum type, unsigned int id,
                      GLenum severity, GLsizei length, const GLchar *message,
                      const void *userParam);
@@ -47,27 +51,26 @@ main ()
     unsigned int *verticesIndex
         = cube.exportVerticesIndex (&verticesIndexCount);
     unsigned int *textureIndex = cube.exportTextureIndex (&textureIndexCount);
-    for(int i = 0;i <textureIndexCount/4  ;i++){
-        printf("%d %d %d %d\n",textureIndex[3*i],textureIndex[3*i+1],textureIndex[3*i+2],textureIndex[3*i+3]);
-    }
     glfwInit ();
     glfwWindowHint (GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint (GLFW_CONTEXT_VERSION_MINOR, 4);
     glfwWindowHint (GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
-    GLFWwindow *window
+    GLFWwindow *bigWindow
         = glfwCreateWindow (SCR_X, SCR_Y, "PhysicsEngine", NULL, NULL);
-    if (window == NULL)
+           
+    if (bigWindow == NULL)
         {
             sendError ("failed to crate a Glfw Window");
             glfwTerminate ();
             return -1;
         }
-    glfwMakeContextCurrent (window);
+    glfwMakeContextCurrent (bigWindow);
+    glfwSwapInterval (1);
     glfwSetFramebufferSizeCallback (
-        window, [] (GLFWwindow *window, int width, int height) {
+        bigWindow, [] (GLFWwindow *window, int width, int height) {
             glViewport (0, 0, width, height);
         });
+
 
     if (!gladLoadGLLoader ((GLADloadproc)glfwGetProcAddress))
         {
@@ -77,9 +80,35 @@ main ()
     glEnable (GL_DEPTH_TEST);
     glEnable (GL_DEBUG_OUTPUT);
     glEnable (GL_DEBUG_OUTPUT_SYNCHRONOUS);
+    glEnable (GL_BLEND);
+    glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glDebugMessageCallback (&error_callback, 0);
     glDebugMessageControl (GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0,
                            nullptr, GL_TRUE);
+
+    IMGUI_CHECKVERSION ();
+    ImGui::CreateContext ();
+    ImGuiIO &io = ImGui::GetIO ();
+    (void)io;
+    io.ConfigFlags
+        |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
+    io.ConfigFlags
+        |= ImGuiConfigFlags_NavEnableGamepad; // Enable Gamepad Controls
+
+    // Setup Dear ImGui style
+    ImGui::StyleColorsDark ();
+    // ImGui::StyleColorsLight();
+
+    // Setup scaling
+    ImGuiStyle &style = ImGui::GetStyle ();
+    // style.ScaleAllSizes(main_scale);        // Bake a fixed style scale.
+    // (until we have a solution for dynamic style scaling, changing this
+    // requires resetting Style + calling this again) style.FontScaleDpi =
+    // main_scale;        // Set i
+    ImGui_ImplGlfw_InitForOpenGL (bigWindow, true);
+    // ImGui_ImplOpenGL3_Inst("#version 460 core");
+    ImGui_ImplOpenGL3_Init ("#version 460");
+
     Texture texture ("assets/3dmodels/CubeTexture2.jpg");
 
     Shader shader ((const char *[3]){ VERTEX_SHADERS_LOCALPATH,
@@ -123,8 +152,9 @@ main ()
                            (void *)0); // set vec4 position
 
     glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData (GL_ELEMENT_ARRAY_BUFFER, sizeof (unsigned int) * verticesIndexCount,
-                  verticesIndex, GL_STATIC_DRAW);
+    glBufferData (GL_ELEMENT_ARRAY_BUFFER,
+                  sizeof (unsigned int) * verticesIndexCount, verticesIndex,
+                  GL_STATIC_DRAW);
 
     glBindBuffer (GL_SHADER_STORAGE_BUFFER, texSSBO);
     glBufferData (GL_SHADER_STORAGE_BUFFER,
@@ -134,8 +164,9 @@ main ()
     glBindBuffer (GL_SHADER_STORAGE_BUFFER, 0); // unbind
 
     glBindBuffer (GL_SHADER_STORAGE_BUFFER, texIndexSSBO);
-    glBufferData (GL_SHADER_STORAGE_BUFFER, sizeof (unsigned int) * textureIndexCount,
-                  textureIndex, GL_DYNAMIC_DRAW);
+    glBufferData (GL_SHADER_STORAGE_BUFFER,
+                  sizeof (unsigned int) * textureIndexCount, textureIndex,
+                  GL_DYNAMIC_DRAW);
     glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 3, texIndexSSBO);
     glBindBuffer (GL_SHADER_STORAGE_BUFFER, 0); // unbind
 
@@ -153,10 +184,15 @@ main ()
     texture.Bind (0);
 
     glUniform1i (glGetUniformLocation (shaderProgram, "Texture"), 0);
-
-    // glClipControl(GL_LOWER_LEFT,GL_ZERO_TO_ONE);
-    while (!glfwWindowShouldClose (window))
+    glfwSetKeyCallback (bigWindow, processInput);
+    while (!glfwWindowShouldClose (bigWindow) )
         {
+            ImGui_ImplGlfw_NewFrame ();
+            ImGui_ImplOpenGL3_NewFrame ();
+            ImGui::NewFrame ();
+            bool a = 1;
+            ImGui::ShowDemoWindow (&a);
+
             glUseProgram (shaderProgram);
             glUniformMatrix4fv (glGetUniformLocation (shaderProgram, "view"),
                                 1, GL_FALSE, glm::value_ptr (viewMatrix));
@@ -174,10 +210,18 @@ main ()
             glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             glBindVertexArray (VAO);
 
-            // glBeginQuery (GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN, Query);
+            ImGui::Render ();
+        glDrawElements (GL_TRIANGLES, verticesIndexCount,
+            GL_UNSIGNED_INT, 0);
+            ImGui_ImplOpenGL3_RenderDrawData (ImGui::GetDrawData ());
+            // glBeginQuery
+            // (GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN,
+            // Query);
             // glBeginTransformFeedback (GL_TRIANGLES);
-            glDrawElements (GL_TRIANGLES, verticesIndexCount, GL_UNSIGNED_INT,
-                            0);
+
+
+
+    
 
             // glEndTransformFeedback ();
             // glEndQuery (GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN);
@@ -200,18 +244,22 @@ main ()
             //                 feedback[4 * i + 3]);
             //     }
 
-            glfwSwapBuffers (window);
-            glfwPollEvents ();
-            processInput (window);
-
+            glfwSwapBuffers (bigWindow);
+            glfwPollEvents();
             // sleep (1);
         }
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+
     glDeleteQueries (1, &Query);
     glDeleteVertexArrays (1, &VAO);
     glDeleteBuffers (1, &VBO);
     glDeleteBuffers (1, &EBO);
+    glDeleteBuffers(1,&texSSBO);
+    glDeleteBuffers(1,&texIndexSSBO);
     glDeleteProgram (shaderProgram);
-    glfwDestroyWindow (window);
+    glfwDestroyWindow (bigWindow);
     glfwTerminate ();
     return 0;
 }
@@ -234,47 +282,52 @@ error_callback (GLenum source, GLenum type, unsigned int id, GLenum severity,
 //     a[0][2] , a[1][2] , a[2][2], a[3][2]
 //     a[0][3] , a[1][3] , a[2][3], a[3][3]
 void
-processInput (GLFWwindow *window)
+processInput (GLFWwindow *window, int key, int scancode, int action, int mods)
+
 {
-    if (glfwGetKey (window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-        glfwSetWindowShouldClose (window, true);
-    // glm::vec4 offset (0);
-    if (glfwGetKey (window, GLFW_KEY_UP) == GLFW_PRESS)
+    ImGui_ImplGlfw_KeyCallback (window, key, scancode, action, mods);
+    if (action == GLFW_PRESS)
         {
-            modelMatrix = glm::rotate (modelMatrix, glm::radians (-2.0f),
+            switch (key)
+                {
+                case GLFW_KEY_ESCAPE:
+                    glfwSetWindowShouldClose (window, true);
+                    break;
+                case GLFW_KEY_UP:
+                    modelMatrix
+                        = glm::rotate (modelMatrix, glm::radians (-10.0f),
                                        glm::vec3 (1, 0, 0));
-        }
-    if (glfwGetKey (window, GLFW_KEY_DOWN) == GLFW_PRESS)
-        {
-            modelMatrix = glm::rotate (modelMatrix, glm::radians (2.0f),
-                                       glm::vec3 (1, 0, 0));
-        }
-    if (glfwGetKey (window, GLFW_KEY_RIGHT) == GLFW_PRESS)
-        {
-            modelMatrix = glm::rotate (modelMatrix, glm::radians (2.0f),
+                    break;
+                case GLFW_KEY_DOWN:
+                    modelMatrix = glm::rotate (
+                        modelMatrix, glm::radians (2.0f), glm::vec3 (1, 0, 0));
+                    break;
+                case GLFW_KEY_RIGHT:
+                    modelMatrix = glm::rotate (
+                        modelMatrix, glm::radians (2.0f), glm::vec3 (0, 1, 0));
+                    break;
+                case GLFW_KEY_LEFT:
+                    modelMatrix
+                        = glm::rotate (modelMatrix, glm::radians (-10.0f),
                                        glm::vec3 (0, 1, 0));
+                    break;
+                case GLFW_KEY_W:
+                    viewMatrix[3][2] += .2;
+                    break;
+                case GLFW_KEY_S:
+                    viewMatrix[3][2] -= .2;
+                    break;
+                case GLFW_KEY_D:
+                    viewMatrix[3][0] += .2;
+                    break;
+                case GLFW_KEY_A:
+                    viewMatrix[3][0] -= .2;
+                    break;
+                default:
+                    break;
+                }
         }
-    if (glfwGetKey (window, GLFW_KEY_LEFT) == GLFW_PRESS)
-        {
-            modelMatrix = glm::rotate (modelMatrix, glm::radians (-2.0f),
-                                       glm::vec3 (0, 1, 0));
-        }
-    if (glfwGetKey (window, GLFW_KEY_W) == GLFW_PRESS)
-        {
-            viewMatrix[3][2] += .2;
-        }
-    if (glfwGetKey (window, GLFW_KEY_S) == GLFW_PRESS)
-        {
-            viewMatrix[3][2] -= .2;
-        }
-    if (glfwGetKey (window, GLFW_KEY_D) == GLFW_PRESS)
-        {
-            viewMatrix[3][0] += .2;
-        }
-    if (glfwGetKey (window, GLFW_KEY_A) == GLFW_PRESS)
-        {
-            viewMatrix[3][0] -= .2;
-        }
+
     // viewMatrix[4] += offset;
 }
 
