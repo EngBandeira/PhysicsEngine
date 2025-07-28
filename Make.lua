@@ -8,7 +8,7 @@ do
   formatedLibs = formatedLibs .. " -l".. lib
 end
 local outFiles = ""
-local rn = "g++ -Wall -I" .. includePath .. " -I" ..vendorPath .. " -g -ggdb " .. formatedLibs .." "
+local rn = "g++ -Wall -fsanitize=address -I" .. includePath .. " -I" ..vendorPath .. " -g -ggdb " .. formatedLibs .." "
 for _,command in ipairs(commands) do
   local handle = io.popen(command)
   if not handle then
@@ -21,9 +21,13 @@ for _,command in ipairs(commands) do
     local out = "build/"..p..'.o'
     outFiles = outFiles.. out .. " "
     local k =os.execute( rn .. file  .." -c -o".. out)
-   file = handle:read()
+    if k == nil then
+      print("\27[31m" .. "        Cannot Compile          " .. "\27[0m".."\n\n\n")
+      os.exit(1, true)
+      end
+      file = handle:read()
 
-  end
+      end
   handle:close()
 end
 os.execute(rn .. outFiles .. " -o build/final")
