@@ -1,42 +1,65 @@
-#include "models.hpp"
+#include "model.hpp"
 #include <stdio.h>
 #include <string.h>
 
 #define BUFFER_LENGHT 64
 #define KEYWORDS_LENGTH 8
 
-// #define LARGE_CONSTANT 100000
-
-// const char *keywords[KEYWORDS_LENGTH]
-//     = { "v", "vn", "vt", "f", "o", "s", "mtllib", "usemtl" };
-// unsigned int keywordsID[KEYWORDS_LENGTH];
-
-// unsigned int
-// getId (const char *str)
-// {
-//     unsigned int rt = 0;
-//     for (__uint8_t x = 0; x < strlen (str); x++)
-//         {
-//             rt += ((int)str[x]);
-//         }
-//     rt += (LARGE_CONSTANT * strlen (str));
-//     return rt;
-// }
-// void
-// getKeywordsId ()
-// {
-//     for (__uint8_t i = 0; i < KEYWORDS_LENGTH; i++)
-//         {
-//             keywordsID[i] = getId (keywords[i]);
-//         }
-// }
-// y =0.00535x+2.958
-Model::Model (const char *localPath)
+float *
+exportVertices (unsigned int *count, std::vector<vec3> vertex)
 {
-    char buffer[512];
+    float *vert = (float *)malloc (3 * sizeof (float) * vertex.size ());
+    for (int i = 0; i < vertex.size (); i++)
+        {
+            vert[3 * i] = vertex[i][0];
+            vert[3 * i + 1] = vertex[i][1];
+            vert[3 * i + 2] = vertex[i][2];
+        }
+    *count = 3 * vertex.size ();
+    return vert;
+}
+
+float *
+exportTexture (unsigned int *count, std::vector<vec2> texture)
+{
+    float *tex = (float *)malloc (2 * sizeof (float) * texture.size ());
+    for (int i = 0; i < texture.size (); i++)
+        {
+            tex[2 * i] = texture[i][0];
+            tex[2 * i + 1] = texture[i][1];
+        }
+    *count = 2 * texture.size ();
+    return tex;
+}
+unsigned int *
+exportVerticesIndex (unsigned int *count, std::vector<Index> vertexIndex)
+{
+    *count = vertexIndex.size () * 3;
+    return (unsigned int *)vertexIndex.data ();
+}
+unsigned int *
+exportTextureIndex (unsigned int *count, std::vector<Index> textureVertexIndex)
+{
+    *count = textureVertexIndex.size () * 4;
+    unsigned int *rt = (unsigned int *)malloc (sizeof (unsigned int) * *count);
+    for (int i = 0; i < textureVertexIndex.size (); i++)
+        {
+            rt[4 * i] = textureVertexIndex.data ()[i].v[0];
+            rt[4 * i + 1] = textureVertexIndex.data ()[i].v[1];
+            rt[4 * i + 2] = textureVertexIndex.data ()[i].v[2];
+            rt[4 * i + 3] = 0;
+        }
+    return rt;
+}
+
+Mesh::Mesh (const char *localPath)
+{
+    std::vector<vec3> vertex;
+    std::vector<vec2> texture;
+    std::vector<Index> vertexIndex, textureVertexIndex;
     unsigned int fileLenght, bufferLenght = 0;
     char *file = readFile (localPath, &fileLenght);
-    for (int i = 0; i < fileLenght; i++)
+    for (unsigned int i = 0; i < fileLenght; i++)
         {
             if (file[i] == '#')
                 {
@@ -116,7 +139,7 @@ Model::Model (const char *localPath)
                                                     prev[2] = value[2];
                                                     break;
                                                 default:
-                                                
+
                                                     vertexIndex.push_back (
                                                         Index ((
                                                             unsigned int[3]){
@@ -139,7 +162,7 @@ Model::Model (const char *localPath)
                                                 }
                                             index++;
                                         }
-                                        printf("\n");
+                                    printf ("\n");
                                 }
                         }
                     else if (file[i] == 'v' && file[i + 1] == 't'
@@ -174,51 +197,19 @@ Model::Model (const char *localPath)
                         continue;
                 }
         }
+
+    
+    vertices = exportVertices (&verticesCount,vertex);
+    textureVertices = exportTexture (&textureVerticesCount,texture);
+    verticesIndex
+        = exportVerticesIndex (&verticesIndexCount,vertexIndex);
+    textureIndex = exportTextureIndex (&textureIndexCount,textureVertexIndex);
+
     free (file);
 }
-Model::~Model () {}
-float *
-Model::exportVertices (unsigned int *count)
-{
-    float *vert = (float *)malloc (3 * sizeof (float) * vertex.size ());
-    for (int i = 0; i < vertex.size (); i++)
-        {
-            vert[3 * i] = vertex[i][0];
-            vert[3 * i + 1] = vertex[i][1];
-            vert[3 * i + 2] = vertex[i][2];
-        }
-    *count = 3 * vertex.size ();
-    return vert;
-}
-
-float *
-Model::exportTexture (unsigned int *count)
-{
-    float *tex = (float *)malloc (2 * sizeof (float) * texture.size ());
-    for (int i = 0; i < texture.size (); i++)
-        {
-            tex[2 * i] = texture[i][0];
-            tex[2 * i + 1] = texture[i][1];
-        }
-    *count = 2 * texture.size ();
-    return tex;
-}
-unsigned int *
-Model::exportVerticesIndex (unsigned int *count)
-{
-    *count = vertexIndex.size ()*3;
-    return (unsigned int *)vertexIndex.data ();
-}
-unsigned int *
-Model::exportTextureIndex (unsigned int *count)
-{
-    *count = textureVertexIndex.size ()*4;
-    unsigned int *rt = (unsigned int *)malloc(sizeof(unsigned int) * *count);
-    for(int i = 0; i < textureVertexIndex.size(); i++){
-        rt[4*i] = textureVertexIndex.data()[i].v[0];
-        rt[4*i+1] = textureVertexIndex.data()[i].v[1];
-        rt[4*i+2] = textureVertexIndex.data()[i].v[2];
-        rt[4*i+3] = 0;
-    }
-    return rt;
+Mesh::~Mesh () {
+    free(vertices);
+    free(textureVertices);
+    free(verticesIndex);
+    free(textureIndex);
 }

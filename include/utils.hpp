@@ -12,14 +12,14 @@ struct vec3{
 
   }
   vec3(){}
-  vec3(float arr[3]): x(arr[0]),y(arr[1]),z(arr[2]){}
-  vec3 operator +(vec3 other){
+  inline vec3(float arr[3]): x(arr[0]),y(arr[1]),z(arr[2]){}
+  inline vec3 operator +(vec3 other){
     return vec3(x+other.x, y + other.y, z + other.z);
   }
-   vec3 operator -(vec3 other){
+   inline vec3 operator -(vec3 other){
     return vec3(x-other.x, y - other.y, z - other.z);
   }
-  float& operator[](int i){
+  inline float& operator[](int i){
     if(i <3 && i >=0)
       return ((float*)this)[i];
     sendError("vec3[x>2]");
@@ -34,13 +34,13 @@ struct vec2{
   }
   vec2(){}
   vec2(float arr[2]): x(arr[0]),y(arr[1]){}
-  vec2 operator +(vec2 other){
+  inline vec2 operator +(vec2 other){
     return vec2(x+other.x, y + other.y);
   }
-   vec2 operator -(vec2 other){
+  inline vec2 operator -(vec2 other){
     return vec2(x-other.x, y - other.y);
   }
-  float& operator[](int i){
+  inline float& operator[](int i){
     if(i <2 && i >=0)
       return ((float*)this)[i];
     sendError("vec2[x>1]");

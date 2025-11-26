@@ -8,7 +8,7 @@ readFile (const char *localPath, unsigned int *fileLenght)
     char *buffer;
     if (file == NULL)
         {
-            char message[1000];
+            char message[100];
             sprintf (message, "cannot open file %s", localPath);
             sendError (message);
             exit (1);

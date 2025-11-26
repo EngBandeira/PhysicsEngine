@@ -1,21 +1,28 @@
 #define STB_IMAGE_IMPLEMENTATION
-#include "glad/glad.h"
-#include <GLFW/glfw3.h>
 #include <bits/stdc++.h>
 #include <iostream>
 #include <stdio.h>
 
-#include "imgui/imgui.h"
-#include "imgui/imgui_impl_glfw.h"
-#include "imgui/imgui_impl_opengl3.h"
-#include "models.hpp"
-#include "shader.hpp"
-#include "stb_image/stb_image.h"
-#include "texture.hpp"
-#include "utils.hpp"
+#include "glad/glad.h"
+#include <GLFW/glfw3.h>
+
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+
+#include "imgui/imgui.h"
+#include "imgui/imgui_impl_glfw.h"
+#include "imgui/imgui_impl_opengl3.h"
+
+#include "stb_image/stb_image.h"
+
+#include "vertexArray.hpp"
+#include "model.hpp"
+#include "shader.hpp"
+#include "texture.hpp"
+#include "utils.hpp"
+
+
 // #define PI 3.14
 #define VERTEX_SHADERS_LOCALPATH "vShader.vert"
 #define FRAGMENT_SHADERS_LOCALPATH "fShader.frag"
@@ -41,16 +48,8 @@ glm::mat4 modelMatrix;
 int
 main ()
 {
-    Model cube ("assets/3dmodels/Cube.obj");
-
-    // per face we have the same number of index and tex ind
-    unsigned int verticesCount, textureVerticesCount, verticesIndexCount,
-        textureIndexCount;
-    vertices = cube.exportVertices (&verticesCount);
-    float *textureVertices = cube.exportTexture (&textureVerticesCount);
-    unsigned int *verticesIndex
-        = cube.exportVerticesIndex (&verticesIndexCount);
-    unsigned int *textureIndex = cube.exportTextureIndex (&textureIndexCount);
+    Mesh cube ("assets/3dmodels/Cube.obj");
+    
     glfwInit ();
     glfwWindowHint (GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint (GLFW_CONTEXT_VERSION_MINOR, 4);
@@ -134,18 +133,18 @@ main ()
     modelMatrix = glm::mat4 (1);
     viewMatrix = glm::translate (viewMatrix, glm::vec3 (0.0f, 0.0f, -5.0f));
 
-    unsigned int VBO, VAO, EBO, TBO, Query, texSSBO, texIndexSSBO;
-    glGenVertexArrays (1, &VAO);
-    glGenBuffers (1, &VBO);
+    VAO m_VAO = VAO();
+
+    unsigned int EBO, TBO, Query, texSSBO, texIndexSSBO;
     glGenBuffers (1, &EBO);
     glGenQueries (1, &Query);
     glGenBuffers (1, &texSSBO);
     glGenBuffers (1, &texIndexSSBO);
 
-    glBindVertexArray (VAO);
-
+    m_VAO.bind();
+    
     glBindBuffer (GL_ARRAY_BUFFER, VBO);
-    glBufferData (GL_ARRAY_BUFFER, sizeof (float) * verticesCount, vertices,
+    glBufferData (GL_ARRAY_BUFFER, sizeof (float) * cube.verticesCount, vertices,
                   GL_DYNAMIC_DRAW);
     glEnableVertexAttribArray (0);
     glVertexAttribPointer (0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof (float),
@@ -153,19 +152,19 @@ main ()
 
     glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, EBO);
     glBufferData (GL_ELEMENT_ARRAY_BUFFER,
-                  sizeof (unsigned int) * verticesIndexCount, verticesIndex,
+                  sizeof (unsigned int) * cube.verticesIndexCount, cube.verticesIndex,
                   GL_STATIC_DRAW);
 
     glBindBuffer (GL_SHADER_STORAGE_BUFFER, texSSBO);
     glBufferData (GL_SHADER_STORAGE_BUFFER,
-                  sizeof (float) * textureVerticesCount, textureVertices,
+                  sizeof (float) * cube.textureVerticesCount, cube.textureVertices,
                   GL_DYNAMIC_DRAW);
     glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 2, texSSBO);
     glBindBuffer (GL_SHADER_STORAGE_BUFFER, 0); // unbind
 
     glBindBuffer (GL_SHADER_STORAGE_BUFFER, texIndexSSBO);
     glBufferData (GL_SHADER_STORAGE_BUFFER,
-                  sizeof (unsigned int) * textureIndexCount, textureIndex,
+                  sizeof (unsigned int) * cube.textureIndexCount, cube.textureIndex,
                   GL_DYNAMIC_DRAW);
     glBindBufferBase (GL_SHADER_STORAGE_BUFFER, 3, texIndexSSBO);
     glBindBuffer (GL_SHADER_STORAGE_BUFFER, 0); // unbind
@@ -176,8 +175,9 @@ main ()
     // nullptr,
     //               GL_STATIC_READ);
 
+
     glBindBuffer (GL_ARRAY_BUFFER, 0);
-    glBindVertexArray (0);
+    m_VAO.unbind();
     glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, 0);
     glUniformMatrix4fv (glGetUniformLocation (shaderProgram, "projection"), 1,
                         GL_FALSE, glm::value_ptr (projMatrix));
@@ -204,14 +204,14 @@ main ()
             // Used to update the vbo but without change the n of Vertex
             glBindBuffer (GL_ARRAY_BUFFER, VBO);
             glBufferSubData (GL_ARRAY_BUFFER, 0,
-                             sizeof (float) * verticesCount, vertices);
+                             sizeof (float) * cube.verticesCount, vertices);
 
             glClearColor (0.07f, 0.13f, 0.17f, 1.0f);
             glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             glBindVertexArray (VAO);
 
             ImGui::Render ();
-        glDrawElements (GL_TRIANGLES, verticesIndexCount,
+        glDrawElements (GL_TRIANGLES, cube.verticesIndexCount,
             GL_UNSIGNED_INT, 0);
             ImGui_ImplOpenGL3_RenderDrawData (ImGui::GetDrawData ());
             // glBeginQuery

@@ -1,6 +1,5 @@
 #pragma once
 
-
 struct Shader{
   unsigned int Shaders[3];
   Shader ();
