@@ -4,43 +4,25 @@
 
 class VBO
 {
-  public:
-    unsigned int name = 0;
+      public:
+        unsigned int name = 0;
+        VBO ();
 };
 
 class VAO
 {
-    unsigned int name = 0;
-    unsigned short layoutIndex = 0;
-  public:
-    std::vector<VBO> vbos;
+      public:
+        unsigned int name = 0, bindedVBO;
+        unsigned short layoutIndex = 0;
 
-    void addLayout (unsigned short vboIndex, unsigned char componentsNumber);
-    inline void createVBO(){
-      VBO v;
-      // v.name = 
-      vbos.push_back(v);
-    }
-    inline void
-    unbindVBO ()
-    {
-        glBindBuffer (GL_ARRAY_BUFFER, 0);
-    }
-    inline void
-    bindVBO (unsigned short vboIndex)
-    {
-        glBindBuffer (GL_ARRAY_BUFFER, vbos[vboIndex].name);
-    }
+        std::vector<VBO> vbos;
 
-    inline void
-    bind ()
-    {
-        glBindVertexArray (name);
-    }
-    inline void
-    unbind ()
-    {
-        glBindVertexArray (0);
-    }
-    VAO () {}
+        void addLayout (unsigned short vboIndex,
+                        unsigned char componentsNumber);
+        void createVBO ();
+        void unbindVBO ();
+        void bindVBO (unsigned short vboIndex);
+        void bind ();
+        void unbind ();
+        VAO ();
 };

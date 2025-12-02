@@ -4,7 +4,7 @@ frag=$(glslang fShader.frag)
 geom=$(glslang gShader.geom)
 
 if [[ "$vert" = "" && "$frag" = ""  && "$geom" = ""  ]]; then
-  lua Make.lua && ./build/final
+  ./a.pl && ./build/final
 else 
   echo $vert
   echo $frag

@@ -1,5 +1,6 @@
 
 #version 460 core 
+#pragma debug(on)
 // layout (location = 0) in vec3 inColor;
 layout (location = 0) out vec4 fragColor;
 uniform sampler2D Texture;
