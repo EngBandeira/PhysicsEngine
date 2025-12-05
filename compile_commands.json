@@ -1,0 +1,104 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/g++",
+      "-Wall",
+      "-Iinclude",
+      "-Ivendor",
+      "-g",
+      "-ggdb",
+      "-c",
+      "-o",
+      "build/shader.o",
+      "src/shader.cpp"
+    ],
+    "directory": "/home/bandeira/Documents/GIT/PhysicsEngine",
+    "file": "/home/bandeira/Documents/GIT/PhysicsEngine/src/shader.cpp",
+    "output": "/home/bandeira/Documents/GIT/PhysicsEngine/build/shader.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/g++",
+      "-Wall",
+      "-Iinclude",
+      "-Ivendor",
+      "-g",
+      "-ggdb",
+      "-c",
+      "-o",
+      "build/texture.o",
+      "src/texture.cpp"
+    ],
+    "directory": "/home/bandeira/Documents/GIT/PhysicsEngine",
+    "file": "/home/bandeira/Documents/GIT/PhysicsEngine/src/texture.cpp",
+    "output": "/home/bandeira/Documents/GIT/PhysicsEngine/build/texture.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/g++",
+      "-Wall",
+      "-Iinclude",
+      "-Ivendor",
+      "-g",
+      "-ggdb",
+      "-c",
+      "-o",
+      "build/utils.o",
+      "src/utils.cpp"
+    ],
+    "directory": "/home/bandeira/Documents/GIT/PhysicsEngine",
+    "file": "/home/bandeira/Documents/GIT/PhysicsEngine/src/utils.cpp",
+    "output": "/home/bandeira/Documents/GIT/PhysicsEngine/build/utils.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/g++",
+      "-Wall",
+      "-Iinclude",
+      "-Ivendor",
+      "-g",
+      "-ggdb",
+      "-c",
+      "-o",
+      "build/model.o",
+      "src/model.cpp"
+    ],
+    "directory": "/home/bandeira/Documents/GIT/PhysicsEngine",
+    "file": "/home/bandeira/Documents/GIT/PhysicsEngine/src/model.cpp",
+    "output": "/home/bandeira/Documents/GIT/PhysicsEngine/build/model.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/g++",
+      "-Wall",
+      "-Iinclude",
+      "-Ivendor",
+      "-g",
+      "-ggdb",
+      "-c",
+      "-o",
+      "build/vertexArray.o",
+      "src/vertexArray.cpp"
+    ],
+    "directory": "/home/bandeira/Documents/GIT/PhysicsEngine",
+    "file": "/home/bandeira/Documents/GIT/PhysicsEngine/src/vertexArray.cpp",
+    "output": "/home/bandeira/Documents/GIT/PhysicsEngine/build/vertexArray.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/g++",
+      "-Wall",
+      "-Iinclude",
+      "-Ivendor",
+      "-g",
+      "-ggdb",
+      "-c",
+      "-o",
+      "build/main.o",
+      "src/main.cpp"
+    ],
+    "directory": "/home/bandeira/Documents/GIT/PhysicsEngine",
+    "file": "/home/bandeira/Documents/GIT/PhysicsEngine/src/main.cpp",
+    "output": "/home/bandeira/Documents/GIT/PhysicsEngine/build/main.o"
+  }
+]

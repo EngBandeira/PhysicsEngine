@@ -4,30 +4,21 @@
 
 #include "utils.hpp"
 
-struct Index
-{
-    unsigned int v[3];
-    inline Index (unsigned int v_[3])
-    {
-        v[0] = v_[0];
-        v[1] = v_[1];
-        v[2] = v_[2];
-    }
-};
-class Mesh
-{
-  public:
-    unsigned int verticesCount, textureVerticesCount, verticesIndexCount,
-        textureIndexCount, *verticesIndex, *textureIndex;
-    float *textureVertices, *vertices;
 
-    Mesh ();
-    Mesh (const char *localPath);
-    ~Mesh ();
+class Mesh {
+    public:
+    // Ponto[verticeCount/3] =
+    // {vertices[verticesCount],vertices[verticesCount+1],vertices[verticesCount+2]}
+    // Ponto[textureVerticesCount/2] =
+    // {textureVertices[textureVerticesCount],textureVertices[textureVerticesCount+1]}
+    unsigned int verticesCount, verticesIndexCount, textureVerticesCount,textureIndexCount;
+    float *vertices, *textureVertices;
+    unsigned int *verticesIndex, *textureIndex;
+    Mesh();
+    Mesh(const char *localPath);
+    ~Mesh();
 };
 
-class Model
-{
-    Mesh mesh;
-    
+class Model {
+  Mesh mesh;
 };

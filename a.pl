@@ -16,7 +16,7 @@ my $buildPath = "build";
 
 my @libs = ("GL","GLU","glfw");
 my $formatedLibs = "";
-foreach $lib (@libs) 
+foreach $lib (@libs)
 {
   $formatedLibs = $formatedLibs .  " -l" . $lib;
 }
