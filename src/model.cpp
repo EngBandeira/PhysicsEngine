@@ -5,39 +5,20 @@
 #define BUFFER_LENGHT 64
 #define KEYWORDS_LENGTH 8
 
-float *exportVertices(unsigned int *count, std::vector<vec3> vertex) {
-  float *vert = (float *)malloc(3 * sizeof(float) * vertex.size());
-  for (int i = 0; i < vertex.size(); i++) {
-    vert[3 * i] = vertex[i][0];
-    vert[3 * i + 1] = vertex[i][1];
-    vert[3 * i + 2] = vertex[i][2];
-  }
-  *count = 3 * vertex.size();
-  return vert;
-}
-
-float *exportTexture(unsigned int *count, std::vector<vec2> texture) {
-  float *tex = (float *)malloc(2 * sizeof(float) * texture.size());
-  for (int i = 0; i < texture.size(); i++) {
-    tex[2 * i] = texture[i][0];
-    tex[2 * i + 1] = texture[i][1];
-  }
-  *count = 2 * texture.size();
-  return tex;
-}
-unsigned int *exportvec(unsigned int *count,
-                                  std::vector<unsigned int> vec) {
+template <typename T>
+T *exportvec(unsigned int *count,
+                                  std::vector<T> vec) {
   *count = vec.size();
-  unsigned int *rt = (unsigned int *)malloc(sizeof(unsigned int) * *count);
-  memcpy(rt,vec.data(),sizeof(unsigned int) * *count);
+  T *rt = (T *)malloc(sizeof(T) * *count);
+  memcpy(rt,vec.data(),sizeof(T) * *count);
 
   return rt;
 }
 
 
 Mesh::Mesh(const char *localPath) {
-    std::vector<vec3> vertex;
-    std::vector<vec2> texture;
+    std::vector<float> vertex;
+    std::vector<float> texture;
     std::vector<unsigned int> vertexIndex, textureVertexIndex;
     unsigned int fileLenght, bufferLenght = 0;
     char *file = readFile(localPath, &fileLenght);
@@ -55,7 +36,6 @@ Mesh::Mesh(const char *localPath) {
             {
                 i += 2;
                 unsigned int j = i;
-                vec3 v;
                 for (int k = 0; k < 3; k++)
                 {
                     unsigned int b = i;
@@ -66,11 +46,10 @@ Mesh::Mesh(const char *localPath) {
                     }
                     char c = file[i];
                     file[i] = 0;
-                    v[k] = (float)atof(file + b);
+                    vertex.push_back((float)atof(file + b));
                     file[i] = c;
                     i++;
                 }
-                vertex.push_back(v);
                 i--;
             }
             else if (file[i] == 'f')
@@ -143,7 +122,6 @@ Mesh::Mesh(const char *localPath) {
         {
             i += 3;
             unsigned int j = i;
-            vec2 v;
             for (int k = 0; k < 2; k++)
             {
                 unsigned int b = i;
@@ -155,11 +133,10 @@ Mesh::Mesh(const char *localPath) {
                 }
                 char c = file[i];
                 file[i] = 0;
-                v[k] = (float)atof(file + b);
+                texture.push_back((float)atof(file + b));
                 file[i] = c;
                 i++;
             }
-            texture.push_back(v);
             i--;
         }
         } else if (file[i] == '\n')
@@ -169,10 +146,10 @@ Mesh::Mesh(const char *localPath) {
         }
     }
 
-    vertices = exportVertices(&verticesCount, vertex);
-    textureVertices = exportTexture(&textureVerticesCount, texture);
-    verticesIndex = exportvec(&verticesIndexCount, vertexIndex);
-    textureIndex = exportvec(&textureIndexCount, textureVertexIndex);
+    vertices = exportvec<float>(&verticesCount, vertex);
+    textureVertices = exportvec<float>(&textureVerticesCount, texture);
+    verticesIndex = exportvec<unsigned int>(&verticesIndexCount, vertexIndex);
+    textureIndex = exportvec<unsigned int>(&textureIndexCount, textureVertexIndex);
 
     free(file);
 }

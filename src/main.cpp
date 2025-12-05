@@ -183,8 +183,8 @@ int main() {
                      GL_FALSE, glm::value_ptr(projMatrix));
 
 
-  texture.Bind(0);
-  glUniform1i(glGetUniformLocation(shaderProgram, "Texture"), 0);
+  texture.Bind(1);
+  glUniform1i(glGetUniformLocation(shaderProgram, "Texture"), 1);
   glfwSetKeyCallback(bigWindow, processInput);
   texture.Unbind();
 
@@ -194,25 +194,15 @@ int main() {
   glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 
   //TEX1
-  unsigned int texture1;
-  glGenTextures(1, &texture1);
-  glBindTexture(GL_TEXTURE_2D, texture1);
+  unsigned int renderTex;
+  glGenTextures(1, &renderTex);
+  glBindTexture(GL_TEXTURE_2D, renderTex);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCR_X , SCR_Y , 0, GL_RGB,
                GL_UNSIGNED_BYTE, NULL);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                         texture1, 0);
-
-  //RBO
-  // unsigned int rbo;
-  // glGenRenderbuffers(1, &rbo);
-  // glBindRenderbuffer(GL_RENDERBUFFER, rbo);
-  // glRenderbufferStorage(GL_RENDERBUFFER, GL_RGB8, SCR_X ,
-  //                       SCR_Y );
-  // glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-  //                           GL_RENDERBUFFER, rbo);
-
+                         renderTex, 0);
   //Unbind
   glBindTexture(GL_TEXTURE_2D, 0);
   glBindRenderbuffer(GL_RENDERBUFFER, 0);
@@ -223,6 +213,7 @@ int main() {
       glClearColor(0.7f, 0.3f, 0.17f, 1.0f);
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
       glBindFramebuffer(GL_FRAMEBUFFER,fbo);
+
       glClearColor(0.07f, 0.13f, 0.27f, 1.0f);
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
       glBindFramebuffer(GL_FRAMEBUFFER,0);
@@ -238,15 +229,15 @@ int main() {
         ImGui::Begin("PintoGrande");
 
         ImGui::GetWindowDrawList()->AddImage(
-            (void *)texture1, ImGui::GetWindowPos(), ImGui::GetWindowSize()+ImGui::GetWindowPos(),
+            (void *)renderTex, ImGui::GetWindowPos(), ImGui::GetWindowSize()+ImGui::GetWindowPos(),
             ImVec2(0, 1), ImVec2(1, 0));
         // glDrawBuffer(GL_COLOR_ATTACHMENT0);
         glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-        glBindTexture(GL_TEXTURE_2D, texture1);
+        glBindTexture(GL_TEXTURE_2D, renderTex);
     	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB,  ImGui::GetWindowSize().x,  ImGui::GetWindowSize().y, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
     	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture1, 0);
+    	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, renderTex, 0);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         // glDrawBuffer(0);
 
@@ -257,6 +248,8 @@ int main() {
     }
 
     { // DRAW
+        texture.Bind(1);
+
       glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "view"), 1, GL_FALSE,
                       glm::value_ptr(viewMatrix));
       glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "model"), 1,
@@ -274,6 +267,8 @@ int main() {
       glDrawElements(GL_TRIANGLES, cube.verticesIndexCount, GL_UNSIGNED_INT, 0);
       // glBindRenderbuffer(GL_RENDERBUFFER, 0);
       glBindFramebuffer(GL_FRAMEBUFFER, 0);
+      texture.Unbind();
+
     }
 
     {//IMGUI_RENDER
@@ -344,16 +339,16 @@ void processInput(GLFWwindow *window, int key, int scancode, int action,
           glm::rotate(modelMatrix, glm::radians(-10.0f), glm::vec3(0, 1, 0));
       break;
     case GLFW_KEY_W:
-      viewMatrix[3][2] += .2;
-      break;
-    case GLFW_KEY_S:
       viewMatrix[3][2] -= .2;
       break;
+    case GLFW_KEY_S:
+      viewMatrix[3][2] += .2;
+      break;
     case GLFW_KEY_D:
-      viewMatrix[3][0] += .2;
+      viewMatrix[3][0] -= .2;
       break;
     case GLFW_KEY_A:
-      viewMatrix[3][0] -= .2;
+      viewMatrix[3][0] += .2;
       break;
     default:
       break;

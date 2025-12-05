@@ -3,7 +3,7 @@
 #pragma debug(on)
 // layout (location = 0) in vec3 inColor;
 layout(location = 0) out vec4 fragColor;
-uniform sampler2D Texture;
+uniform sampler2D Texture; //This is texture 38
 //  in vec3 vColor;
 in vec2 g_texCoord;
 in vec3 gColor;
@@ -17,7 +17,7 @@ void main()
     // fragColor = vec4(inColor,1);
     // fragColor = vec4(vColor,1);
     // fragColor = vec4(gColor,1);
-    fragColor = vec4(1.0, 0.0, 0.0, 1.0);
-    // fragColor = texture(Texture, g_texCoord);
+    // fragColor = vec4(1.0, 0.0, 0.0, 1.0);
+    fragColor = texture(Texture, g_texCoord);
     // fragColor = vec4(inColor,1);
 }
