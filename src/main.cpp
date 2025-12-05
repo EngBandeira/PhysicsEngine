@@ -203,6 +203,13 @@ int main() {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
                          renderTex, 0);
+
+  unsigned int rbo;
+
+  glGenRenderbuffers(1, &rbo);
+  glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, SCR_X, SCR_Y);
+  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
   //Unbind
   glBindTexture(GL_TEXTURE_2D, 0);
   glBindRenderbuffer(GL_RENDERBUFFER, 0);
@@ -231,14 +238,22 @@ int main() {
         ImGui::GetWindowDrawList()->AddImage(
             (void *)renderTex, ImGui::GetWindowPos(), ImGui::GetWindowSize()+ImGui::GetWindowPos(),
             ImVec2(0, 1), ImVec2(1, 0));
-        // glDrawBuffer(GL_COLOR_ATTACHMENT0);
-        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-        glBindTexture(GL_TEXTURE_2D, renderTex);
-    	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB,  ImGui::GetWindowSize().x,  ImGui::GetWindowSize().y, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-    	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, renderTex, 0);
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        {
+            glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+
+            glBindTexture(GL_TEXTURE_2D, renderTex);
+           	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB,  ImGui::GetWindowSize().x,  ImGui::GetWindowSize().y, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+           	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+           	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+           	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, renderTex, 0);
+
+            glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+            glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8,ImGui::GetWindowSize().x,  ImGui::GetWindowSize().y);
+            glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
+            glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        }
         // glDrawBuffer(0);
 
         ImGui::End();
@@ -279,11 +294,13 @@ int main() {
     glfwSwapBuffers(bigWindow);
     glfwPollEvents();
 }
-{
+{//KILL
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
-
+    glDeleteFramebuffers(1,&fbo);
+    glDeleteRenderbuffers(1,&rbo);
+    glDeleteTextures(1,&renderTex);
     glDeleteQueries(1, &Query);
     glDeleteVertexArrays(1, &m_VAO.name);
     glDeleteBuffers(1, &m_VAO.vbos[0].name);
