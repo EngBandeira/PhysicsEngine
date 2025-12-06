@@ -1,5 +1,5 @@
 
-#version 460 core 
+#version 460 core
 #pragma debug(on)
 layout(triangles) in;
 layout(triangle_strip, max_vertices = 3) out;
@@ -15,20 +15,22 @@ layout(std430, binding = 3) buffer TexIndexBuffer {
 };
 // layout (location = 1) in vec3 inColor;
 
-void main(){
-      //
-      uvec4 a = indexTexture[gl_PrimitiveIDIn];
+void main() {
+    uvec4 a = indexTexture[gl_PrimitiveIDIn];
 
-      gl_Position = gl_in[0].gl_Position;
-      g_texCoord = texCoord[a.x];
-      EmitVertex();
+    gl_Position = gl_in[0].gl_Position;
+    g_texCoord = texCoord[a.x];
+    gl_PrimitiveID = gl_PrimitiveIDIn;
+    EmitVertex();
 
-      gl_Position = gl_in[1].gl_Position;
-      g_texCoord = texCoord[a.y];
-      EmitVertex();
+    gl_Position = gl_in[1].gl_Position;
+    g_texCoord = texCoord[a.y];
+    gl_PrimitiveID = gl_PrimitiveIDIn;
+    EmitVertex();
 
-      gl_Position = gl_in[2].gl_Position;
-      g_texCoord = texCoord[a.z];
-      EmitVertex();
-
+    gl_Position = gl_in[2].gl_Position;
+    g_texCoord = texCoord[a.z];
+    gl_PrimitiveID = gl_PrimitiveIDIn;
+    EmitVertex();
+    EndPrimitive();
 }

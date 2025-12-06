@@ -1,0 +1,13 @@
+# Blender 4.5.3 LTS MTL File: 'lemon_4k.blend'
+# www.blender.org
+
+newmtl lemon
+Ka 1.000000 1.000000 1.000000
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd /home/bandeira/Downloads/lemon_4k.blend/textures/lemon_diff_4k.jpg
+map_Ns /home/bandeira/Downloads/lemon_4k.blend/textures/lemon_rough_4k.exr
+map_Bump -bm 1.000000 /home/bandeira/Downloads/lemon_4k.blend/textures/lemon_nor_gl_4k.exr

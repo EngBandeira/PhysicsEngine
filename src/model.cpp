@@ -1,4 +1,6 @@
 #include "model.hpp"
+#include "texture.hpp"
+#include <cstddef>
 #include <stdio.h>
 #include <string.h>
 
@@ -6,22 +8,24 @@
 #define KEYWORDS_LENGTH 8
 
 template <typename T>
-T *exportvec(unsigned int *count,
-                                  std::vector<T> vec) {
+T *exportvec(unsigned int *count, std::vector<T> vec)
+{
   *count = vec.size();
   T *rt = (T *)malloc(sizeof(T) * *count);
   memcpy(rt,vec.data(),sizeof(T) * *count);
-
   return rt;
 }
 
 
-Mesh::Mesh(const char *localPath) {
-    std::vector<float> vertex;
-    std::vector<float> texture;
-    std::vector<unsigned int> vertexIndex, textureVertexIndex;
+Mesh::Mesh(const char *meshPath)
+{
+
+
+
+    std::vector<float> vertices_,textureVertices_,normalVec_;
+    std::vector<unsigned int> verticesIndex_, textureIndex_,normalIndex_;
     unsigned int fileLenght, bufferLenght = 0;
-    char *file = readFile(localPath, &fileLenght);
+    char *file = readFile(meshPath, &fileLenght);
     for (unsigned int i = 0; i < fileLenght; i++) {
         if (file[i] == '#') {
             i++;
@@ -35,18 +39,18 @@ Mesh::Mesh(const char *localPath) {
             if (file[i] == 'v')
             {
                 i += 2;
-                unsigned int j = i;
                 for (int k = 0; k < 3; k++)
                 {
                     unsigned int b = i;
-                    while (1) {
-                    if (file[i] == ' ' || file[i] == '\n')
-                        break;
-                    i++;
+                    while (1)
+                    {
+                        if (file[i] == ' ' || file[i] == '\n')
+                            break;
+                        i++;
                     }
                     char c = file[i];
                     file[i] = 0;
-                    vertex.push_back((float)atof(file + b));
+                    vertices_.push_back((float)atof(file + b));
                     file[i] = c;
                     i++;
                 }
@@ -96,17 +100,21 @@ Mesh::Mesh(const char *localPath) {
                         break;
 
                         default: // From now on the first will be constant, but the prev and actual changing for each triangle
-                            vertexIndex.push_back(first[0]);
-                            vertexIndex.push_back(prev[0]);
-                            vertexIndex.push_back(value[0]);
+                            verticesIndex_.push_back(first[0]);
+                            verticesIndex_.push_back(prev[0]);
+                            verticesIndex_.push_back(value[0]);
 
-                            textureVertexIndex.push_back(first[1]);
-                            textureVertexIndex.push_back(prev[1]);
-                            textureVertexIndex.push_back(value[1]);
-                            textureVertexIndex.push_back(0);
+                            textureIndex_.push_back(first[1]);
+                            textureIndex_.push_back(prev[1]);
+                            textureIndex_.push_back(value[1]);
+                            textureIndex_.push_back(0);
+
+                            normalIndex_.push_back(value[2]);
+
                             prev[0] = value[0];
                             prev[1] = value[1];
                             prev[2] = value[2];
+
                         break;
                     }
                     if (c == '\n')
@@ -116,12 +124,10 @@ Mesh::Mesh(const char *localPath) {
                     }
                     index++;
                 }
-                    printf("\n");
             }
         } else if (file[i] == 'v' && file[i + 1] == 't' && file[i + 2] == ' ')
         {
             i += 3;
-            unsigned int j = i;
             for (int k = 0; k < 2; k++)
             {
                 unsigned int b = i;
@@ -133,7 +139,27 @@ Mesh::Mesh(const char *localPath) {
                 }
                 char c = file[i];
                 file[i] = 0;
-                texture.push_back((float)atof(file + b));
+                textureVertices_.push_back((float)atof(file + b));
+                file[i] = c;
+                i++;
+            }
+            i--;
+        }
+        else if (file[i] == 'v' && file[i + 1] == 'n' && file[i + 2] == ' ')
+        {
+            i += 3;
+            for (int k = 0; k < 3; k++)
+            {
+                unsigned int b = i;
+                while (1)
+                {
+                    if (file[i] == ' ' || file[i] == '\n')
+                        break;
+                    i++;
+                }
+                char c = file[i];
+                file[i] = 0;
+                normalVec_.push_back((float)atof(file + b));
                 file[i] = c;
                 i++;
             }
@@ -145,14 +171,17 @@ Mesh::Mesh(const char *localPath) {
                 continue;
         }
     }
-
-    vertices = exportvec<float>(&verticesCount, vertex);
-    textureVertices = exportvec<float>(&textureVerticesCount, texture);
-    verticesIndex = exportvec<unsigned int>(&verticesIndexCount, vertexIndex);
-    textureIndex = exportvec<unsigned int>(&textureIndexCount, textureVertexIndex);
-
+    normalVec = exportvec(&normalVecCount,normalVec_);
+    normalIndex = exportvec(&verticesCount,normalIndex_);
+    vertices = exportvec<float>(&verticesCount, vertices_);
+    textureVertices = exportvec<float>(&textureVerticesCount, textureVertices_);
+    verticesIndex = exportvec<unsigned int>(&verticesIndexCount, verticesIndex_);
+    textureIndex = exportvec<unsigned int>(&textureIndexCount, textureIndex_);
     free(file);
+
+
 }
+
 Mesh::~Mesh() {
     free(vertices);
     free(textureVertices);

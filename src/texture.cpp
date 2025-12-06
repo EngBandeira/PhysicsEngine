@@ -2,7 +2,7 @@
 #include "glad/glad.h"
 #include "stb_image/stb_image.h"
 Texture::Texture (const char *path)
-    : localBuffer (nullptr), localPath (path), width (0), height (0), BPP (0)
+    : localBuffer (nullptr), localPath (path), width (0), height (0), BPP (0),renderID(0)
 {
         glGenTextures (1, &renderID);
         glBindTexture (GL_TEXTURE_2D, renderID);

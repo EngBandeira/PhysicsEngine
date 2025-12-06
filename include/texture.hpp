@@ -8,7 +8,7 @@ class Texture{
   unsigned char *localBuffer;
   int width, height, BPP;
   Texture(const char* path);
-  void Bind(unsigned int slot = 0);
+  void Bind(unsigned int slot);
   void Unbind() const;
   ~Texture();
 };
