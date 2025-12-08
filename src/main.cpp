@@ -49,6 +49,7 @@ glm::mat4 modelMatrix;
 int main()
 {
 
+
         glfwInit();
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 4);
@@ -100,20 +101,31 @@ int main()
         ImGui_ImplGlfw_InitForOpenGL(bigWindow, true);
         ImGui_ImplOpenGL3_Init("#version 460");
 
+
+
     Shader shader((const char *[3]){VERTEX_SHADERS_LOCALPATH,
                                     FRAGMENT_SHADERS_LOCALPATH,
                                     GEOMETRY_SHADERS_LOCALPATH});
 
     unsigned int shaderProgram = glCreateProgram();
     shader.attach(shaderProgram);
+    Model model("assets/3dmodels/Cube.obj","assets/3dmodels/CubeTexture2.jpg");
+
+    const GLchar* feedbackVaryings[] = { "outValue" };
+    glTransformFeedbackVaryings(shaderProgram, 1, feedbackVaryings, GL_INTERLEAVED_ATTRIBS);
+    // glGetTransformFeedbackVarying(shaderProgram,);
+
+    unsigned int feedbacksize,feedbacknumber;
+    feedbacknumber = 4*model.mesh.verticesIndexCount;
+    feedbacksize = feedbacknumber * sizeof(float);
 
     glLinkProgram(shaderProgram);
-    // shader.~Shader();
     glUseProgram(shaderProgram);
+    // shader.~Shader();
 
 
 
-    Model model("assets/3dmodels/Cube.obj","assets/3dmodels/CubeTexture2.jpg");
+
 
     // Model model("assets/3dmodels/cannon_01_4k.obj","assets/3dmodels/cannon_01_diff_4k.jpg");
 
@@ -135,7 +147,7 @@ int main()
 
     VAO m_VAO = VAO();
 
-    unsigned int EBO, TBO, Query, texSSBO, texIndexSSBO, normVexSSBO,normIndexSSBO;
+    unsigned int EBO, TBO,TFO, Query, texSSBO, texIndexSSBO, normVexSSBO,normIndexSSBO;
     glGenQueries(1, &Query);
 
     m_VAO.bind();
@@ -192,12 +204,13 @@ int main()
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, normIndexSSBO);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0); // unbind
 
-    // glGenBuffers (1, &TBO);
-    // glBindBuffer (GL_ARRAY_BUFFER, TBO);
-    // glBufferData (GL_ARRAY_BUFFER, sizeof (float) * indexCount * 4 /3 ,
-    // nullptr,
-    //               GL_STATIC_READ);
-    // glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glGenTransformFeedbacks(1,&TFO);
+    glGenBuffers (1, &TBO);
+    glBindBuffer (GL_ARRAY_BUFFER, TBO);
+    glBufferData (GL_ARRAY_BUFFER, feedbacksize ,
+    nullptr,
+                  GL_STATIC_READ);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 
     m_VAO.unbind();
@@ -304,10 +317,40 @@ int main()
             glBindFramebuffer(GL_FRAMEBUFFER,fbo);
             // glBindRenderbuffer(GL_RENDERBUFFER, rbo);
             glClearColor(0.7f, 0.3f, 0.17f, 1.0f);
+
+            // const GLchar *feedbackVaryings[] = { "outValue" };
+            // glTransformFeedbackVaryings (shaderProgram, 1, feedbackVaryings,
+            //                              GL_INTERLEAVED_ATTRIBS);
+                glBindBufferBase(GL_TRANSFORM_FEEDBACK_BUFFER, 0, TBO);
+            glBeginQuery (GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN, Query);
+
+            glBeginTransformFeedback (GL_TRIANGLES);
+
             glDrawElements(GL_TRIANGLES, model.mesh.verticesIndexCount, GL_UNSIGNED_INT, 0);
             // glBindRenderbuffer(GL_RENDERBUFFER, 0);
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
             model.tex.Unbind();
+            glEndTransformFeedback ();
+            glEndQuery (GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN);
+
+            glFlush ();
+
+            GLuint primitives;
+            glGetQueryObjectuiv (Query, GL_QUERY_RESULT, &primitives);
+
+            GLfloat feedback[feedbacksize];
+            glGetBufferSubData (GL_TRANSFORM_FEEDBACK_BUFFER, 0,
+                                feedbacksize, feedback);
+
+            printf ("%u vecs written!\n\n", primitives);
+
+            for (int i = 0; i < feedbacknumber/4; i++)
+                {
+                    printf ("%f %f %f\n ", feedback[3*i],feedback[3*i+1],feedback[3*i+2]);
+                }
+            printf("\n\n");
+            glBindBufferBase(GL_TRANSFORM_FEEDBACK_BUFFER, 0, 0);
+
         }
 
         {//IMGUI_RENDER

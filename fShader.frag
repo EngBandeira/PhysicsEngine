@@ -7,9 +7,10 @@ uniform sampler2D Texture; //This is texture 38
 //  in vec3 vColor;
 in vec2 g_texCoord;
 in vec3 gColor;
-
+in vec3 norm;
 uniform mat4 model;
 uniform vec3 viewVec;
+// out vec4 outValue;
 
 layout(std430, binding = 4) buffer NormVecBuffer {
     vec3 normalVecs[];
@@ -29,11 +30,10 @@ void main()
     // fragColor = vec4(gColor,1);
     // fragColor = vec4(1.0, 0.0, 0.0, 1.0);
     //
-    // fragColor = texture(Texture, g_texCoord);
+    fragColor = texture(Texture, g_texCoord);
     //
 
-    vec4 preta = model * vec4(normalVecs[NormalVecIndex[gl_PrimitiveID]], 1);
-    vec3 bingoludo = normalize(preta.xyz);
-    float pinto = dot(bingoludo, viewVec);
-    fragColor = vec4(pinto, pinto, pinto, 1);
+    // vec4 preta = model * vec4(normalVecs[NormalVecIndex[gl_PrimitiveID]], 1);
+    // vec3 bingoludo = normalize(preta.xyz);
+    // float pinto = dot(norm, viewVec);
 }
