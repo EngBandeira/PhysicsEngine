@@ -1,7 +1,13 @@
 #include "vertexArray.hpp"
 #include "utils.hpp"
+#include <memory>
 
-VBO::VBO () { glGenBuffers (1, &name); }
+VBO::VBO () {
+    glGenBuffers (1, &name);
+}
+VBO::~VBO(){
+    glDeleteBuffers(1,&name);
+}
 
 void
 VAO::addLayout (unsigned short vboIndex, unsigned char componentsNumber)
@@ -16,7 +22,7 @@ VAO::addLayout (unsigned short vboIndex, unsigned char componentsNumber)
                         sendError ("invalid componentsNumber");
                         exit (1);
                 }
-        glBindBuffer (GL_ARRAY_BUFFER, vbos[vboIndex].name);
+        glBindBuffer (GL_ARRAY_BUFFER, vbos[vboIndex]->name);
         glVertexAttribPointer (layoutIndex, componentsNumber, GL_FLOAT,
                                GL_FALSE, componentsNumber * sizeof (float),
                                (void *)0); // set vec4 position  if()
@@ -32,12 +38,13 @@ VAO::VAO ()
                         exit (1);
                 }
 }
+VAO::~VAO(){
+    glDeleteVertexArrays(1,&name);
+}
 void
 VAO::createVBO ()
 {
-        VBO v;
-        // v.name =
-        vbos.push_back (v);
+        vbos.push_back(std::make_unique<VBO>());
 }
 void
 VAO::unbindVBO ()
@@ -48,7 +55,7 @@ VAO::unbindVBO ()
 void
 VAO::bindVBO (unsigned short vboIndex)
 {
-        glBindBuffer (GL_ARRAY_BUFFER, vbos[vboIndex].name);
+        glBindBuffer (GL_ARRAY_BUFFER, vbos[vboIndex]->name);
         bindedVBO = vboIndex;
 }
 

@@ -5,6 +5,36 @@
 void sendError (const char *str);
 char *readFile (const char *localPath, unsigned int *fileLenght);
 
+
+
+
+struct vec4
+{
+        float x=0, y=0, z=0,w=0;
+        vec4 (float x, float y, float z,float w) : x (x), y (y), z (z),w(w) {}
+        vec4 () {}
+        inline vec4 (float arr[4]) : x (arr[0]), y (arr[1]), z (arr[2]), w(arr[3]){}
+        inline vec4
+        operator+ (vec4 other)
+        {
+                return vec4 (x + other.x, y + other.y, z + other.z,w+other.w);
+        }
+        inline vec4
+        operator- (vec4 other)
+        {
+                return vec4 (x - other.x, y - other.y, z - other.z,w-other.w);
+        }
+        inline float &
+        operator[] (int i)
+        {
+                if (i < 4 && i >= 0)
+                        return ((float *)this)[i];
+                sendError ("vec4[x>3]");
+                return x;
+        }
+};
+
+
 struct vec3
 {
         float x, y, z;

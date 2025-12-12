@@ -17,7 +17,7 @@ T *exportvec(unsigned int *count, std::vector<T> vec)
 }
 
 
-Mesh::Mesh(const char *meshPath)
+Mesh::Mesh(const char *meshPath): matrix(1)
 {
 
 
@@ -26,7 +26,7 @@ Mesh::Mesh(const char *meshPath)
     std::vector<unsigned int> verticesIndex_, textureIndex_,normalIndex_;
     unsigned int fileLenght, bufferLenght = 0;
     char *file = readFile(meshPath, &fileLenght);
-    for (unsigned int i = 0; i < fileLenght; i++) {
+    for (unsigned int i = 0; i < fileLenght-1; i++) {
         if (file[i] == '#') {
             i++;
             while (file[i] != '\n')
@@ -171,20 +171,20 @@ Mesh::Mesh(const char *meshPath)
                 continue;
         }
     }
-    normalVec = exportvec(&normalVecCount,normalVec_);
-    normalIndex = exportvec(&verticesCount,normalIndex_);
+    // normalVec = exportvec(&normalVecCount,normalVec_);
+    // normalIndex = exportvec(&verticesCount,normalIndex_);
     vertices = exportvec<float>(&verticesCount, vertices_);
-    textureVertices = exportvec<float>(&textureVerticesCount, textureVertices_);
+    // textureVertices = exportvec<float>(&textureVerticesCount, textureVertices_);
     verticesIndex = exportvec<unsigned int>(&verticesIndexCount, verticesIndex_);
-    textureIndex = exportvec<unsigned int>(&textureIndexCount, textureIndex_);
+    // textureIndex = exportvec<unsigned int>(&textureIndexCount, textureIndex_);
     free(file);
 
 
 }
 
-Mesh::~Mesh() {
-    free(vertices);
-    free(textureVertices);
-    // free(verticesIndex);//er
-    free(textureIndex);
-}
+// Mesh::~Mesh() {
+//     free(vertices);
+//     // free(textureVertices);
+//     free(verticesIndex);//er
+//     // free(textureIndex);
+// }

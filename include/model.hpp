@@ -1,5 +1,6 @@
 #pragma once
 
+#include <glm/ext/matrix_float4x4.hpp>
 #include <vector>
 
 #include "texture.hpp"
@@ -12,18 +13,19 @@ class Mesh {
     // {vertices[verticesCount],vertices[verticesCount+1],vertices[verticesCount+2]}
     // Ponto[textureVerticesCount/2] =
     // {textureVertices[textureVerticesCount],textureVertices[textureVerticesCount+1]}
-    unsigned int verticesCount, verticesIndexCount, textureVerticesCount,textureIndexCount,normalVecCount;
-    float *vertices, *textureVertices,*normalVec;
-    unsigned int *verticesIndex, *textureIndex,*normalIndex;
-    Mesh();
+    glm::mat4 matrix;
+    unsigned int verticesCount, verticesIndexCount;
+    float *vertices;
+    unsigned int *verticesIndex;
+    Mesh(){};
     Mesh(const char *meshPath);
-    ~Mesh();
+    // ~Mesh();
 };
 
 class Model
 {
     public:
-    Texture tex;
     Mesh mesh;
-    Model(const char *meshPath,const char *texPath):tex(Texture(texPath)),mesh(Mesh(meshPath)){};
+    Model(){};
+    Model(const char *meshPath,const char *texPath):mesh(Mesh(meshPath)){};
 };

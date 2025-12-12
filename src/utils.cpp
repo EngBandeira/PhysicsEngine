@@ -16,12 +16,13 @@ readFile (const char *localPath, unsigned int *fileLenght)
         fseek (file, 0L, SEEK_END);
         unsigned int sz = ftell (file) + 1;
         fseek (file, 0, SEEK_SET);
-        buffer = (char *)malloc (sz * sizeof (char));
-        buffer[sz - 1] = EOF;
+        buffer = (char *)malloc (sz * sizeof (char));//aq tbm
+        buffer[sz - 2] = EOF;
         fread (buffer, sizeof (char), sz, file);
         fclose (file);
         if (fileLenght != nullptr)
                 *fileLenght = sz;
+        buffer[sz-1] = 0;
         return buffer;
 }
 void

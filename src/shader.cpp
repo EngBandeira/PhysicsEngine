@@ -15,7 +15,7 @@ Shader::Shader (const char *shadersPath[3])
                 // break;
                 char *file = readFile (shadersPath[i], nullptr);
                 Shaders[i] = glCreateShader (sets[i]);
-                glShaderSource (Shaders[i], 1, &file, NULL);
+                glShaderSource (Shaders[i], 1, &file, NULL);//aq
                 glCompileShader (Shaders[i]);
                 free (file);
 

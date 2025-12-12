@@ -4,9 +4,10 @@
 use Getopt::Long;
 
 my $vendor  = 0;
-
+my $asan = 0;
 GetOptions(
     "vendor"  => \$vendor,
+    "asan" => \$asan,
 ) or die "Invalid options\n";
 
 my $srcPath = "src";
@@ -30,7 +31,12 @@ my $fileC = `find $srcPath $k -name '*.c' -print`;
 my @files = (split (/\n/,$fileCPP), split( /\n/,$fileC));
 # my @files = (split("/\n/",$fileCPP),split("/\n/",$fileC));
 # my $rn ="g++ -Wall -I" . $includePath . " -I" . $vendorPath . " -g -ggdb " . $formatedLibs . " ";
+
 my $rn ="g++ -Wall -I" . $includePath . " -I" . $vendorPath . " -g -ggdb "  . $formatedLibs ." ";
+if($asan)
+{
+ $rn ="g++ -Wall -fsanitize=address -I" . $includePath . " -I" . $vendorPath . " -g -ggdb "  . $formatedLibs ." ";
+}
 foreach $file (@files){
     if($file =~ /\w*\/(\w+)\.\w+/g){
         print "\n";

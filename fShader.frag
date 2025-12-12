@@ -12,14 +12,6 @@ uniform mat4 model;
 uniform vec3 viewVec;
 // out vec4 outValue;
 
-layout(std430, binding = 4) buffer NormVecBuffer {
-    vec3 normalVecs[];
-};
-
-layout(std430, binding = 5) buffer NormIndexBuffer {
-    uint NormalVecIndex[];
-};
-
 void main()
 {
     // float d = sqrt(gl_PointCoord.x*gl_PointCoord.x + gl_PointCoord.y * gl_PointCoord.y)*1000;
@@ -28,9 +20,24 @@ void main()
     // fragColor = vec4(inColor,1);
     // fragColor = vec4(vColor,1);
     // fragColor = vec4(gColor,1);
-    // fragColor = vec4(1.0, 0.0, 0.0, 1.0);
     //
-    fragColor = texture(Texture, g_texCoord);
+    int pinto = gl_PrimitiveID % 3;
+    switch (pinto) {
+        case 0:
+        fragColor = vec4(1.0, 0.0, 0.0, 1.0);
+        break;
+        case 1:
+        fragColor = vec4(0.0, 1.0, 0.0, 1.0);
+
+        break;
+        case 2:
+        fragColor = vec4(0.0, 0.0, 1.0, 1.0);
+
+        break;
+    }
+    // fragColor = vec4(1.0, 0.0, 0.0, 1.0) * gl_FragCoord.w;
+    //
+    // fragColor = texture(Texture, g_texCoord);
     //
 
     // vec4 preta = model * vec4(normalVecs[NormalVecIndex[gl_PrimitiveID]], 1);
