@@ -16,29 +16,27 @@
 #include "imgui/imgui_impl_glfw.h"
 #include "imgui/imgui_impl_opengl3.h"
 
-#define SCR_X 800
-#define SCR_Y 600
 
 #define VERTEX_SHADERS_LOCALPATH "vShader.vert"
 #define FRAGMENT_SHADERS_LOCALPATH "fShader.frag"
 #define GEOMETRY_SHADERS_LOCALPATH "gShader.geom"
 
 
-RenderData::RenderData() : models() {
-  vertices = (float *)malloc(0);
-  matrices = (float *)malloc(0);
+RenderData::RenderData() : models()
+{
+    vertices = (float *)malloc(0);
+    matrices = (float *)malloc(0);
 
-  matricesIndex = (unsigned int *)malloc(0);
-  verticesIndex = (unsigned int *)malloc(0);
-
-  verticesPerModels = (int *)malloc(0);
+    matricesIndex = (unsigned int *)malloc(0);
+    verticesIndex = (unsigned int *)malloc(0);
 }
 
-RenderData::~RenderData() {
-  // free(vertices);
-  // free(matrices);
-  // free(matricesIndex);
-  // free(verticesIndex);
+RenderData::~RenderData()
+{
+    free(vertices);
+    free(matrices);
+    free(matricesIndex);
+    free(verticesIndex);
 }
 
 Camera::Camera(glm::mat4 vMatrix,glm::mat4 pjMatrix):viewMatrix(vMatrix),
@@ -80,7 +78,7 @@ Render::~Render() {
   }
   m_VAO.reset();
   glDeleteProgram(shaderProgram);
-  glDeleteFramebuffers(1, &FBO);
+  glDeleteFramebuffers(1, &FBO_FROM);
   glDeleteRenderbuffers(1, &RBO);
   // glDeleteTextures(1,&renderTex);
   glDeleteQueries(1, &Query);
@@ -152,7 +150,7 @@ void Render::input()
     }
 }
 
-void Render::predraw()
+void Render::once()
 {
     if (transFeed) {
         glGenQueries(1, &Query);
@@ -173,18 +171,6 @@ void Render::predraw()
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float),
                             (void *)0);
-
-    // set vec3 position
-    // for(int i = 0; i < (camera.renderData.verticesCount / 3); i++){
-
-    //     printf(
-    //         "(%f, %f, %f, %d)\n ",
-    //         camera.renderData.vertices[3*i],
-    //         camera.renderData.vertices[3*i+1],
-    //         camera.renderData.vertices[3*i+2],
-    //         camera.renderData.matricesIndex[i]
-    //     );
-    // }
 
     m_VAO->createVBO();
     m_VAO->bindVBO(1);
@@ -219,86 +205,73 @@ void Render::predraw()
     glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "projection"), 1,
                         GL_FALSE, glm::value_ptr(camera.projMatrix));
 
-    // model.tex.Bind(1);
-    // glUniform1i(glGetUniformLocation(shaderProgram, "Texture"), 1);
-    // glfwSetKeyCallback(bigWindow, processInput);
-    // model.tex.Unbind();
 
+    //------//------//------//------//
     // FBO
-    glGenFramebuffers(1, &FBO);
-    glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+    glGenFramebuffers(1, &FBO_FROM);
+    glBindFramebuffer(GL_FRAMEBUFFER, FBO_FROM);
 
-    // TEX1
-    glGenTextures(1, &renderTex);
-    glBindTexture(GL_TEXTURE_2D, renderTex);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCR_X, SCR_Y, 0, GL_RGB,
-                GL_UNSIGNED_BYTE, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                            renderTex, 0);
+    //texToRenderOver
+    glGenTextures(1, &texToRenderOver);
+    glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, texToRenderOver);
+    glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE,samples,GL_RGB8 , 1920, 1080,GL_TRUE);//aa
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE,
+                            texToRenderOver, 0);
 
     glGenRenderbuffers(1, &RBO);
     glBindRenderbuffer(GL_RENDERBUFFER, RBO);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, SCR_X, SCR_Y);
+    glRenderbufferStorageMultisample(GL_RENDERBUFFER,samples ,GL_DEPTH24_STENCIL8, 1920, 1080);
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT,
                                 GL_RENDERBUFFER, RBO);
-    // Unbind
-    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, 0);
     glBindRenderbuffer(GL_RENDERBUFFER, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    //------//------//------//------//------//
+
+
+    glGenFramebuffers(1, &FBO_TO);
+    glBindFramebuffer(GL_FRAMEBUFFER, FBO_TO);
+
+    //texToShow
+    glGenTextures(1, &texToShowFrom);
+    glBindTexture(GL_TEXTURE_2D, texToShowFrom);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1920, 1080, 0, GL_RGB,
+                GL_UNSIGNED_BYTE, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                            texToShowFrom, 0);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
+
+    // Unbind
+
 }
 
-void Render::newframe() {
-  glClearColor(0.7f, 0.3f, 0.17f, 1.0f);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+void Render::newframe()
+{
+    glClearColor(0.7f, 0.3f, 0.17f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glBindFramebuffer(GL_FRAMEBUFFER, FBO_FROM);
 
-  glClearColor(0.07f, 0.13f, 0.27f, 1.0f);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glClearColor(0.07f, 0.13f, 0.27f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-  ImGui_ImplGlfw_NewFrame();
-  ImGui_ImplOpenGL3_NewFrame();
-  // glUseProgram(shaderProgram);
+    ImGui_ImplGlfw_NewFrame();
+    ImGui_ImplOpenGL3_NewFrame();
 
-  ImGui::NewFrame();
-  ImGui::Begin("Render");
-  input();
-  ImGui::GetWindowDrawList()->AddImage((void *)renderTex, ImGui::GetWindowPos(),
-                                       ImGui::GetWindowSize() +
-                                           ImGui::GetWindowPos(),
-                                       ImVec2(0, 1), ImVec2(1, 0));
-
-  glBindFramebuffer(GL_FRAMEBUFFER, FBO);
-
-  glBindTexture(GL_TEXTURE_2D, renderTex);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, ImGui::GetWindowSize().x,
-               ImGui::GetWindowSize().y, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                         renderTex, 0);
-
-  glBindRenderbuffer(GL_RENDERBUFFER, RBO);
-  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8,
-                        ImGui::GetWindowSize().x, ImGui::GetWindowSize().y);
-  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT,
-                            GL_RENDERBUFFER, RBO);
-  glBindRenderbuffer(GL_RENDERBUFFER, 0);
-
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-  ImGui::End();
-
-  bool a = 1;
-  ImGui::ShowDemoWindow(&a);
-
-  glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "view"), 1, GL_FALSE,
+    glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "view"), 1, GL_FALSE,
                      glm::value_ptr(camera.viewMatrix));
 }
 
-void Render::draw() {
+
+void Render::renderDrawing() {
   // model.tex.Bind(1);
 
   m_VAO->bind();
@@ -325,7 +298,7 @@ void Render::draw() {
 
 
 
-  glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+  glBindFramebuffer(GL_FRAMEBUFFER, FBO_FROM);
   glClearColor(0.7f, 0.3f, 0.17f, 1.0f);
 
   if (transFeed) {
@@ -361,6 +334,56 @@ void Render::draw() {
     printf("\n\n");
     glBindBufferBase(GL_TRANSFORM_FEEDBACK_BUFFER, 0, 0);
   }
+}
+
+void Render::imguiSetting()
+{
+    ImGui::NewFrame();
+    ImGui::Begin("Render");
+    input();
+    ImGui::GetWindowDrawList()->AddImage((void *)texToShowFrom, ImGui::GetWindowPos(),
+                                        ImGui::GetWindowSize() +
+                                            ImGui::GetWindowPos(),
+                                        ImVec2(0, 1), ImVec2(1, 0));
+    ImGui::End();
+
+    bool a = 1;
+    ImGui::ShowDemoWindow(&a);
+}
+
+
+void Render::start(void(*op1)(),void(*op2)(),void(*op3)()){
+    once();
+    while(!glfwWindowShouldClose(glfwWin))
+    {
+        newframe();
+
+        op1();
+
+        renderDrawing();
+
+        {
+            glBindFramebuffer(GL_READ_FRAMEBUFFER,FBO_FROM);
+            glBindFramebuffer(GL_DRAW_FRAMEBUFFER,FBO_TO);
+            glBlitFramebuffer(0, 0, 1920, 1080,
+                              0, 0, 1920, 1080,
+                              GL_COLOR_BUFFER_BIT, GL_LINEAR);
+            glBindFramebuffer(GL_READ_FRAMEBUFFER,0);
+            glBindFramebuffer(GL_DRAW_FRAMEBUFFER,0);
+        }
+
+        op2();
+
+        imguiSetting();
+
+        op3();
+
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+        glfwSwapBuffers(glfwWin);
+        glfwPollEvents();
+    }
 }
 
 void Render::addModels(unsigned short n, Model *data) {

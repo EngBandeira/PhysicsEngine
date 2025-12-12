@@ -1,4 +1,5 @@
-/build/*.o
-/.vscode/*
-/.cache
-/.cache/*
+build/*.o
+.vscode
+.vscode/*
+.cache
+.cache/*

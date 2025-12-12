@@ -4,6 +4,7 @@
 #include "shader.hpp"
 #include "vertexArray.hpp"
 #include <GLFW/glfw3.h>
+#include <cstddef>
 #include <vector>
 
 class RenderData{
@@ -34,8 +35,8 @@ class Camera
 class Render{
     public:
     char flags; // abcd efgh: h = Update renderData
-    unsigned int EBO, FBO,RBO, TBO, Query, modelMxSSBO,renderTex;
-    unsigned int feedbacksize,feedbacknumber;
+    unsigned int EBO, FBO_FROM,FBO_TO,RBO, TBO, Query, modelMxSSBO,texToRenderOver,texToShowFrom;
+    unsigned int feedbacksize,feedbacknumber,samples=4;
 
     Camera camera;
     bool transFeed = false;
@@ -44,12 +45,17 @@ class Render{
     Shader shader;
     GLFWwindow *glfwWin;
 
-    void predraw();
-    void newframe();
-    void draw();
+    void start(void(*op1)(),void(*op2)(),void(*op3)());
     void addModels(unsigned short n, Model *data);
     void rmModels(unsigned short n,unsigned short* index);
-    void input();
     Render(glm::mat4 vMatrix,glm::mat4 pjMatrix,GLFWwindow *win);
     ~Render();
+    private:
+    void once();
+    void runTime();
+    void newframe();
+    void renderDrawing();
+    void imguiSetting();
+    void input();
+
 };

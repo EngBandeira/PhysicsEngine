@@ -46,6 +46,9 @@ void error_callback(GLenum source, GLenum type, unsigned int id,
 glm::mat4 projMatrix;
 glm::mat4 viewMatrix;
 glm::mat4 modelMatrix;
+void pr(){
+    // printf("bah\n");
+}
 
 int main()
 {
@@ -127,20 +130,7 @@ int main()
 
 
 
-        m_render.predraw();
-
-        while (!glfwWindowShouldClose(bigWindow))
-        {
-            m_render.newframe();
-
-            m_render.draw();
-
-            ImGui::Render();
-            ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
-            glfwSwapBuffers(bigWindow);
-            glfwPollEvents();
-        }
+        m_render.start(pr,pr,pr);
     }
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
