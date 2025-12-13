@@ -171,20 +171,25 @@ Mesh::Mesh(const char *meshPath): matrix(1)
                 continue;
         }
     }
-    // normalVec = exportvec(&normalVecCount,normalVec_);
-    // normalIndex = exportvec(&verticesCount,normalIndex_);
+    normalVec = exportvec(&normalVecCount,normalVec_);
+    normalIndex = exportvec(&verticesCount,normalIndex_);
     vertices = exportvec<float>(&verticesCount, vertices_);
-    // textureVertices = exportvec<float>(&textureVerticesCount, textureVertices_);
+    textureVertices = exportvec<float>(&textureVerticesCount, textureVertices_);
     verticesIndex = exportvec<unsigned int>(&verticesIndexCount, verticesIndex_);
-    // textureIndex = exportvec<unsigned int>(&textureIndexCount, textureIndex_);
+    textureIndex = exportvec<unsigned int>(&textureIndexCount, textureIndex_);
     free(file);
 
 
 }
 
-// Mesh::~Mesh() {
-//     free(vertices);
-//     // free(textureVertices);
-//     free(verticesIndex);//er
-//     // free(textureIndex);
-// }
+Mesh::~Mesh()
+{
+    printf("print\n");
+    // free(vertices);
+    // free(textureVertices);
+    // free(normalVec);
+
+    // free(verticesIndex);
+    // free(textureIndex);
+    // free(normalIndex);
+}

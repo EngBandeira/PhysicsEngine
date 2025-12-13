@@ -1,0 +1,4 @@
+Memory Leak :
+    Destructors of Model and Mesh: Sugestion:
+        Solve like others with unique_ptr
+    Render::rmModels() do not work

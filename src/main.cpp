@@ -60,7 +60,8 @@ int main()
     GLFWwindow *bigWindow =
         glfwCreateWindow(SCR_X, SCR_Y, "PhysicsEngine", NULL, NULL);
 
-    if (bigWindow == NULL) {
+    if (bigWindow == NULL)
+    {
         sendError("failed to crate a Glfw Window");
         glfwTerminate();
         return -1;
@@ -117,7 +118,8 @@ int main()
 
 
         Model model1("assets/3dmodels/Cube.obj","assets/3dmodels/CubeTexture2.jpg");
-        Model model2("assets/3dmodels/cannon_01_4k.obj","assets/3dmodels/cannon_01_diff_4k.jpg");
+        Model model2("assets/3dmodels/Cube.obj","assets/3dmodels/CubeTexture2.jpg");
+        // Model model2("assets/3dmodels/cannon_01_4k.obj","assets/3dmodels/cannon_01_diff_4k.jpg");
 
         // Model model1("assets/3dmodels/SphereLow.obj","assets/3dmodels/CubeTexture2.jpg");
         // Model model1("assets/3dmodels/Cube.obj","assets/3dmodels/CubeTexture2.jpg");

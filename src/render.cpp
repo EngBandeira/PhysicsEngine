@@ -22,21 +22,32 @@
 #define GEOMETRY_SHADERS_LOCALPATH "gShader.geom"
 
 
+
 RenderData::RenderData() : models()
 {
     vertices = (float *)malloc(0);
     matrices = (float *)malloc(0);
+    textureVertices = (float *)malloc(0);
+    normalVec = (float *)malloc(0);
 
-    matricesIndex = (unsigned int *)malloc(0);
+
     verticesIndex = (unsigned int *)malloc(0);
+    matricesIndex = (unsigned int *)malloc(0);
+    textureIndex = (unsigned int *)malloc(0);
+    normalIndex = (unsigned int *)malloc(0);
 }
 
 RenderData::~RenderData()
 {
-    free(vertices);
-    free(matrices);
-    free(matricesIndex);
-    free(verticesIndex);
+    // free(vertices);
+    // free(matrices);
+    // free(textureVertices);
+    // free(normalVec);
+
+    // free(verticesIndex);
+    // free(matricesIndex);
+    // free(textureIndex);
+    // free(normalIndex);
 }
 
 Camera::Camera(glm::mat4 vMatrix,glm::mat4 pjMatrix):viewMatrix(vMatrix),
@@ -161,6 +172,10 @@ void Render::once()
     }
 
 
+    for(int i =0; i < camera.renderData.normalVecCount/3; i++){
+        printf("%f %f %f\n",camera.renderData.normalVec[3*i],camera.renderData.normalVec[3*i+1],camera.renderData.normalVec[3*i+2]);
+    }
+
     m_VAO->bind();
     m_VAO->createVBO();
     m_VAO->bindVBO(0);
@@ -189,7 +204,7 @@ void Render::once()
     glBufferData(GL_SHADER_STORAGE_BUFFER,
                 16 * sizeof(float) * camera.renderData.models.size(),
                 camera.renderData.matrices, GL_DYNAMIC_DRAW);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, modelMxSSBO);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, modelMxSSBO);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0); // unbind
 
 
@@ -271,69 +286,71 @@ void Render::newframe()
 }
 
 
-void Render::renderDrawing() {
-  // model.tex.Bind(1);
+void Render::renderDrawing()
+{
+    // model.tex.Bind(1);
 
-  m_VAO->bind();
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-  glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0,
-                  sizeof(unsigned int) * camera.renderData.verticesIndexCount,
-                  camera.renderData.verticesIndex);
-  // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    m_VAO->bind();
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0,
+                    sizeof(unsigned int) * camera.renderData.verticesIndexCount,
+                    camera.renderData.verticesIndex);
+    // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
-  //Repassing ModelsMatricesSSBO
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, modelMxSSBO);
-  glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0,
-                  16 * sizeof(float) * camera.renderData.models.size(),
-                  camera.renderData.matrices);
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+    //Repassing ModelsMatricesSSBO
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, modelMxSSBO);
+    glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0,
+                    16 * sizeof(float) * camera.renderData.models.size(),
+                    camera.renderData.matrices);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
-  m_VAO->bindVBO(1);
-  glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(int) * camera.renderData.verticesCount/3,
-                    camera.renderData.matricesIndex);
-  m_VAO->bindVBO(0);
-  glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(float) * camera.renderData.verticesCount,
-                  camera.renderData.vertices);
-
-
+    m_VAO->bindVBO(1);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(int) * camera.renderData.verticesCount/3,
+                        camera.renderData.matricesIndex);
+    m_VAO->bindVBO(0);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(float) * camera.renderData.verticesCount,
+                    camera.renderData.vertices);
 
 
-  glBindFramebuffer(GL_FRAMEBUFFER, FBO_FROM);
-  glClearColor(0.7f, 0.3f, 0.17f, 1.0f);
 
-  if (transFeed) {
-    glBindBufferBase(GL_TRANSFORM_FEEDBACK_BUFFER, 0, TBO);
-    glBeginQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN, Query);
-    glBeginTransformFeedback(GL_TRIANGLES);
-  }
-  glDrawElements(GL_TRIANGLES, camera.renderData.verticesIndexCount, GL_UNSIGNED_INT,
-                 0);
 
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
-  m_VAO->unbind();
-  // model.tex.Unbind();
+    glBindFramebuffer(GL_FRAMEBUFFER, FBO_FROM);
+    glClearColor(0.7f, 0.3f, 0.17f, 1.0f);
 
-  if (transFeed) {
-    glEndTransformFeedback();
-    glEndQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN);
-
-    glFlush();
-
-    GLuint primitives;
-    glGetQueryObjectuiv(Query, GL_QUERY_RESULT, &primitives);
-
-    GLfloat *feedback = (GLfloat *)malloc(feedbacksize);
-    glGetBufferSubData(GL_TRANSFORM_FEEDBACK_BUFFER, 0, feedbacksize, feedback);
-
-    printf("%u vecs written!\n\n", primitives);
-
-    for (int i = 0; i < feedbacknumber / 4; i++) {
-      printf("%f %f %f\n ", feedback[3 * i], feedback[3 * i + 1],
-             feedback[3 * i + 2]);
+    if (transFeed) {
+        glBindBufferBase(GL_TRANSFORM_FEEDBACK_BUFFER, 0, TBO);
+        glBeginQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN, Query);
+        glBeginTransformFeedback(GL_TRIANGLES);
     }
-    printf("\n\n");
-    glBindBufferBase(GL_TRANSFORM_FEEDBACK_BUFFER, 0, 0);
-  }
+    glDrawElements(GL_TRIANGLES, camera.renderData.verticesIndexCount, GL_UNSIGNED_INT,
+                    0);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    m_VAO->unbind();
+    // model.tex.Unbind();
+
+    if (transFeed)
+    {
+        glEndTransformFeedback();
+        glEndQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN);
+
+        glFlush();
+
+        GLuint primitives;
+        glGetQueryObjectuiv(Query, GL_QUERY_RESULT, &primitives);
+
+        GLfloat *feedback = (GLfloat *)malloc(feedbacksize);
+        glGetBufferSubData(GL_TRANSFORM_FEEDBACK_BUFFER, 0, feedbacksize, feedback);
+
+        printf("%u vecs written!\n\n", primitives);
+
+        for (int i = 0; i < feedbacknumber / 4; i++) {
+        printf("%f %f %f\n ", feedback[3 * i], feedback[3 * i + 1],
+                feedback[3 * i + 2]);
+        }
+        printf("\n\n");
+        glBindBufferBase(GL_TRANSFORM_FEEDBACK_BUFFER, 0, 0);
+    }
 }
 
 void Render::imguiSetting()
@@ -386,48 +403,114 @@ void Render::start(void(*op1)(),void(*op2)(),void(*op3)()){
     }
 }
 
-void Render::addModels(unsigned short n, Model *data) {
-  for (unsigned short i = 0; i < n; i++) {
-    Model actualM = data[i];
-    for(int j = 0; j < actualM.mesh.verticesIndexCount; j++){
-        actualM.mesh.verticesIndex[j] += camera.renderData.verticesOffsetIndex;
-    }
-    camera.renderData.verticesOffsetIndex += data->mesh.verticesCount/3;
+void Render::addModels(unsigned short n, Model *data)
+{
+    for (unsigned short i = 0; i < n; i++)
+    {
+        Model actualM = data[i];
 
-    camera.renderData.models.push_back(actualM);
-    unsigned long nModels = camera.renderData.models.size();
+        for(unsigned int j = 0; j < actualM.mesh.verticesIndexCount; j++){//PRECISO CORRIGIR TODOS OS INDEX
+            actualM.mesh.verticesIndex[j] += camera.renderData.verticesIndexOffset;
+        }
+        for(unsigned int j = 0; j < actualM.mesh.textureIndexCount; j++){//PRECISO CORRIGIR TODOS OS INDEX
+            actualM.mesh.textureIndex[j] += camera.renderData.textureIndexOffset;
+        }
+        for(unsigned int j = 0; j < actualM.mesh.normalIndexCount; j++){//PRECISO CORRIGIR TODOS OS INDEX
+            actualM.mesh.normalIndex[j] += camera.renderData.normalIndexOffset;
+        }
 
-    camera.renderData.matrices =
-        (float *)realloc(camera.renderData.matrices, sizeof(float) * 16 * nModels);
-    memcpy(camera.renderData.matrices + 16 * (nModels - 1),
-           glm::value_ptr(actualM.mesh.matrix), 16 * sizeof(float));
-
-    camera.renderData.vertices = (float *)realloc(
-        camera.renderData.vertices, sizeof(float) * (camera.renderData.verticesCount +
-                                              actualM.mesh.verticesCount));
-    memcpy(camera.renderData.vertices + camera.renderData.verticesCount,
-           actualM.mesh.vertices, sizeof(float) * actualM.mesh.verticesCount);
-    camera.renderData.verticesCount += actualM.mesh.verticesCount;
+        camera.renderData.verticesIndexOffset += data->mesh.verticesCount/3;
+        camera.renderData.textureIndexOffset += data->mesh.textureVerticesCount/2;
+        camera.renderData.normalIndexOffset += data->mesh.normalVecCount/3;
 
 
-    camera.renderData.verticesIndex = (unsigned int *)realloc(
-        camera.renderData.verticesIndex,
-        sizeof(int) *
-            (camera.renderData.verticesIndexCount + actualM.mesh.verticesIndexCount));
-    memcpy(camera.renderData.verticesIndex + camera.renderData.verticesIndexCount,
-           actualM.mesh.verticesIndex,
-           sizeof(int) * actualM.mesh.verticesIndexCount);
-    camera.renderData.verticesIndexCount += actualM.mesh.verticesIndexCount;
+        camera.renderData.models.push_back(actualM);
+        unsigned long nModels = camera.renderData.models.size();
 
-    camera.renderData.matricesIndex = (unsigned int *)realloc(
-        camera.renderData.matricesIndex, sizeof(int) * camera.renderData.verticesCount/3);
-    unsigned int *p =camera.renderData.matricesIndex+(camera.renderData.verticesCount- actualM.mesh.verticesCount)/3;
-    for (int i = 0; i < actualM.mesh.verticesCount/3; i++) {
-      p[i] = nModels - 1;
-    }
-    // printf("caraio %d  de %d\n",nModels-1,);
+    //-------/-------/-------/----- FLOAT* -----/-------/-------/-------/-------/
+
+        camera.renderData.vertices = (float *)realloc(
+            camera.renderData.vertices, sizeof(float) * (camera.renderData.verticesCount +
+                                                    actualM.mesh.verticesCount));
+        memcpy(camera.renderData.vertices + camera.renderData.verticesCount,
+                actualM.mesh.vertices, sizeof(float) * actualM.mesh.verticesCount);
+        camera.renderData.verticesCount += actualM.mesh.verticesCount;
+
+
+        camera.renderData.matrices =
+            (float *)realloc(camera.renderData.matrices, sizeof(float) * 16 * nModels);
+        memcpy(camera.renderData.matrices + 16 * (nModels - 1),
+                glm::value_ptr(actualM.mesh.matrix), 16 * sizeof(float));
+
+
+        camera.renderData.textureVertices = (float *)realloc(
+            camera.renderData.textureVertices, sizeof(float) * (camera.renderData.textureVerticesCount +
+                                                    actualM.mesh.textureVerticesCount));
+        memcpy(camera.renderData.textureVertices + camera.renderData.textureVerticesCount,
+                actualM.mesh.textureVertices, sizeof(float) * actualM.mesh.textureVerticesCount);
+        camera.renderData.textureVerticesCount += actualM.mesh.textureVerticesCount;
+
+
+        camera.renderData.normalVec = (float *)realloc(
+            camera.renderData.normalVec, sizeof(float) * (camera.renderData.normalVecCount +
+                                                    actualM.mesh.normalVecCount));
+        memcpy(camera.renderData.normalVec + camera.renderData.normalVecCount,
+                actualM.mesh.normalVec, sizeof(float) * actualM.mesh.normalVecCount);
+        camera.renderData.normalVecCount += actualM.mesh.normalVecCount;
+
+
+    //-------/-------/-------/----- UINT* -----/-------/-------/-------/-------/
+
+
+
+
+        camera.renderData.verticesIndex = (unsigned int *)realloc(
+            camera.renderData.verticesIndex,
+            sizeof(int) *
+                (camera.renderData.verticesIndexCount + actualM.mesh.verticesIndexCount));
+        memcpy(camera.renderData.verticesIndex + camera.renderData.verticesIndexCount,
+                actualM.mesh.verticesIndex,
+                sizeof(int) * actualM.mesh.verticesIndexCount);
+        camera.renderData.verticesIndexCount += actualM.mesh.verticesIndexCount;
+
+
+
+
+        camera.renderData.matricesIndex = (unsigned int *)realloc(
+            camera.renderData.matricesIndex, sizeof(int) * camera.renderData.verticesCount/3);
+        unsigned int *p =camera.renderData.matricesIndex+(camera.renderData.verticesCount- actualM.mesh.verticesCount)/3;
+        for (int i = 0; i < actualM.mesh.verticesCount/3; i++) {
+            p[i] = nModels - 1;
+        }
+
+
+        camera.renderData.textureIndex = (unsigned int *)realloc(
+            camera.renderData.textureIndex,
+            sizeof(int) *
+                (camera.renderData.textureIndexCount + actualM.mesh.textureIndexCount));
+        memcpy(camera.renderData.textureIndex + camera.renderData.textureIndexCount,
+                actualM.mesh.textureIndex,
+                sizeof(int) * actualM.mesh.textureIndexCount);
+        camera.renderData.textureIndexCount += actualM.mesh.textureIndexCount;
+
+
+        camera.renderData.verticesIndex = (unsigned int *)realloc(
+            camera.renderData.verticesIndex,
+            sizeof(int) *
+                (camera.renderData.verticesIndexCount + actualM.mesh.verticesIndexCount));
+        memcpy(camera.renderData.verticesIndex + camera.renderData.verticesIndexCount,
+                actualM.mesh.verticesIndex,
+                sizeof(int) * actualM.mesh.verticesIndexCount);
+        camera.renderData.verticesIndexCount += actualM.mesh.verticesIndexCount;
+
+    //-------/-------/-------/-------/-------/-------/-------/-------/-------/-------/
   }
 }
+
+// unsigned int  verticesCount = 0, verticesIndexCount = 0, textureVerticesCount=0,
+//                     textureIndexCount=0,normalVecCount=0,normalIndexCount=0,verticesOffsetIndex= 0;
+// float *vertices,*matrices,*textureVertices,*normalVec;
+// unsigned int *verticesIndex, *matricesIndex,*textureIndex,*normalIndex;
 
 void Render::rmModels(unsigned short n, unsigned short *index)
 {
@@ -437,36 +520,32 @@ void Render::rmModels(unsigned short n, unsigned short *index)
         camera.renderData.models.erase(camera.renderData.models.begin() + index[i]);
         camera.renderData.verticesCount -= actualM.mesh.verticesCount;
         camera.renderData.verticesIndexCount -= actualM.mesh.verticesIndexCount;
+        camera.renderData.textureVerticesCount  -= actualM.mesh.textureVerticesCount;
+        camera.renderData.textureIndexCount -= actualM.mesh.textureIndexCount;
+        camera.renderData.normalVecCount -= actualM.mesh.normalVecCount;
+        camera.renderData.normalIndexCount -= actualM.mesh.normalIndexCount;
     }
-    camera.renderData.matrices = (float *)realloc(
-        camera.renderData.matrices, sizeof(float) * 16 * camera.renderData.models.size());
-    camera.renderData.vertices = (float *)realloc(
-        camera.renderData.vertices, sizeof(float) * camera.renderData.verticesCount);
-    camera.renderData.verticesIndex = (unsigned int *)realloc(
-        camera.renderData.verticesIndex, sizeof(int) * camera.renderData.verticesIndexCount);
-    for (unsigned short i = 0; i < camera.renderData.models.size(); i++) {
-        Model actualM = camera.renderData.models.at(i);
+    camera.renderData.verticesIndexOffset = 0;
 
-        memcpy(camera.renderData.matrices + 16 * i, glm::value_ptr(actualM.mesh.matrix),
-            16 * sizeof(float));
+    camera.renderData.vertices = (float *)realloc(camera.renderData.vertices,
+                sizeof(float) * camera.renderData.verticesCount);
+    camera.renderData.matrices = (float *)realloc(camera.renderData.matrices,
+                sizeof(float) * 16 * camera.renderData.models.size());
+    camera.renderData.textureVertices = (float *)realloc(camera.renderData.textureVertices,
+                sizeof(float) * camera.renderData.textureVerticesCount);
+    camera.renderData.normalVec = (float *)realloc(camera.renderData.normalVec,
+                sizeof(float) * camera.renderData.normalVecCount);
 
-        memcpy(camera.renderData.vertices + camera.renderData.verticesCount,
-            actualM.mesh.vertices, sizeof(float) * actualM.mesh.verticesCount);
-        camera.renderData.verticesCount += actualM.mesh.verticesCount;
+    camera.renderData.verticesIndex = (unsigned int *)realloc(camera.renderData.verticesIndex,
+                sizeof(float) * camera.renderData.verticesIndexCount);
+    camera.renderData.matricesIndex = (unsigned int *)realloc(camera.renderData.verticesIndex,
+                sizeof(float) * camera.renderData.verticesIndexCount);
+    camera.renderData.textureIndex = (unsigned int *)realloc(camera.renderData.textureIndex,
+                sizeof(float) * camera.renderData.textureIndexCount);
+    camera.renderData.normalIndex = (unsigned int *)realloc(camera.renderData.normalIndex,
+                sizeof(float) * camera.renderData.normalIndexCount);
 
-        memcpy(camera.renderData.verticesIndex + camera.renderData.verticesIndexCount,
-            actualM.mesh.verticesIndex,
-            sizeof(int) * actualM.mesh.verticesIndexCount);
-        camera.renderData.verticesIndexCount += actualM.mesh.verticesIndexCount;
 
-        camera.renderData.matricesIndex = (unsigned int *)realloc(
-            camera.renderData.matricesIndex, sizeof(int) * camera.renderData.verticesCount/3);
-        unsigned int *p =camera.renderData.matricesIndex+(camera.renderData.verticesCount- actualM.mesh.verticesCount)/3;
-        for (int j = 0; j < actualM.mesh.verticesCount/3; j++)
-        {
-            p[j] = i - 1;
-        }
-    }
 }
 // o começo(nBlock,sizeBlock) = (nBlock)sizeBlock to (nBlock+1)sizeBlock -1
 // 0 to  15 16 to 31

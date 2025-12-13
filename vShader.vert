@@ -4,16 +4,13 @@ layout(location = 0) in vec3 position;
 layout(location = 1) in uint modelMxIndex;
 // layout (location = 0) out vec3 outColor;
 // out vec4 outValue;
-// layout(std430, binding = 3) buffer tex{
-//    vec2 texCoord[];
+// layout(std430, binding = 0) buffer tex {
+//     vec2 texCoord[];
 // };
-// layout(std430, binding = 3) buffer texIn{
-//    int texIndex[];
+// layout(std430, binding = 1) buffer texIn {
+//     int texIndex[];
 // };
-// out vec3 vColor;
-
-// uniform int caseta;
-layout(std430, binding = 6) buffer modelMxBuffer {
+layout(std430, binding = 2) buffer modelMxBuffer {
     mat4 modelsMatrix[];
 };
 

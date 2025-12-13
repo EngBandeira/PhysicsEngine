@@ -14,12 +14,13 @@ Texture::Texture (const char *path)
         glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glTexImage2D (GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA,
                       GL_UNSIGNED_BYTE, localBuffer);
-
+        glGenerateMipmap(GL_TEXTURE_2D);
         glBindTexture (GL_TEXTURE_2D, 0);
+
+        stbi_image_free (localBuffer);
 }
 Texture::~Texture ()
 {
-        stbi_image_free (localBuffer);
         glDeleteTextures (1, &renderID);
 }
 void

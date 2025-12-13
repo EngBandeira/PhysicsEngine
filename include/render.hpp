@@ -10,12 +10,12 @@
 class RenderData{
     public:
     std::vector<Model> models;
-    unsigned int verticesCount = 0, verticesIndexCount = 0,verticesOffsetIndex= 0;
-    float *vertices,*matrices;
-    unsigned int *verticesIndex, *matricesIndex;
+    unsigned int  verticesCount = 0, verticesIndexCount = 0, textureVerticesCount=0,
+                        textureIndexCount=0,normalVecCount=0,normalIndexCount=0,
+                        verticesIndexOffset= 0,textureIndexOffset = 0,normalIndexOffset=0;
+    float *vertices,*matrices,*textureVertices,*normalVec;
+    unsigned int *verticesIndex, *matricesIndex,*textureIndex,*normalIndex;
     //count(matricesIndex) = count(vertices) = verticesCount
-
-    int *verticesPerModels;
 
 
     RenderData();
@@ -37,6 +37,7 @@ class Render{
     char flags; // abcd efgh: h = Update renderData
     unsigned int EBO, FBO_FROM,FBO_TO,RBO, TBO, Query, modelMxSSBO,texToRenderOver,texToShowFrom;
     unsigned int feedbacksize,feedbacknumber,samples=4;
+
 
     Camera camera;
     bool transFeed = false;
