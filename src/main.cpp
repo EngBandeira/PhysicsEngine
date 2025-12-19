@@ -39,8 +39,8 @@ void error_callback(GLenum source, GLenum type, unsigned int id,
                     const void *userParam);
 
 // settings
-#define SCR_X 800
-#define SCR_Y 600
+#define SCR_X 1920
+#define SCR_Y 1080
 
 // float *vertices;
 glm::mat4 projMatrix;
@@ -117,8 +117,6 @@ int main()
 
 
 
-        Model model1("assets/3dmodels/Cube.obj","assets/3dmodels/CubeTexture2.jpg");
-        Model model2("assets/3dmodels/Cube.obj","assets/3dmodels/CubeTexture2.jpg");
         // Model model2("assets/3dmodels/cannon_01_4k.obj","assets/3dmodels/cannon_01_diff_4k.jpg");
 
         // Model model1("assets/3dmodels/SphereLow.obj","assets/3dmodels/CubeTexture2.jpg");
@@ -126,9 +124,32 @@ int main()
 
         // model2.mesh.matrix = glm::translate(model2.mesh.matrix, glm::vec3(1.0f, 0.0f,0.0f));
         // model1.mesh.matrix = glm::translate(model1.mesh.matrix, glm::vec3(0.0f, 0.0f, -5.0f));
-        Model models[2] = {model1,model2};
-        m_render.addModels(2, models);
-        // m_render.transFeed =1;
+        ModelGenStruct models[2] =
+        {ModelGenStruct
+        {
+            meshPath:"assets/3dmodels/cannon_01_4k.obj",
+            texPath:"assets/3dmodels/cannon_01_diff_4k.jpg"
+        },
+            ModelGenStruct
+            {
+                meshPath:"assets/3dmodels/Cube.obj",
+                texPath:"assets/3dmodels/CubeTexture2.jpg"
+            }
+
+        };
+
+
+        ;
+        // m_render.addModels(1, models);
+        unsigned short i = 1;
+        // m_render.rmModels(1, &i);
+
+        int a =1;
+        // m_render.addModels(1, model);
+        // ;
+        // m_render.addModels(1, model);
+        // unsigned short i = 0;
+        // m_render.rmModels(1, &i);
 
 
 

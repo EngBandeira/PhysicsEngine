@@ -6,20 +6,23 @@
 #include <GLFW/glfw3.h>
 #include <cstddef>
 #include <vector>
+#define TEXTURE_COUNT 7
 
 class RenderData{
     public:
+    unsigned short texturesCount[TEXTURE_COUNT];
     std::vector<Model> models;
     unsigned int  verticesCount = 0, verticesIndexCount = 0, textureVerticesCount=0,
-                        textureIndexCount=0,normalVecCount=0,normalIndexCount=0,
+                        textureVerticesIndexCount=0,normalVecCount=0,normalIndexCount=0,
                         verticesIndexOffset= 0,textureIndexOffset = 0,normalIndexOffset=0;
+    unsigned short *modelsPerTex[TEXTURE_COUNT];
     float *vertices,*matrices,*textureVertices,*normalVec;
-    unsigned int *verticesIndex, *matricesIndex,*textureIndex,*normalIndex;
+    unsigned int *verticesIndex, *matricesIndex,*textureVerticesIndex,*normalIndex,*textureIndxDATA;
     //count(matricesIndex) = count(vertices) = verticesCount
 
 
     RenderData();
-    ~RenderData();
+    void freeRenderData();
 };
 
 class Camera
@@ -32,10 +35,17 @@ class Camera
     glm::mat4 *getNMatrix(unsigned short index);
 };
 
+struct ModelGenStruct{
+    const char *meshPath, *texPath;
+};
+
+
 class Render{
     public:
     char flags; // abcd efgh: h = Update renderData
-    unsigned int EBO, FBO_FROM,FBO_TO,RBO, TBO, Query, modelMxSSBO,texToRenderOver,texToShowFrom;
+    unsigned int EBO, FBO_FROM,FBO_TO,RBO, TBO, Query,
+                 modelMxSSBO,texCoordSSBO,texIndexSSBO,textureIndxSSBO,texUtilitary,//texUtilitary: for copying and resing
+                 texToRenderOver,texToShowFrom,texARRAY[16];
     unsigned int feedbacksize,feedbacknumber,samples=4;
 
 
@@ -47,7 +57,7 @@ class Render{
     GLFWwindow *glfwWin;
 
     void start(void(*op1)(),void(*op2)(),void(*op3)());
-    void addModels(unsigned short n, Model *data);
+    void addModels(unsigned short n, ModelGenStruct *data);
     void rmModels(unsigned short n,unsigned short* index);
     Render(glm::mat4 vMatrix,glm::mat4 pjMatrix,GLFWwindow *win);
     ~Render();

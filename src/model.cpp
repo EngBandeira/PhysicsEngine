@@ -11,13 +11,13 @@ template <typename T>
 T *exportvec(unsigned int *count, std::vector<T> vec)
 {
   *count = vec.size();
-  T *rt = (T *)malloc(sizeof(T) * *count);
-  memcpy(rt,vec.data(),sizeof(T) * *count);
+  T *rt = (T *)malloc(sizeof(T) * (*count));
+  memcpy(rt,vec.data(),sizeof(T) * (*count));
   return rt;
 }
 
 
-Mesh::Mesh(const char *meshPath): matrix(1)
+Mesh::Mesh(const char *meshPath): matrix(1),meshPath(meshPath)
 {
 
 
@@ -176,7 +176,7 @@ Mesh::Mesh(const char *meshPath): matrix(1)
     vertices = exportvec<float>(&verticesCount, vertices_);
     textureVertices = exportvec<float>(&textureVerticesCount, textureVertices_);
     verticesIndex = exportvec<unsigned int>(&verticesIndexCount, verticesIndex_);
-    textureIndex = exportvec<unsigned int>(&textureIndexCount, textureIndex_);
+    textureVerticesIndex = exportvec<unsigned int>(&textureVerticesIndexCount, textureIndex_);
     free(file);
 
 
@@ -184,7 +184,7 @@ Mesh::Mesh(const char *meshPath): matrix(1)
 
 Mesh::~Mesh()
 {
-    printf("print\n");
+    // printf("print\n");
     // free(vertices);
     // free(textureVertices);
     // free(normalVec);

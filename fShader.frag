@@ -1,6 +1,5 @@
-
 #version 460 core
-#pragma debug(on)
+#extension GL_EXT_nonuniform_qualifier : enable
 // layout (location = 0) in vec3 inColor;
 layout(location = 0) out vec4 fragColor;
 uniform sampler2D Texture; //This is texture 38
@@ -8,8 +7,17 @@ uniform sampler2D Texture; //This is texture 38
 in vec2 g_texCoord;
 in vec3 gColor;
 in vec3 norm;
+in flat uint modelIndexFrag;
 uniform mat4 model;
 uniform vec3 viewVec;
+
+uniform sampler2DArray textures[16]; //64x64, 4096x4096
+// uniform sampler2DArray textures; //64x64, 4096x4096
+
+layout(std430, binding = 3) buffer textureIndxBuffer {
+    uvec2 textureInxBuffer[]; //which tex array, index
+};
+
 // out vec4 outValue;
 
 void main()
@@ -35,11 +43,15 @@ void main()
 
         break;
     }
-    // fragColor = vec4(1.0, 0.0, 0.0, 1.0) * gl_FragCoord.w;
     //
-    // fragColor = texture(Texture, g_texCoord);
     //
+    //
+    fragColor = texture(textures[textureInxBuffer[modelIndexFrag].x],
+            vec3(g_texCoord, textureInxBuffer[modelIndexFrag].y));
 
+    // fragColor += vec4(1.0, 0.0, 0.0, 1.0) * gl_FragCoord.w * 0.3;
+    // fragColor = texture(textures,
+    // vec3(g_texCoord, 0));
     // vec4 preta = model * vec4(normalVecs[NormalVecIndex[gl_PrimitiveID]], 1);
     // vec3 bingoludo = normalize(preta.xyz);
     // float pinto = dot(norm, viewVec);

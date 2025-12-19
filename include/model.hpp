@@ -1,6 +1,7 @@
 #pragma once
 
 #include <glm/ext/matrix_float4x4.hpp>
+#include <memory>
 #include <vector>
 
 #include "texture.hpp"
@@ -20,9 +21,10 @@ class Mesh {
     //
     glm::mat4 matrix;
     unsigned int verticesCount = 0, verticesIndexCount = 0, textureVerticesCount=0,
-                 textureIndexCount=0,normalVecCount=0,normalIndexCount=0,verticesOffsetIndex= 0;
+                 textureVerticesIndexCount=0,normalVecCount=0,normalIndexCount=0,verticesOffsetIndex= 0;
     float *vertices,*textureVertices,*normalVec;
-    unsigned int *verticesIndex,*textureIndex,*normalIndex;
+    unsigned int *verticesIndex,*textureVerticesIndex,*normalIndex;
+    const char *meshPath;
     Mesh(){};
     Mesh(const char *meshPath);
     ~Mesh();
@@ -33,7 +35,8 @@ class Model
 {
     public:
     Mesh mesh;
+    Texture tex;
     Model(){};
-    Model(const char *meshPath,const char *texPath):mesh(Mesh(meshPath)){};
+    Model(const char *meshPath,const char *texPath):mesh(meshPath), tex(texPath){};
     ~Model(){};
 };
