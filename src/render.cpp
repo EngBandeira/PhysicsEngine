@@ -300,7 +300,6 @@ void Render::once()
     m_VAO->createVBO();
     m_VAO->bindVBO(0);
 
-    // VBO Binded
     glBufferData(GL_ARRAY_BUFFER, sizeof(float) * camera.renderData.verticesCount,
                 camera.renderData.vertices, GL_DYNAMIC_DRAW);
     glEnableVertexAttribArray(0);
@@ -318,13 +317,10 @@ void Render::once()
     m_VAO->unbindVBO();
     m_VAO->unbind();
 
-    // EBO
     glGenBuffers(1, &EBO);
 
     glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "projection"), 1,
                         GL_FALSE, glm::value_ptr(camera.projMatrix));
-
-
 
 //-------/-------/-------/----- SSBO -----/-------/-------/-------/-------/
 
@@ -332,42 +328,37 @@ void Render::once()
     glGenBuffers(1, &modelMxSSBO);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, modelMxSSBO);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, modelMxSSBO);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0); // unbind
 
     // TextureIndxSSBO
     glGenBuffers(1, &textureIndxSSBO);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, textureIndxSSBO);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, textureIndxSSBO);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0); // unbind
 
     // TextureCoordSSBO
     glGenBuffers(1, &texCoordSSBO);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, texCoordSSBO);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, texCoordSSBO);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0); // unbind
 
     // TextureIndexSSBO
     glGenBuffers(1, &texIndexSSBO);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, texIndexSSBO);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, texIndexSSBO);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0); // unbind
 
     // RenderFlagsSSBO
     glGenBuffers(1, &renderFlagsSSBO);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, renderFlagsSSBO);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, renderFlagsSSBO);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0); // unbind
 
     // NormalVecsSSBO
     glGenBuffers(1, &normalVecsSSBO);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, normalVecsSSBO);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, normalVecsSSBO);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0); // unbind
 
     // NormalVecsIndexSSBO
     glGenBuffers(1, &normalVecsIndexSSBO);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, normalVecsIndexSSBO);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 8, normalVecsIndexSSBO);
+
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0); // unbind
 
 //-------/-------/-------/----- FBOs -----/-------/-------/-------/-------/
@@ -436,17 +427,17 @@ void Render::once()
 
     glUniform1iv(glGetUniformLocation(shaderProgram, "textures"), TEXTURE_COUNT,fodase);
 
-
 }
 
 void Render::newframe()
 {
     glClearColor(0.7f, 0.3f, 0.17f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glBindFramebuffer(GL_FRAMEBUFFER, FBO_FROM);
 
+    glBindFramebuffer(GL_FRAMEBUFFER, FBO_FROM);
     glClearColor(0.07f, 0.13f, 0.27f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     ImGui_ImplGlfw_NewFrame();
@@ -459,7 +450,6 @@ void Render::newframe()
 
 void Render::renderDrawing()
 {
-    // model.tex.Bind(1);
     if(flags & 4){
         flags = flags & ~(4);
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, modelMxSSBO);
@@ -474,8 +464,14 @@ void Render::renderDrawing()
         glBufferData(GL_ELEMENT_ARRAY_BUFFER,
                         sizeof(unsigned int) * camera.renderData.verticesIndexCount,
                         camera.renderData.verticesIndex,GL_DYNAMIC_DRAW);
-        // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
+        m_VAO->bindVBO(1);
+        glBufferData(GL_ARRAY_BUFFER,  sizeof(int) * camera.renderData.verticesCount/3,
+                            camera.renderData.matricesIndex,GL_DYNAMIC_DRAW);
+        m_VAO->bindVBO(0);
+        glBufferData(GL_ARRAY_BUFFER,  sizeof(float) * camera.renderData.verticesCount,
+                        camera.renderData.vertices,GL_DYNAMIC_DRAW);
+    //-------/-------/-------/----- SSBO -----/-------/-------/-------/-------/
         //Repassing ModelsMatricesSSBO
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, modelMxSSBO);
         glBufferData(GL_SHADER_STORAGE_BUFFER,
@@ -506,49 +502,31 @@ void Render::renderDrawing()
                     sizeof(int) * 2 * camera.renderData.models.size(),
                     camera.renderData.textureIndxDATA, GL_DYNAMIC_DRAW);
 
+        // TextureIndicesSSBO
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, normalVecsSSBO);
+        glBufferData(GL_SHADER_STORAGE_BUFFER,
+                    sizeof(float) * camera.renderData.normalVecCount,
+                    camera.renderData.normalVec, GL_DYNAMIC_DRAW);
+
+        // TextureIndicesSSBO
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, normalVecsIndexSSBO);
+        glBufferData(GL_SHADER_STORAGE_BUFFER,
+                    sizeof(int) * camera.renderData.verticesIndexCount/3,
+                    camera.renderData.normalIndex, GL_DYNAMIC_DRAW);
+
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0); // unbind
-
-
-        m_VAO->bindVBO(1);
-        glBufferData(GL_ARRAY_BUFFER,  sizeof(int) * camera.renderData.verticesCount/3,
-                            camera.renderData.matricesIndex,GL_DYNAMIC_DRAW);
-        m_VAO->bindVBO(0);
-        glBufferData(GL_ARRAY_BUFFER,  sizeof(float) * camera.renderData.verticesCount,
-                        camera.renderData.vertices,GL_DYNAMIC_DRAW);
-
-
-        for(unsigned short i = 0; i < TEXTURE_COUNT; i++){
-            glActiveTexture(GL_TEXTURE0+i);
-            glBindTexture(GL_TEXTURE_2D_ARRAY,texARRAY[i]);
-        }
     }
     else {
         m_VAO->bind();
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, modelMxSSBO);
-
-        // TextureCoordSSBO
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, texCoordSSBO);
-
-        // TextureIndexSSBO
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, texIndexSSBO);
-
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, renderFlagsSSBO);
-
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, textureIndxSSBO);
-
         m_VAO->bindVBO(1);
-
         m_VAO->bindVBO(0);
+    }
 
-        for(unsigned short i = 0; i < TEXTURE_COUNT; i++){
-            glActiveTexture(GL_TEXTURE0+i);
-            glBindTexture(GL_TEXTURE_2D_ARRAY,texARRAY[i]);
-        }
+    for(unsigned short i = 0; i < TEXTURE_COUNT; i++){
+        glActiveTexture(GL_TEXTURE0+i);
+        glBindTexture(GL_TEXTURE_2D_ARRAY,texARRAY[i]);
     }
     glBindFramebuffer(GL_FRAMEBUFFER, FBO_FROM);
-    glClearColor(0.7f, 0.3f, 0.17f, 1.0f);
 
     if (transFeed) {
         glBindBufferBase(GL_TRANSFORM_FEEDBACK_BUFFER, 0, TBO);
@@ -562,19 +540,9 @@ void Render::renderDrawing()
     glBindTexture(GL_TEXTURE_2D_ARRAY,0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-
-    // TextureCoordSSBO
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-
-    // TextureIndexSSBO
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-
     m_VAO->unbindVBO();
-
     m_VAO->unbind();
-    // model.tex.Unbind();
 
     if (transFeed)
     {
@@ -628,7 +596,7 @@ void Render::imguiSetting()
             if(camera.renderData.models.size() > camera.selectedModelIndex){
                 printf("aa%d\n", camera.selectedModelIndex);
                 rmModels(1, &camera.selectedModelIndex);
-                camera.selectedModelIndex--;
+                camera.selectedModelIndex = 0;
             }
 
         }
@@ -700,13 +668,13 @@ void Render::start(void(*op1)(),void(*op2)(),void(*op3)()){
 
     };
 
-    addModels(3, models);
-    // addModels(1, models);
+    // addModels(3, models);
+    addModels(1, models);
     // addModels(1, &models[1]);
 
     // addModels(1, &models[1]);
-    unsigned short  a = 0;
-    rmModels(1, &a);
+    // unsigned short  a = 0;
+    // rmModels(1, &a);
 
     while(!glfwWindowShouldClose(glfwWin))
     {
@@ -752,9 +720,7 @@ void Render::addModels(unsigned short n, ModelGenStruct *data){
                  totalTextureVerticesCount = camera.renderData.textureVerticesCount,
                  totalNormalVecCount = camera.renderData.normalVecCount,
                  totalVerticesIndexCount = camera.renderData.verticesIndexCount,
-                 totalTextureVerticesIndexCount = camera.renderData.textureVerticesIndexCount,
-                 totalNormalIndexCount = camera.renderData.normalIndexCount;
-
+                 totalTextureVerticesIndexCount = camera.renderData.textureVerticesIndexCount;
 
     for (unsigned short i = 0; i < n; i++){
         camera.renderData.models.push_back(Model(data[i].meshPath,data[i].texPath));
@@ -765,7 +731,6 @@ void Render::addModels(unsigned short n, ModelGenStruct *data){
         totalNormalVecCount += actualM.mesh.normalVecCount;
         totalVerticesIndexCount += actualM.mesh.verticesIndexCount;
         totalTextureVerticesIndexCount += actualM.mesh.textureVerticesIndexCount;
-        totalNormalIndexCount += actualM.mesh.normalIndexCount;
     }
 
     unsigned long nModels = camera.renderData.models.size();
@@ -785,7 +750,7 @@ void Render::addModels(unsigned short n, ModelGenStruct *data){
     camera.renderData.textureVerticesIndex = (unsigned int *)realloc(camera.renderData.textureVerticesIndex,
                 sizeof(int) * totalTextureVerticesIndexCount);
     camera.renderData.normalIndex = (unsigned int *)realloc(camera.renderData.normalIndex,
-                sizeof(int) * totalNormalIndexCount);
+                sizeof(int) * totalVerticesIndexCount/3);
 
 
     camera.renderData.textureIndxDATA = (unsigned int*)realloc(camera.renderData.textureIndxDATA,
@@ -885,9 +850,9 @@ void Render::addModels(unsigned short n, ModelGenStruct *data){
                 actualM.mesh.textureVerticesIndex,
                 sizeof(int) * actualM.mesh.textureVerticesIndexCount);
 
-        memcpy(camera.renderData.normalIndex + camera.renderData.normalIndexCount,
+        memcpy(camera.renderData.normalIndex + camera.renderData.verticesIndexCount/3,
                 actualM.mesh.normalIndex,
-                sizeof(int) * actualM.mesh.normalIndexCount);
+                sizeof(int) * actualM.mesh.verticesIndexCount/3);
 
         camera.renderData.renderFlags[nModels - n + i] = actualM.mesh.renderFlags;
 
@@ -897,12 +862,11 @@ void Render::addModels(unsigned short n, ModelGenStruct *data){
         for(unsigned int j = 0; j < actualM.mesh.textureVerticesIndexCount; j++){
             *(camera.renderData.textureVerticesIndex + camera.renderData.textureVerticesIndexCount + j) += camera.renderData.textureIndexOffset;
         }
-        for(unsigned int j = 0; j < actualM.mesh.normalIndexCount; j++){
-            *(camera.renderData.normalIndex + camera.renderData.normalIndexCount + j) += camera.renderData.normalIndexOffset;
+        for(unsigned int j = 0; j < actualM.mesh.verticesIndexCount/3; j++){
+            *(camera.renderData.normalIndex + camera.renderData.verticesIndexCount/3 + j) += camera.renderData.normalIndexOffset;
         }
         camera.renderData.verticesIndexCount += actualM.mesh.verticesIndexCount;
         camera.renderData.textureVerticesIndexCount += actualM.mesh.textureVerticesIndexCount;
-        camera.renderData.normalIndexCount += actualM.mesh.normalIndexCount;
 
         camera.renderData.verticesIndexOffset += actualM.mesh.verticesCount/3;
         camera.renderData.textureIndexOffset += actualM.mesh.textureVerticesCount/2;
@@ -1007,7 +971,6 @@ void Render::rmModels(unsigned short n, unsigned short *indices){
         camera.renderData.textureVerticesCount  -= actualM.mesh.textureVerticesCount;
         camera.renderData.textureVerticesIndexCount -= actualM.mesh.textureVerticesIndexCount;
         camera.renderData.normalVecCount -= actualM.mesh.normalVecCount;
-        camera.renderData.normalIndexCount -= actualM.mesh.normalIndexCount;
         actualM.mesh.deleteMesh();
     }
 
@@ -1028,7 +991,7 @@ void Render::rmModels(unsigned short n, unsigned short *indices){
     camera.renderData.textureVerticesIndex = (unsigned int *)realloc(camera.renderData.textureVerticesIndex,
                 sizeof(int) * camera.renderData.textureVerticesIndexCount);
     camera.renderData.normalIndex = (unsigned int *)realloc(camera.renderData.normalIndex,
-                sizeof(int) * camera.renderData.normalIndexCount);
+                sizeof(int) * camera.renderData.verticesIndexCount / 3);
 
 
     camera.renderData.renderFlags = (int*)realloc(camera.renderData.renderFlags,
@@ -1038,7 +1001,7 @@ void Render::rmModels(unsigned short n, unsigned short *indices){
     camera.renderData.textureIndexOffset = 0;
     camera.renderData.normalIndexOffset = 0;
     unsigned int indexVerticesCount = 0,indexVerticesIndexCount = 0,indexTextureVerticesCount = 0,
-                 indexTextureVerticesIndexCount = 0,indexNormalVecCount = 0,indexNormalIndexCount = 0,indexMatricesIndexCount = 0;
+                 indexTextureVerticesIndexCount = 0,indexNormalVecCount = 0,indexMatricesIndexCount = 0;
 
 
     for(unsigned int i = 0; i < camera.renderData.models.size(); i++){
@@ -1081,9 +1044,9 @@ void Render::rmModels(unsigned short n, unsigned short *indices){
                 sizeof(int) * actualM.mesh.textureVerticesIndexCount);
 
 
-        memcpy(camera.renderData.normalIndex + indexNormalIndexCount,
+        memcpy(camera.renderData.normalIndex + indexVerticesIndexCount/3,
                 actualM.mesh.normalIndex,
-                sizeof(int) * actualM.mesh.normalIndexCount);
+                sizeof(int) * actualM.mesh.verticesIndexCount/3);
 
         camera.renderData.renderFlags[i] = actualM.mesh.renderFlags;
 
@@ -1096,14 +1059,14 @@ void Render::rmModels(unsigned short n, unsigned short *indices){
         {
             *(camera.renderData.textureVerticesIndex + indexTextureVerticesIndexCount + j) += camera.renderData.textureIndexOffset;
         }
-        for(unsigned int j = 0; j < actualM.mesh.normalIndexCount; j++)
+        for(unsigned int j = 0; j < actualM.mesh.verticesIndexCount/3; j++)
         {
-            *(camera.renderData.normalIndex + indexNormalIndexCount + j) += camera.renderData.normalIndexOffset;
+            *(camera.renderData.normalIndex + indexVerticesIndexCount/3 + j) += camera.renderData.normalIndexOffset;
         }
 
         indexVerticesIndexCount += actualM.mesh.verticesIndexCount;
         indexTextureVerticesIndexCount += actualM.mesh.textureVerticesIndexCount;
-        indexNormalIndexCount += actualM.mesh.normalIndexCount;
+
         indexMatricesIndexCount += actualM.mesh.verticesCount/3;
         camera.renderData.verticesIndexOffset += actualM.mesh.verticesCount/3;
         camera.renderData.textureIndexOffset += actualM.mesh.textureVerticesCount/2;

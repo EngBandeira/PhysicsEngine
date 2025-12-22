@@ -12,7 +12,7 @@ class RenderData{
     unsigned short texturesCount[TEXTURE_COUNT];
     std::vector<Model> models;
     unsigned int  verticesCount = 0, verticesIndexCount = 0, textureVerticesCount=0,
-                        textureVerticesIndexCount=0,normalVecCount=0,normalIndexCount=0,
+                        textureVerticesIndexCount=0,normalVecCount=0,// normalIndexCount = nOfPrimitives = verticesIndexCount /3
                         verticesIndexOffset= 0,textureIndexOffset = 0,normalIndexOffset=0;
     int *renderFlags;//one per Model
     unsigned short *modelsPerTex[TEXTURE_COUNT];
@@ -31,7 +31,7 @@ class Camera
     glm::vec4 *up,*foward,*right;
     glm::mat4 translation, rotation, localTranslation, viewMatrix, projMatrix;
     RenderData renderData;
-    unsigned short selectedModelIndex=1;
+    unsigned short selectedModelIndex=0;
     glm::vec4 getUp();
     glm::vec4 getFoward();
     glm::vec4 getRight();
@@ -49,7 +49,8 @@ class Render{
     public:
     char flags; // abcd efgh: h = Update renderData
     unsigned int EBO, FBO_FROM,FBO_TO,RBO, TBO, Query,
-                 modelMxSSBO,texCoordSSBO,texIndexSSBO,textureIndxSSBO,renderFlagsSSBO,normalVecsIndexSSBO,normalVecsSSBO,texUtilitary,//texUtilitary: for copying and resing
+                 modelMxSSBO,texCoordSSBO,texIndexSSBO,textureIndxSSBO,renderFlagsSSBO,normalVecsSSBO,normalVecsIndexSSBO,
+                 texUtilitary,//texUtilitary: for copying and resing
                  texToRenderOver,texToShowFrom,texARRAY[16];
     unsigned int feedbacksize,feedbacknumber,samples=4;
 

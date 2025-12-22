@@ -21,7 +21,7 @@ class Mesh {
     //
     glm::mat4 matrix;
     unsigned int verticesCount = 0, verticesIndexCount = 0, textureVerticesCount=0,
-                 textureVerticesIndexCount=0,normalVecCount=0,normalIndexCount=0,verticesOffsetIndex= 0;
+                 textureVerticesIndexCount=0,normalVecCount=0,verticesOffsetIndex= 0;// normalIndexCount = nOfPrimitives = verticesIndexCount /3
     float *vertices,*textureVertices,*normalVec;
     int renderFlags = 0;
     unsigned int *verticesIndex,*textureVerticesIndex,*normalIndex;
