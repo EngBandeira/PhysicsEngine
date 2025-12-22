@@ -6,7 +6,7 @@ layout(triangle_strip, max_vertices = 3) out;
 out vec3 gColor;
 out vec4 outValue;
 out vec2 g_texCoord;
-out vec3 norm;
+out vec3 normalVec;
 out uint modelIndexFrag;
 // layout (location = 1) in vec3 inColor;
 in uint modelIndexGeom[3];
@@ -22,6 +22,13 @@ layout(std430, binding = 5) buffer TexIndexBuffer {
     uvec3 indexTexture[];
 };
 
+layout(std430, binding = 7) buffer NormalVecsBuffer {
+    vec3 normalVecsBuffer[];
+};
+layout(std430, binding = 8) buffer NormalVecsIndexBuffer {
+    uint normalVecsIndexBuffer[];
+};
+
 void main() {
     //
     uvec3 inxTex = indexTexture[gl_PrimitiveIDIn];
@@ -29,6 +36,7 @@ void main() {
     g_texCoord = texCoord[inxTex.x];
     gl_PrimitiveID = gl_PrimitiveIDIn;
     modelIndexFrag = modelIndexGeom[0];
+    normalVec = normalVecsBuffer[normalVecsIndexBuffer[gl_PrimitiveIDIn]];
 
     EmitVertex();
 
@@ -36,6 +44,7 @@ void main() {
     g_texCoord = texCoord[inxTex.y];
     gl_PrimitiveID = gl_PrimitiveIDIn;
     modelIndexFrag = modelIndexGeom[0];
+    normalVec = normalVecsBuffer[normalVecsIndexBuffer[gl_PrimitiveIDIn]];
 
     EmitVertex();
 
@@ -43,6 +52,7 @@ void main() {
     g_texCoord = texCoord[inxTex.z];
     gl_PrimitiveID = gl_PrimitiveIDIn;
     modelIndexFrag = modelIndexGeom[0];
+    normalVec = normalVecsBuffer[normalVecsIndexBuffer[gl_PrimitiveIDIn]];
 
     EmitVertex();
     EndPrimitive();

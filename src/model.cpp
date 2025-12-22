@@ -17,6 +17,18 @@ T *exportvec(unsigned int *count, std::vector<T> vec)
 }
 
 
+
+
+void Mesh::deleteMesh(){
+    free(vertices);
+    free(textureVertices);
+    free(normalVec);
+    free(verticesIndex);
+    free(textureVerticesIndex);
+    free(normalIndex);
+    // free(meshPath);
+}
+
 Mesh::Mesh(const char *meshPath): matrix(1),meshPath(meshPath)
 {
 

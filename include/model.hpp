@@ -23,8 +23,10 @@ class Mesh {
     unsigned int verticesCount = 0, verticesIndexCount = 0, textureVerticesCount=0,
                  textureVerticesIndexCount=0,normalVecCount=0,normalIndexCount=0,verticesOffsetIndex= 0;
     float *vertices,*textureVertices,*normalVec;
+    int renderFlags = 0;
     unsigned int *verticesIndex,*textureVerticesIndex,*normalIndex;
     const char *meshPath;
+    void deleteMesh();
     Mesh(){};
     Mesh(const char *meshPath);
     ~Mesh();

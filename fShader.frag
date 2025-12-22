@@ -17,6 +17,10 @@ uniform sampler2DArray textures[16]; //64x64, 4096x4096
 layout(std430, binding = 3) buffer textureIndxBuffer {
     uvec2 textureInxBuffer[]; //which tex array, index
 };
+layout(std430, binding = 6) buffer renderFlagBuffer {
+    int renderFlagsBuffer[]; //which tex array, index//abcd efgh
+    //                h:have texture
+};
 
 // out vec4 outValue;
 
@@ -45,9 +49,12 @@ void main()
     }
     //
     //
-    //
-    fragColor = texture(textures[textureInxBuffer[modelIndexFrag].x],
-            vec3(g_texCoord, textureInxBuffer[modelIndexFrag].y));
+    fragColor = vec4(1, 0, 0, 1);
+    if (bool(renderFlagsBuffer[modelIndexFrag] & 1))
+    {
+        fragColor = texture(textures[textureInxBuffer[modelIndexFrag].x],
+                vec3(g_texCoord, textureInxBuffer[modelIndexFrag].y));
+    }
 
     // fragColor += vec4(1.0, 0.0, 0.0, 1.0) * gl_FragCoord.w * 0.3;
     // fragColor = texture(textures,

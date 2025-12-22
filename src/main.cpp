@@ -108,8 +108,9 @@ int main()
 
     projMatrix = glm::perspective(glm::radians(45.0f),
                                     (float)SCR_X / (float)SCR_Y, 0.1f, 100.0f);
-        viewMatrix = glm::mat4(1);
-        viewMatrix = glm::translate(viewMatrix, glm::vec3(0.0f, 0.0f, -5.0f));
+        // viewMatrix = glm::mat4(1);
+        // viewMatrix = glm::translate(viewMatrix, glm::vec3(0.0f, 0.0f, -5.0f));
+        viewMatrix = glm::lookAt(glm::vec3(0.0f, 0.0f, -5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
 
     {
@@ -160,7 +161,6 @@ int main()
     ImGui::DestroyContext();
     glfwDestroyWindow(bigWindow);
     glfwTerminate();
-
     return 0;
 }
 void error_callback(GLenum source, GLenum type, unsigned int id,

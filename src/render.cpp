@@ -27,8 +27,18 @@
 #define FRAGMENT_SHADERS_LOCALPATH "fShader.frag"
 #define GEOMETRY_SHADERS_LOCALPATH "gShader.geom"
 #define LEVEL 0
+#define MOUSE_SENSI 0.05f
 
 int fodase[16] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15};
+
+void setTexParameter(){
+    glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_BASE_LEVEL, 0);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAX_LEVEL, LEVEL);
+}
 
 RenderData::RenderData() : models()
 {
@@ -43,7 +53,10 @@ RenderData::RenderData() : models()
     matricesIndex = (unsigned int *)malloc(0);
     textureVerticesIndex = (unsigned int *)malloc(0);
     normalIndex = (unsigned int *)malloc(0);
+
     textureIndxDATA = (unsigned int *)malloc(0);
+    renderFlags = (int*)malloc(0);
+
     for(int i =0; i < TEXTURE_COUNT; i++){
         modelsPerTex[i] = (unsigned short *)malloc(0);
     }
@@ -53,14 +66,13 @@ RenderData::RenderData() : models()
 void RenderData::freeRenderData()
 {
     for(int i = 0; i <models.size(); i++){
-        free(models[i].mesh.vertices);
-        free(models[i].mesh.textureVertices);
-        free(models[i].mesh.normalVec);
-        free(models[i].mesh.verticesIndex);
-        free(models[i].mesh.textureVerticesIndex);
-        free(models[i].mesh.normalIndex);
+        models[i].mesh.deleteMesh();
+    }
+    for(int i =0; i < TEXTURE_COUNT; i++){
+        free(modelsPerTex[i]);
     }
     free(textureIndxDATA);
+    free(renderFlags);
 
     free(vertices);
     free(matrices);
@@ -73,10 +85,23 @@ void RenderData::freeRenderData()
     free(normalIndex);
 }
 
-Camera::Camera(glm::mat4 vMatrix,glm::mat4 pjMatrix):viewMatrix(vMatrix),
-                    projMatrix(pjMatrix),renderData(){
-
+// rotation[0][0] = r.x; rotation[1][0] = r.y; rotation[2][0] = r.z;
+// rotation[0][1] = u.x; rotation[1][1] = u.y; rotation[2][1] = u.z;
+// rotation[0][2] = -f.x; rotation[1][2] = -f.y; rotation[2][2] = -f.z;
+//
+glm::vec4 Camera::getUp(){
+    return translation* glm::vec4(rotation[0][1],rotation[1][1],rotation[2][1],rotation[3][1]);
 }
+glm::vec4 Camera::getFoward(){
+    return translation* glm::vec4(rotation[0][2],rotation[1][2],rotation[2][2],rotation[3][2]);
+}
+glm::vec4 Camera::getRight(){
+    return translation* glm::vec4(rotation[0][0],rotation[1][0],rotation[2][0],rotation[3][0]);
+}
+// glm::mat4 translation, rotation, localTranslation, viewMatrix, projMatrix;
+
+Camera::Camera(glm::mat4 vMatrix,glm::mat4 pjMatrix):translation(1),rotation(1),localTranslation(1),viewMatrix(vMatrix),
+                    projMatrix(pjMatrix),renderData(){}
 
 glm::mat4 *Camera::getNMatrix(unsigned short index){
     return (glm::mat4*)(renderData.matrices + 16*index);
@@ -149,16 +174,52 @@ Render::~Render() {
 }
 
 
+
+
 void Render::input()
 {
-    if (ImGui::IsKeyPressed(ImGuiKey_Escape))
-        {
-            glfwSetWindowShouldClose(glfwWin, true);
-        }
-    if (ImGui::IsWindowFocused())
+
+    if (ImGui::IsWindowFocused() && ImGui::GetMousePos().y >=ImGui::GetCursorScreenPos().y)
     {
+        if (ImGui::IsKeyPressed(ImGuiKey_Escape)){
+            ImGui::SetWindowFocus(NULL);
+            ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
+        }
+
+        ImGuiIO& io = ImGui::GetIO();
+
+        ImVec2 mousePos = io.MousePos;
+        ImVec2 windowCenter = ImGui::GetWindowSize();
+        windowCenter.x *= .5;
+        windowCenter.y *= .5;
+        windowCenter = windowCenter +ImGui::GetWindowPos();
+
+        ImGui::SetMouseCursor(ImGuiMouseCursor_None);
+
+        // printf("ca %f %f\n", io.MouseDelta.x,io.MouseDelta.y);
+        ImVec2  mouseDelta = ImVec2(0,0);
+        if(io.MouseDelta.x && io.MouseDelta.y)
+            mouseDelta = ImVec2(mousePos.x - windowCenter.x,mousePos.y - windowCenter.y);
+
+
+        glfwSetCursorPos(glfwWin,windowCenter.x,windowCenter.y);
+        ImGui::Dummy(ImVec2(0,0));
+
+
+        camera.rotation = glm::rotate(camera.rotation,glm::radians(MOUSE_SENSI*mouseDelta.x), glm::vec3(0, 1, 0));
+        camera.rotation = glm::rotate(camera.rotation,glm::radians(-.5f*MOUSE_SENSI*mouseDelta.y), glm::vec3(1, 0, 0));
+        float b = .3;
         if(camera.renderData.models.size() > camera.selectedModelIndex){
             glm::mat4 *modelMatrix = camera.getNMatrix(camera.selectedModelIndex);
+            // if(ImGui::IsKeyPressed(ImGuiKey_H)){
+                // rotation = glm::rotate(rotation,glm::radians(-10.0f), glm::vec3(1, 0, 0));
+                // camera.viewMatrix = rotation * translation;
+                // printf("\n %f %f %f %f \n %f %f %f %f \n %f %f %f %f \n %f %f %f %f \n",
+                //     camera.viewMatrix[0][0],camera.viewMatrix[1][0],camera.viewMatrix[2][0],camera.viewMatrix[3][0],
+                //     camera.viewMatrix[0][1],camera.viewMatrix[1][1],camera.viewMatrix[2][1],camera.viewMatrix[3][1],
+                //     camera.viewMatrix[0][2],camera.viewMatrix[1][2],camera.viewMatrix[2][2],camera.viewMatrix[3][2],
+                //     camera.viewMatrix[0][3],camera.viewMatrix[1][3],camera.viewMatrix[2][3],camera.viewMatrix[3][3]);
+            // }
             if (ImGui::IsKeyPressed(ImGuiKey_UpArrow))
             {
                 *modelMatrix =
@@ -176,6 +237,7 @@ void Render::input()
                 *modelMatrix =
                     glm::rotate(*modelMatrix, glm::radians(-10.0f), glm::vec3(0, 1, 0));
                 flags = flags | 4;
+
             }
             if (ImGui::IsKeyPressed(ImGuiKey_RightArrow))
             {
@@ -186,35 +248,39 @@ void Render::input()
             }
             if (ImGui::IsKeyPressed(ImGuiKey_A))
             {
-                *modelMatrix = glm::translate(*modelMatrix, glm::vec3(1, 0, 0));
+                camera.localTranslation = glm::translate(camera.localTranslation, b*glm::vec3(camera.getRight()));
                 flags = flags | 4;
 
                 // camera.viewMatrix[3][2] -= .2;
             }
             if (ImGui::IsKeyPressed(ImGuiKey_D))
             {
-                *modelMatrix = glm::translate(*modelMatrix, glm::vec3(-1, 0, 0));
+                camera.localTranslation = glm::translate(camera.localTranslation, b*glm::vec3(-camera.getRight()));
                 flags = flags | 4;
-
 
                 // camera.viewMatrix[3][2] += .2;
             }
             if (ImGui::IsKeyPressed(ImGuiKey_W))
             {
-                *modelMatrix = glm::translate(*modelMatrix, glm::vec3(0, 0, 1));
+                camera.localTranslation = glm::translate(camera.localTranslation, b*glm::vec3(camera.getFoward()));
                 flags = flags | 4;
-
 
                 // camera.viewMatrix[3][0] -= .2;
             }
             if (ImGui::IsKeyPressed(ImGuiKey_S))
             {
-                *modelMatrix = glm::translate(*modelMatrix, glm::vec3(0, 0, -1));
+                camera.localTranslation = glm::translate(camera.localTranslation, b*glm::vec3(-camera.getFoward()));
                 flags = flags | 4;
 
                 // camera.viewMatrix[3][0] += .2;
             }
         }
+        camera.translation = camera.localTranslation;
+        camera.viewMatrix = camera.rotation * camera.translation;
+    }
+    else if (ImGui::IsKeyPressed(ImGuiKey_Escape))
+    {
+        glfwSetWindowShouldClose(glfwWin, true);
     }
 }
 
@@ -252,10 +318,26 @@ void Render::once()
     m_VAO->unbindVBO();
     m_VAO->unbind();
 
+    // EBO
+    glGenBuffers(1, &EBO);
+
+    glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "projection"), 1,
+                        GL_FALSE, glm::value_ptr(camera.projMatrix));
+
+
+
+//-------/-------/-------/----- SSBO -----/-------/-------/-------/-------/
+
     // ModelMatricesSSBO
     glGenBuffers(1, &modelMxSSBO);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, modelMxSSBO);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, modelMxSSBO);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0); // unbind
+
+    // TextureIndxSSBO
+    glGenBuffers(1, &textureIndxSSBO);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, textureIndxSSBO);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, textureIndxSSBO);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0); // unbind
 
     // TextureCoordSSBO
@@ -270,18 +352,25 @@ void Render::once()
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, texIndexSSBO);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0); // unbind
 
-    // EBO
-    glGenBuffers(1, &EBO);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    // RenderFlagsSSBO
+    glGenBuffers(1, &renderFlagsSSBO);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, renderFlagsSSBO);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, renderFlagsSSBO);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0); // unbind
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    // NormalVecsSSBO
+    glGenBuffers(1, &normalVecsSSBO);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, normalVecsSSBO);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, normalVecsSSBO);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0); // unbind
 
-    glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "projection"), 1,
-                        GL_FALSE, glm::value_ptr(camera.projMatrix));
+    // NormalVecsIndexSSBO
+    glGenBuffers(1, &normalVecsIndexSSBO);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, normalVecsIndexSSBO);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 8, normalVecsIndexSSBO);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0); // unbind
 
-
-    //------//------//------//------//
-    // FBO
+//-------/-------/-------/----- FBOs -----/-------/-------/-------/-------/
     glGenFramebuffers(1, &FBO_FROM);
     glBindFramebuffer(GL_FRAMEBUFFER, FBO_FROM);
 
@@ -301,7 +390,6 @@ void Render::once()
     glBindRenderbuffer(GL_RENDERBUFFER, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    //------//------//------//------//------//
 
 
     glGenFramebuffers(1, &FBO_TO);
@@ -321,6 +409,8 @@ void Render::once()
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+//-------/-------/-------/----- Textures -----/-------/-------/-------/-------/
+
     for(int i = 0; i < TEXTURE_COUNT; i++){
         camera.renderData.texturesCount[i] = 0;
     }
@@ -331,35 +421,17 @@ void Render::once()
         glBindTexture(GL_TEXTURE_2D_ARRAY,texARRAY[i]);
         glTexImage3D(GL_TEXTURE_2D_ARRAY,LEVEL,GL_RGBA8 ,k,k,0,0,GL_RGBA,GL_UNSIGNED_BYTE,NULL);
 
-        glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_BASE_LEVEL, 0);
-        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAX_LEVEL, LEVEL);
+        setTexParameter();
     }
 
     glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
 
-    // textureIndxSSBO
-    // for(int i = 0; i < camera.renderData.models.size(); i++){
-    //     printf("vaia%d %d\n",camera.renderData.textureIndxDATA[2*i],camera.renderData.textureIndxDATA[2*i+1]);
-    // }
-    glGenBuffers(1, &textureIndxSSBO);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, textureIndxSSBO);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, textureIndxSSBO);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0); // unbind
 
 
     glGenTextures(1, &texUtilitary);
     glBindTexture(GL_TEXTURE_2D_ARRAY, texUtilitary);
     glTexImage3D(GL_TEXTURE_2D_ARRAY,LEVEL,GL_RGBA8 ,0,0,0,0,GL_RGBA,GL_UNSIGNED_BYTE,NULL);
-    glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_BASE_LEVEL, 0);
-    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAX_LEVEL, LEVEL);
+    setTexParameter();
     glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
 
     glUniform1iv(glGetUniformLocation(shaderProgram, "textures"), TEXTURE_COUNT,fodase);
@@ -422,11 +494,13 @@ void Render::renderDrawing()
                     sizeof(int) * camera.renderData.textureVerticesIndexCount,
                     camera.renderData.textureVerticesIndex, GL_DYNAMIC_DRAW);
 
-        // printf("\n");
-        // for(int i = 0; i < camera.renderData.models.size(); i++){
-        //     printf("pinta%d %d\n",camera.renderData.textureIndxDATA[2*i],camera.renderData.textureIndxDATA[2*i+1]);
-        // }
-        // printf("\n");
+        // RenderFlagsSSBO
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, renderFlagsSSBO);
+        glBufferData(GL_SHADER_STORAGE_BUFFER,
+                    sizeof(int) * camera.renderData.models.size(),
+                    camera.renderData.renderFlags, GL_DYNAMIC_DRAW);
+
+        // TextureIndicesSSBO
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, textureIndxSSBO);
         glBufferData(GL_SHADER_STORAGE_BUFFER,
                     sizeof(int) * 2 * camera.renderData.models.size(),
@@ -459,6 +533,10 @@ void Render::renderDrawing()
 
         // TextureIndexSSBO
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, texIndexSSBO);
+
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, renderFlagsSSBO);
+
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, textureIndxSSBO);
 
         m_VAO->bindVBO(1);
 
@@ -577,7 +655,7 @@ void Render::imguiSetting()
 
 
 
-    ImGui::Begin("Render");
+    ImGui::Begin("Render",nullptr);
     input();
     ImGui::GetWindowDrawList()->AddImage((void *)texToShowFrom, ImGui::GetWindowPos(),
                                         ImGui::GetWindowSize() +
@@ -592,22 +670,32 @@ void Render::imguiSetting()
 
 void Render::start(void(*op1)(),void(*op2)(),void(*op3)()){
     once();
+
+    camera.translation[3][0] = 0;
+    camera.translation[3][1] = 0;
+    camera.translation[3][2] = 5;
+    camera.rotation = glm::rotate(camera.rotation,3.14f, glm::vec3(0, 1, 0));
+
     ModelGenStruct models[3] =
     {
         ModelGenStruct
         {
             meshPath:"assets/3dmodels/Cube.obj",
-            texPath:"assets/3dmodels/CubeTexture2.jpg"
+            texPath:"assets/3dmodels/CubeTexture2.jpg",
+            renderFlags:1
         },
         ModelGenStruct
         {
             meshPath:"assets/3dmodels/cannon_01_4k.obj",
-            texPath:"assets/3dmodels/cannon_01_diff_4k.jpg"
+            texPath:"assets/3dmodels/cannon_01_diff_4k.jpg",
+            renderFlags:1
+
         },
         ModelGenStruct
         {
             meshPath:"assets/3dmodels/marble_bust_01_4k.obj",
-            texPath:"assets/3dmodels/marble_bust_01_diff_4k.jpg"
+            texPath:"assets/3dmodels/marble_bust_01_diff_4k.jpg",
+            renderFlags:1
         }
 
     };
@@ -619,6 +707,7 @@ void Render::start(void(*op1)(),void(*op2)(),void(*op3)()){
     // addModels(1, &models[1]);
     unsigned short  a = 0;
     rmModels(1, &a);
+
     while(!glfwWindowShouldClose(glfwWin))
     {
         newframe();
@@ -640,6 +729,7 @@ void Render::start(void(*op1)(),void(*op2)(),void(*op3)()){
         op2();
 
         imguiSetting();//Here is where im removing
+        // camera.viewMatrix  = rotation * translation;
 
 
         op3();
@@ -669,6 +759,7 @@ void Render::addModels(unsigned short n, ModelGenStruct *data){
     for (unsigned short i = 0; i < n; i++){
         camera.renderData.models.push_back(Model(data[i].meshPath,data[i].texPath));
         Model &actualM = camera.renderData.models.back();
+        actualM.mesh.renderFlags = data[i].renderFlags;
         totalVerticesCount += actualM.mesh.verticesCount;
         totalTextureVerticesCount += actualM.mesh.textureVerticesCount;
         totalNormalVecCount += actualM.mesh.normalVecCount;
@@ -697,7 +788,10 @@ void Render::addModels(unsigned short n, ModelGenStruct *data){
                 sizeof(int) * totalNormalIndexCount);
 
 
-    camera.renderData.textureIndxDATA = (unsigned int*)realloc(camera.renderData.textureIndxDATA, sizeof(int) * 2 * nModels);
+    camera.renderData.textureIndxDATA = (unsigned int*)realloc(camera.renderData.textureIndxDATA,
+                sizeof(int) * 2 * nModels);
+    camera.renderData.renderFlags = (int*)realloc(camera.renderData.renderFlags,
+                sizeof(int) * nModels);
 
 
     for (unsigned short i = 0; i < n; i++){
@@ -721,12 +815,7 @@ void Render::addModels(unsigned short n, ModelGenStruct *data){
         glBindTexture(GL_TEXTURE_2D_ARRAY, texUtilitary);
         glTexImage3D(GL_TEXTURE_2D_ARRAY,LEVEL,GL_RGBA8 ,actualM.tex.width,actualM.tex.width,camera.renderData.texturesCount[buffIndex]+1,0,GL_RGBA,GL_UNSIGNED_BYTE,NULL);
 
-        glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_BASE_LEVEL, 0);
-        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAX_LEVEL, LEVEL);
+        setTexParameter();
 
         glCopyImageSubData(texARRAY[buffIndex],GL_TEXTURE_2D_ARRAY,LEVEL,0,0,0,texUtilitary,GL_TEXTURE_2D_ARRAY,LEVEL,
                         0,0,0,actualM.tex.width,actualM.tex.width,camera.renderData.texturesCount[buffIndex]);
@@ -799,6 +888,8 @@ void Render::addModels(unsigned short n, ModelGenStruct *data){
         memcpy(camera.renderData.normalIndex + camera.renderData.normalIndexCount,
                 actualM.mesh.normalIndex,
                 sizeof(int) * actualM.mesh.normalIndexCount);
+
+        camera.renderData.renderFlags[nModels - n + i] = actualM.mesh.renderFlags;
 
         for(unsigned int j = 0; j < actualM.mesh.verticesIndexCount; j++){
             *(camera.renderData.verticesIndex + camera.renderData.verticesIndexCount + j) += camera.renderData.verticesIndexOffset;
@@ -887,12 +978,7 @@ void Render::rmModels(unsigned short n, unsigned short *indices){
             glBindTexture(GL_TEXTURE_2D_ARRAY, texUtilitary);
             glTexImage3D(GL_TEXTURE_2D_ARRAY,LEVEL,GL_RGBA8 ,size,size,camera.renderData.texturesCount[i],0,GL_RGBA,GL_UNSIGNED_BYTE,NULL);
 
-            glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-            glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-            glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-            glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-            glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_BASE_LEVEL, 0);
-            glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAX_LEVEL, LEVEL);
+            setTexParameter();
 
             glCopyImageSubData(texARRAY[i], GL_TEXTURE_2D_ARRAY, LEVEL, 0, 0, 0, texUtilitary, GL_TEXTURE_2D_ARRAY, LEVEL,
                                0, 0, 0, size, size, camera.renderData.texturesCount[i]);
@@ -922,6 +1008,7 @@ void Render::rmModels(unsigned short n, unsigned short *indices){
         camera.renderData.textureVerticesIndexCount -= actualM.mesh.textureVerticesIndexCount;
         camera.renderData.normalVecCount -= actualM.mesh.normalVecCount;
         camera.renderData.normalIndexCount -= actualM.mesh.normalIndexCount;
+        actualM.mesh.deleteMesh();
     }
 
 
@@ -944,7 +1031,8 @@ void Render::rmModels(unsigned short n, unsigned short *indices){
                 sizeof(int) * camera.renderData.normalIndexCount);
 
 
-
+    camera.renderData.renderFlags = (int*)realloc(camera.renderData.renderFlags,
+                sizeof(int) * camera.renderData.models.size());
 
     camera.renderData.verticesIndexOffset = 0;
     camera.renderData.textureIndexOffset = 0;
@@ -996,6 +1084,8 @@ void Render::rmModels(unsigned short n, unsigned short *indices){
         memcpy(camera.renderData.normalIndex + indexNormalIndexCount,
                 actualM.mesh.normalIndex,
                 sizeof(int) * actualM.mesh.normalIndexCount);
+
+        camera.renderData.renderFlags[i] = actualM.mesh.renderFlags;
 
 
         for(unsigned int j = 0; j < actualM.mesh.verticesIndexCount; j++)//PRECISO CORRIGIR TODOS OS INDEX

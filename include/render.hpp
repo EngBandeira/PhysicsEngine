@@ -4,7 +4,6 @@
 #include "shader.hpp"
 #include "vertexArray.hpp"
 #include <GLFW/glfw3.h>
-#include <cstddef>
 #include <vector>
 #define TEXTURE_COUNT 7
 
@@ -15,6 +14,7 @@ class RenderData{
     unsigned int  verticesCount = 0, verticesIndexCount = 0, textureVerticesCount=0,
                         textureVerticesIndexCount=0,normalVecCount=0,normalIndexCount=0,
                         verticesIndexOffset= 0,textureIndexOffset = 0,normalIndexOffset=0;
+    int *renderFlags;//one per Model
     unsigned short *modelsPerTex[TEXTURE_COUNT];
     float *vertices,*matrices,*textureVertices,*normalVec;
     unsigned int *verticesIndex, *matricesIndex,*textureVerticesIndex,*normalIndex,*textureIndxDATA;
@@ -28,15 +28,20 @@ class RenderData{
 class Camera
 {
     public:
-    glm::mat4 viewMatrix,projMatrix;
+    glm::vec4 *up,*foward,*right;
+    glm::mat4 translation, rotation, localTranslation, viewMatrix, projMatrix;
     RenderData renderData;
     unsigned short selectedModelIndex=1;
+    glm::vec4 getUp();
+    glm::vec4 getFoward();
+    glm::vec4 getRight();
     Camera(glm::mat4 vMatrix,glm::mat4 pjMatrix);
     glm::mat4 *getNMatrix(unsigned short index);
 };
 
 struct ModelGenStruct{
     const char *meshPath, *texPath;
+    int renderFlags = 0;
 };
 
 
@@ -44,7 +49,7 @@ class Render{
     public:
     char flags; // abcd efgh: h = Update renderData
     unsigned int EBO, FBO_FROM,FBO_TO,RBO, TBO, Query,
-                 modelMxSSBO,texCoordSSBO,texIndexSSBO,textureIndxSSBO,texUtilitary,//texUtilitary: for copying and resing
+                 modelMxSSBO,texCoordSSBO,texIndexSSBO,textureIndxSSBO,renderFlagsSSBO,normalVecsIndexSSBO,normalVecsSSBO,texUtilitary,//texUtilitary: for copying and resing
                  texToRenderOver,texToShowFrom,texARRAY[16];
     unsigned int feedbacksize,feedbacknumber,samples=4;
 
