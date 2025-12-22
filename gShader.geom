@@ -23,7 +23,7 @@ layout(std430, binding = 5) buffer TexIndexBuffer {
 };
 
 layout(std430, binding = 7) buffer NormalVecsBuffer {
-    vec3 normalVecsBuffer[];
+    float normalVecsBuffer[]; // to getway with vec3 limitations
 };
 layout(std430, binding = 8) buffer NormalVecsIndexBuffer {
     uint normalVecsIndexBuffer[];
@@ -31,12 +31,16 @@ layout(std430, binding = 8) buffer NormalVecsIndexBuffer {
 
 void main() {
     //
+    vec3 nmVec = vec3(normalVecsBuffer[3 * normalVecsIndexBuffer[gl_PrimitiveIDIn]],
+            normalVecsBuffer[3 * normalVecsIndexBuffer[gl_PrimitiveIDIn]] + 1,
+            normalVecsBuffer[3 * normalVecsIndexBuffer[gl_PrimitiveIDIn]] + 2);
+
     uvec3 inxTex = indexTexture[gl_PrimitiveIDIn];
     gl_Position = gl_in[0].gl_Position;
     g_texCoord = texCoord[inxTex.x];
     gl_PrimitiveID = gl_PrimitiveIDIn;
     modelIndexFrag = modelIndexGeom[0];
-    normalVec = normalVecsBuffer[normalVecsIndexBuffer[gl_PrimitiveIDIn]];
+    normalVec = nmVec;
 
     EmitVertex();
 
@@ -44,7 +48,7 @@ void main() {
     g_texCoord = texCoord[inxTex.y];
     gl_PrimitiveID = gl_PrimitiveIDIn;
     modelIndexFrag = modelIndexGeom[0];
-    normalVec = normalVecsBuffer[normalVecsIndexBuffer[gl_PrimitiveIDIn]];
+    normalVec = nmVec;
 
     EmitVertex();
 
@@ -52,7 +56,7 @@ void main() {
     g_texCoord = texCoord[inxTex.z];
     gl_PrimitiveID = gl_PrimitiveIDIn;
     modelIndexFrag = modelIndexGeom[0];
-    normalVec = normalVecsBuffer[normalVecsIndexBuffer[gl_PrimitiveIDIn]];
+    normalVec = nmVec;
 
     EmitVertex();
     EndPrimitive();
