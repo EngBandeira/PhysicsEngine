@@ -32,6 +32,7 @@ class Camera
     glm::mat4 translation, rotation, localTranslation, viewMatrix, projMatrix;
     RenderData renderData;
     unsigned short selectedModelIndex=0;
+    glm::vec4 getPosition();
     glm::vec4 getUp();
     glm::vec4 getFoward();
     glm::vec4 getRight();

@@ -43,7 +43,7 @@ Mesh::Mesh(const char *meshPath): matrix(1),meshPath(meshPath)
             i++;
             while (file[i] != '\n')
                 i++;
-                continue;
+            continue;
         }
         if (bufferLenght == 0) {
         if (file[i + 1] == ' ')

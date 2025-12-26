@@ -1,65 +1,57 @@
 #version 460 core
 #extension GL_EXT_nonuniform_qualifier : enable
-// layout (location = 0) in vec3 inColor;
+
 layout(location = 0) out vec4 fragColor;
-uniform sampler2D Texture; //This is texture 38
-//  in vec3 vColor;
+
 in vec2 g_texCoord;
 in vec3 gColor;
-in vec3 norm;
+in vec3 normalVec;
+in vec3 normalVecT;
 in flat uint modelIndexFrag;
-uniform mat4 model;
-uniform vec3 viewVec;
+in noperspective vec4 worldPos;
+in noperspective vec4 worldPosT;
 
-uniform sampler2DArray textures[16]; //64x64, 4096x4096
-// uniform sampler2DArray textures; //64x64, 4096x4096
+uniform vec4 cameraPosition;
+uniform vec4 lampPosition;
+// uniform vec4 cameraPositionT;
+uniform mat4 projection;
+uniform mat4 view;
+uniform sampler2DArray textures[16];
 
+uniform float Ka;
+uniform float Kd;
+uniform float Ks;
+uniform float lightIntensity;
+uniform float alpha;
+
+uniform int test;
 layout(std430, binding = 3) buffer textureIndxBuffer {
     uvec2 textureInxBuffer[]; //which tex array, index
 };
 layout(std430, binding = 6) buffer renderFlagBuffer {
     int renderFlagsBuffer[]; //which tex array, index//abcd efgh
-    //                h:have texture
+    //h:have texture
 };
-
-// out vec4 outValue;
 
 void main()
 {
-    // float d = sqrt(gl_PointCoord.x*gl_PointCoord.x + gl_PointCoord.y * gl_PointCoord.y)*1000;
-    // float d = gl_Position.x;
-    // fragColor = vec4(d,d,d,1.0);
-    // fragColor = vec4(inColor,1);
-    // fragColor = vec4(vColor,1);
-    // fragColor = vec4(gColor,1);
-    //
-    int pinto = gl_PrimitiveID % 3;
-    switch (pinto) {
-        case 0:
-        fragColor = vec4(1.0, 0.0, 0.0, 1.0);
-        break;
-        case 1:
-        fragColor = vec4(0.0, 1.0, 0.0, 1.0);
+    vec3 L = normalize(worldPos.xyz - lampPosition.xyz); //Incident
+    vec3 V = normalize(cameraPosition.xyz - worldPos.xyz); //View
+    vec3 R = reflect(L, normalVec); //Reflected
+    vec3 N = normalVec.xyz;
+    //Ambient
+    float illumA = Ka * lightIntensity;
+    //Difuse
+    float illumD = Kd * max(dot(L, N), 0);
+    // Specular
+    float illumS = Ks * max(pow(dot(V, R), alpha), 0);
 
-        break;
-        case 2:
-        fragColor = vec4(0.0, 0.0, 1.0, 1.0);
-
-        break;
-    }
-    //
-    //
     fragColor = vec4(1, 0, 0, 1);
     if (bool(renderFlagsBuffer[modelIndexFrag] & 1))
     {
         fragColor = texture(textures[textureInxBuffer[modelIndexFrag].x],
                 vec3(g_texCoord, textureInxBuffer[modelIndexFrag].y));
     }
-
-    // fragColor += vec4(1.0, 0.0, 0.0, 1.0) * gl_FragCoord.w * 0.3;
-    // fragColor = texture(textures,
-    // vec3(g_texCoord, 0));
-    // vec4 preta = model * vec4(normalVecs[NormalVecIndex[gl_PrimitiveID]], 1);
-    // vec3 bingoludo = normalize(preta.xyz);
-    // float pinto = dot(norm, viewVec);
+    fragColor = fragColor * (illumA + illumD + illumS);
+    fragColor.w = 1;
 }

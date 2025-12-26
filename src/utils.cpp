@@ -31,14 +31,3 @@ sendError (const char *str)
 {
         fprintf (stderr, "error: %s\n", str);
 }
-
-std::ostream &
-operator<< (std::ostream &os, vec3 v)
-{
-        return os << v.x << " , " << v.y << " , " << v.z;
-}
-std::ostream &
-operator<< (std::ostream &os, vec2 v)
-{
-        return os << v.x << " , " << v.y;
-}

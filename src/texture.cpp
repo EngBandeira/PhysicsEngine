@@ -7,20 +7,6 @@
 #include <cstring>
 #include <glm/ext/vector_float3.hpp>
 
-// # Blender 4.5.3 LTS MTL File: 'cannon_01_4k.blend'
-// # www.blender.org
-
-// newmtl cannon_01
-// Ka 1.000000 1.000000 1.000000
-// Ks 0.500000 0.500000 0.500000
-// Ke 0.000000 0.000000 0.000000
-// Ni 1.450000
-// d 1.000000
-// illum 2
-// map_Kd /home/bandeira/Downloads/cannon_01_4k.blend/textures/cannon_01_diff_4k.jpg
-// map_Ns /home/bandeira/Downloads/cannon_01_4k.blend/textures/cannon_01_rough_4k.exr
-// map_refl /home/bandeira/Downloads/cannon_01_4k.blend/textures/cannon_01_metal_4k.exr
-// map_Bump -bm 1.000000 /home/bandeira/Downloads/cannon_01_4k.blend/textures/cannon_01_nor_gl_4k.exr
 
 
 
@@ -94,18 +80,18 @@ Material *mtl(const char *path,unsigned int *materialsCount)
                 continue;
             }
         }
-        if(c == 'K' && (buffer[i+1] == 'a' || buffer[i+1] == 's' || buffer[i+1] == 'e') && buffer[i+2] == ' '){
+        if(c == 'K' && (buffer[i+1] == 'a' || buffer[i+1] == 'd' || buffer[i+1] == 's') && buffer[i+2] == ' '){
             unsigned int vecIndex;
             switch (buffer[i+1]) {
                 case 'a':{
                     vecIndex = 0;
                     break;
                 }
-                case 's':{
+                case 'd':{
                     vecIndex = 1;
                     break;
                 }
-                case 'e':{
+                case 's':{
                     vecIndex = 2;
                     break;
                 }

@@ -57,6 +57,7 @@ int main()
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 4);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
     GLFWwindow *bigWindow =
         glfwCreateWindow(SCR_X, SCR_Y, "PhysicsEngine", NULL, NULL);
 
@@ -99,8 +100,6 @@ int main()
     ImGui::StyleColorsDark();
     // ImGui::StyleColorsLight();
 
-    // Setup scaling
-    ImGuiStyle &style = ImGui::GetStyle();
 
     ImGui_ImplGlfw_InitForOpenGL(bigWindow, true);
     ImGui_ImplOpenGL3_Init("#version 460");
@@ -110,50 +109,11 @@ int main()
                                     (float)SCR_X / (float)SCR_Y, 0.1f, 100.0f);
         // viewMatrix = glm::mat4(1);
         // viewMatrix = glm::translate(viewMatrix, glm::vec3(0.0f, 0.0f, -5.0f));
-        viewMatrix = glm::lookAt(glm::vec3(0.0f, 0.0f, -5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    viewMatrix = glm::lookAt(glm::vec3(0.0f, 0.0f, -5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
 
     {
         Render m_render(viewMatrix,projMatrix,bigWindow);
-
-
-
-        // Model model2("assets/3dmodels/cannon_01_4k.obj","assets/3dmodels/cannon_01_diff_4k.jpg");
-
-        // Model model1("assets/3dmodels/SphereLow.obj","assets/3dmodels/CubeTexture2.jpg");
-        // Model model1("assets/3dmodels/Cube.obj","assets/3dmodels/CubeTexture2.jpg");
-
-        // model2.mesh.matrix = glm::translate(model2.mesh.matrix, glm::vec3(1.0f, 0.0f,0.0f));
-        // model1.mesh.matrix = glm::translate(model1.mesh.matrix, glm::vec3(0.0f, 0.0f, -5.0f));
-        ModelGenStruct models[2] =
-        {ModelGenStruct
-        {
-            meshPath:"assets/3dmodels/cannon_01_4k.obj",
-            texPath:"assets/3dmodels/cannon_01_diff_4k.jpg"
-        },
-            ModelGenStruct
-            {
-                meshPath:"assets/3dmodels/Cube.obj",
-                texPath:"assets/3dmodels/CubeTexture2.jpg"
-            }
-
-        };
-
-
-        ;
-        // m_render.addModels(1, models);
-        unsigned short i = 1;
-        // m_render.rmModels(1, &i);
-
-        int a =1;
-        // m_render.addModels(1, model);
-        // ;
-        // m_render.addModels(1, model);
-        // unsigned short i = 0;
-        // m_render.rmModels(1, &i);
-
-
-
         m_render.start(pr,pr,pr);
     }
     ImGui_ImplOpenGL3_Shutdown();

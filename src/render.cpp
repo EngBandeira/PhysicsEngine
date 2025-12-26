@@ -11,8 +11,11 @@
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
+#include <glm/ext/matrix_float4x4.hpp>
 #include <glm/ext/matrix_transform.hpp>
+#include <glm/ext/vector_float4.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/matrix.hpp>
 #include <memory>
 #include <stdlib.h>
 
@@ -57,7 +60,7 @@ RenderData::RenderData() : models()
     textureIndxDATA = (unsigned int *)malloc(0);
     renderFlags = (int*)malloc(0);
 
-    for(int i =0; i < TEXTURE_COUNT; i++){
+    for(unsigned int i =0; i < TEXTURE_COUNT; i++){
         modelsPerTex[i] = (unsigned short *)malloc(0);
     }
 }
@@ -65,10 +68,10 @@ RenderData::RenderData() : models()
 
 void RenderData::freeRenderData()
 {
-    for(int i = 0; i <models.size(); i++){
+    for(unsigned int i = 0; i <models.size(); i++){
         models[i].mesh.deleteMesh();
     }
-    for(int i =0; i < TEXTURE_COUNT; i++){
+    for(unsigned int i =0; i < TEXTURE_COUNT; i++){
         free(modelsPerTex[i]);
     }
     free(textureIndxDATA);
@@ -98,6 +101,10 @@ glm::vec4 Camera::getFoward(){
 glm::vec4 Camera::getRight(){
     return translation* glm::vec4(rotation[0][0],rotation[1][0],rotation[2][0],rotation[3][0]);
 }
+glm::vec4 Camera::getPosition(){
+    return translation * glm::vec4(0,0,0,1);
+}
+
 // glm::mat4 translation, rotation, localTranslation, viewMatrix, projMatrix;
 
 Camera::Camera(glm::mat4 vMatrix,glm::mat4 pjMatrix):translation(1),rotation(1),localTranslation(1),viewMatrix(vMatrix),
@@ -146,11 +153,11 @@ Render::Render(glm::mat4 vMatrix, glm::mat4 pjMatrix,GLFWwindow *win)
     shader.attach(shaderProgram);
 
     if (transFeed) {
-        const GLchar *feedbackVaryings[] = {"outValue"};
+        const GLchar *feedbackVaryings[] = {"transformFeedback"};
         glTransformFeedbackVaryings(shaderProgram, 1, feedbackVaryings,
                                     GL_INTERLEAVED_ATTRIBS);
 
-        // feedbacknumber = 4*model.mesh.verticesIndexCount;
+        feedbacknumber = 4 * camera.renderData.verticesIndexCount;
         feedbacksize = feedbacknumber * sizeof(float);
     }
 
@@ -162,6 +169,7 @@ Render::~Render() {
 
     camera.renderData.freeRenderData();
     if (transFeed) {
+        glDeleteQueries(1,&Query);
         glDeleteBuffers(1, &TBO);
     }
     m_VAO.reset();
@@ -174,8 +182,9 @@ Render::~Render() {
 }
 
 
-
-
+glm::vec3 angle;
+glm::vec4 lamp_position;
+unsigned int indexLampModel;
 void Render::input()
 {
 
@@ -205,78 +214,80 @@ void Render::input()
         glfwSetCursorPos(glfwWin,windowCenter.x,windowCenter.y);
         ImGui::Dummy(ImVec2(0,0));
 
-
-        camera.rotation = glm::rotate(camera.rotation,glm::radians(MOUSE_SENSI*mouseDelta.x), glm::vec3(0, 1, 0));
-        camera.rotation = glm::rotate(camera.rotation,glm::radians(-.5f*MOUSE_SENSI*mouseDelta.y), glm::vec3(1, 0, 0));
+        angle.x += MOUSE_SENSI*mouseDelta.x;
+        angle.y += .5f*MOUSE_SENSI*mouseDelta.y;
+        camera.rotation = glm::rotate(glm::mat4(1),glm::radians(angle.x), glm::vec3(0, 1, 0));
+        camera.rotation = glm::rotate(camera.rotation,glm::radians(angle.y), glm::vec3(camera.getRight()));
         float b = .3;
         if(camera.renderData.models.size() > camera.selectedModelIndex){
             glm::mat4 *modelMatrix = camera.getNMatrix(camera.selectedModelIndex);
-            // if(ImGui::IsKeyPressed(ImGuiKey_H)){
-                // rotation = glm::rotate(rotation,glm::radians(-10.0f), glm::vec3(1, 0, 0));
-                // camera.viewMatrix = rotation * translation;
-                // printf("\n %f %f %f %f \n %f %f %f %f \n %f %f %f %f \n %f %f %f %f \n",
-                //     camera.viewMatrix[0][0],camera.viewMatrix[1][0],camera.viewMatrix[2][0],camera.viewMatrix[3][0],
-                //     camera.viewMatrix[0][1],camera.viewMatrix[1][1],camera.viewMatrix[2][1],camera.viewMatrix[3][1],
-                //     camera.viewMatrix[0][2],camera.viewMatrix[1][2],camera.viewMatrix[2][2],camera.viewMatrix[3][2],
-                //     camera.viewMatrix[0][3],camera.viewMatrix[1][3],camera.viewMatrix[2][3],camera.viewMatrix[3][3]);
-            // }
-            if (ImGui::IsKeyPressed(ImGuiKey_UpArrow))
-            {
+
+            if (ImGui::IsKeyPressed(ImGuiKey_UpArrow)){
                 *modelMatrix =
                     glm::rotate(*modelMatrix, glm::radians(-10.0f), glm::vec3(1, 0, 0));
                 flags = flags | 4;
             }
-            if (ImGui::IsKeyPressed(ImGuiKey_DownArrow))
-            {
+            if (ImGui::IsKeyPressed(ImGuiKey_DownArrow)){
                 *modelMatrix =
                     glm::rotate(*modelMatrix, glm::radians(2.0f), glm::vec3(1, 0, 0));
                 flags = flags | 4;
             }
-            if (ImGui::IsKeyPressed(ImGuiKey_LeftArrow))
-            {
+            if (ImGui::IsKeyPressed(ImGuiKey_LeftArrow)){
                 *modelMatrix =
                     glm::rotate(*modelMatrix, glm::radians(-10.0f), glm::vec3(0, 1, 0));
                 flags = flags | 4;
 
             }
-            if (ImGui::IsKeyPressed(ImGuiKey_RightArrow))
-            {
+            if (ImGui::IsKeyPressed(ImGuiKey_RightArrow)){
                 *modelMatrix =
                     glm::rotate(*modelMatrix, glm::radians(2.0f), glm::vec3(0, 1, 0));
                 flags = flags | 4;
-
             }
-            if (ImGui::IsKeyPressed(ImGuiKey_A))
-            {
+
+            if (ImGui::IsKeyPressed(ImGuiKey_H)){
+                lamp_position = lamp_position + glm::vec4(.1,0,0,0);
+                // *modelMatrix = glm::translate(*modelMatrix, glm::vec3(1,0,0));
+                flags = flags | 4;
+            }
+            if (ImGui::IsKeyPressed(ImGuiKey_K)){
+                lamp_position = lamp_position + glm::vec4(-.1,0,0,0);
+
+                // *modelMatrix = glm::translate(*modelMatrix, glm::vec3(-1,0,0));
+                flags = flags | 4;
+            }
+            if (ImGui::IsKeyPressed(ImGuiKey_U)){
+                lamp_position = lamp_position + glm::vec4(0,0,.1,0);
+
+                // *modelMatrix = glm::translate(*modelMatrix, glm::vec3(0,0,1));
+                flags = flags | 4;
+            }
+            if (ImGui::IsKeyPressed(ImGuiKey_J)){
+                lamp_position = lamp_position + glm::vec4(0,0,-.1,0);
+
+                // *modelMatrix = glm::translate(*modelMatrix, glm::vec3(0,0,-1));
+                flags = flags | 4;
+            }
+
+            if (ImGui::IsKeyPressed(ImGuiKey_A)){
                 camera.localTranslation = glm::translate(camera.localTranslation, b*glm::vec3(camera.getRight()));
                 flags = flags | 4;
-
-                // camera.viewMatrix[3][2] -= .2;
             }
-            if (ImGui::IsKeyPressed(ImGuiKey_D))
-            {
+            if (ImGui::IsKeyPressed(ImGuiKey_D)){
                 camera.localTranslation = glm::translate(camera.localTranslation, b*glm::vec3(-camera.getRight()));
                 flags = flags | 4;
-
-                // camera.viewMatrix[3][2] += .2;
             }
-            if (ImGui::IsKeyPressed(ImGuiKey_W))
-            {
+            if (ImGui::IsKeyPressed(ImGuiKey_W)){
                 camera.localTranslation = glm::translate(camera.localTranslation, b*glm::vec3(camera.getFoward()));
                 flags = flags | 4;
-
-                // camera.viewMatrix[3][0] -= .2;
             }
-            if (ImGui::IsKeyPressed(ImGuiKey_S))
-            {
+            if (ImGui::IsKeyPressed(ImGuiKey_S)){
                 camera.localTranslation = glm::translate(camera.localTranslation, b*glm::vec3(-camera.getFoward()));
                 flags = flags | 4;
-
-                // camera.viewMatrix[3][0] += .2;
             }
         }
         camera.translation = camera.localTranslation;
         camera.viewMatrix = camera.rotation * camera.translation;
+        *camera.getNMatrix(indexLampModel) = glm::translate(glm::mat4(1), glm::vec3(lamp_position));
     }
     else if (ImGui::IsKeyPressed(ImGuiKey_Escape))
     {
@@ -291,9 +302,6 @@ void Render::once()
     if (transFeed) {
         glGenQueries(1, &Query);
         glGenBuffers(1, &TBO);
-        glBindBuffer(GL_ARRAY_BUFFER, TBO);
-        glBufferData(GL_ARRAY_BUFFER, feedbacksize, nullptr, GL_STATIC_READ);
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
     }
 
     m_VAO->bind();
@@ -429,6 +437,8 @@ void Render::once()
 
 }
 
+float Ka,Kd,Ks,lightIntensity,alpha;
+bool testV = 0;
 void Render::newframe()
 {
     glClearColor(0.7f, 0.3f, 0.17f, 1.0f);
@@ -445,6 +455,18 @@ void Render::newframe()
 
     glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "view"), 1, GL_FALSE,
                      glm::value_ptr(camera.viewMatrix));
+    glm::vec4 po = glm::inverse(camera.viewMatrix)*glm::vec4(0,0,0,1); //w = 1bcs is a point
+    glUniform4f(glGetUniformLocation(shaderProgram,"cameraPosition"),po.x,po.y,po.z,po.w);
+    glm::vec4 lampP = camera.viewMatrix * lamp_position;
+    glUniform4f(glGetUniformLocation(shaderProgram,"lampPosition"),lampP.x,lampP.y,lampP.z,lampP.w);
+
+    glUniform1f(glGetUniformLocation(shaderProgram,"Ka"),Ka);
+    glUniform1f(glGetUniformLocation(shaderProgram,"Kd"),Kd);
+    glUniform1f(glGetUniformLocation(shaderProgram,"Ks"),Ks);
+    glUniform1f(glGetUniformLocation(shaderProgram,"lightIntensity"),lightIntensity);
+    glUniform1f(glGetUniformLocation(shaderProgram,"alpha"),alpha);
+
+    glUniform1i(glGetUniformLocation(shaderProgram,"test"),testV);
 }
 
 
@@ -471,6 +493,12 @@ void Render::renderDrawing()
         m_VAO->bindVBO(0);
         glBufferData(GL_ARRAY_BUFFER,  sizeof(float) * camera.renderData.verticesCount,
                         camera.renderData.vertices,GL_DYNAMIC_DRAW);
+
+        if(transFeed){
+            glBindBuffer(GL_ARRAY_BUFFER, TBO);
+            glBufferData(GL_ARRAY_BUFFER, feedbacksize, nullptr, GL_STATIC_READ);
+            glBindBuffer(GL_ARRAY_BUFFER, 0);
+        }
     //-------/-------/-------/----- SSBO -----/-------/-------/-------/-------/
         //Repassing ModelsMatricesSSBO
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, modelMxSSBO);
@@ -529,6 +557,7 @@ void Render::renderDrawing()
     glBindFramebuffer(GL_FRAMEBUFFER, FBO_FROM);
 
     if (transFeed) {
+        glBindBuffer(GL_ARRAY_BUFFER, TBO);
         glBindBufferBase(GL_TRANSFORM_FEEDBACK_BUFFER, 0, TBO);
         glBeginQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN, Query);
         glBeginTransformFeedback(GL_TRIANGLES);
@@ -559,15 +588,13 @@ void Render::renderDrawing()
 
         printf("%u vecs written!\n\n", primitives);
 
-        for (int i = 0; i < feedbacknumber / 4; i++) {
-        printf("%f %f %f\n ", feedback[3 * i], feedback[3 * i + 1],
-                feedback[3 * i + 2]);
-        }
-        printf("\n\n");
+        for (unsigned int i = 0; i < feedbacknumber / 4; i++)
+            printf("[%d] = %f %f %f %f\n", i,feedback[4 * i], feedback[4 * i + 1],
+                    feedback[4 * i + 2],feedback[4 * i + 3]);
+        printf("\n");
         glBindBufferBase(GL_TRANSFORM_FEEDBACK_BUFFER, 0, 0);
     }
 }
-
 
 
 void Render::imguiSetting()
@@ -584,6 +611,20 @@ void Render::imguiSetting()
         ImGui::End();
     }
     if(ImGui::Begin("Models")){
+        ImGui::SliderFloat("Ka: ", &Ka, 0, 5);
+        ImGui::SliderFloat("Kd: ", &Kd, 0, 5);
+        ImGui::SliderFloat("Ks: ", &Ks, 0, 5);
+        ImGui::SliderFloat("lightIntensity : ", &lightIntensity, 0, 5);
+        ImGui::SliderFloat("alpha: ", &alpha, 0, 5);
+        glm::vec4 car = glm::inverse(camera.viewMatrix) * glm::vec4(0,0,0,1);
+        ImGui::Text("Camera Position:(%f, %f, %f)",car.x,car.y,car.z);
+        ImGui::Text("Lamp Position:(%f, %f, %f)",lamp_position.x,lamp_position.y,lamp_position.z);
+        if(camera.renderData.models.size() > camera.selectedModelIndex){
+            glm::vec4 pintobom = camera.renderData.models[camera.selectedModelIndex].mesh.matrix * glm::vec4(0,0,0,1);
+            ImGui::Text("Selected Model Center:(%f, %f, %f)",pintobom.x,pintobom.y,pintobom.z);
+        }
+
+        ImGui::Checkbox("Test", &testV);
         if(ImGui::Button("Add")){
             if(camera.selectedModelIndex < camera.renderData.models.size()){
                 ModelGenStruct m;
@@ -602,7 +643,7 @@ void Render::imguiSetting()
         }
         if(ImGui::BeginTable("Modelss1", 1)){
             char label[100];
-            for(int i = 0; i < camera.renderData.models.size(); i++){
+            for(unsigned int i = 0; i < camera.renderData.models.size(); i++){
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex(0);
                 sprintf(label, "Model %d",i);
@@ -638,13 +679,13 @@ void Render::imguiSetting()
 
 void Render::start(void(*op1)(),void(*op2)(),void(*op3)()){
     once();
-
+    lamp_position = glm::vec4(0,0,0,1);
     camera.translation[3][0] = 0;
     camera.translation[3][1] = 0;
     camera.translation[3][2] = 5;
     camera.rotation = glm::rotate(camera.rotation,3.14f, glm::vec3(0, 1, 0));
 
-    ModelGenStruct models[3] =
+    ModelGenStruct models[] =
     {
         ModelGenStruct
         {
@@ -664,15 +705,32 @@ void Render::start(void(*op1)(),void(*op2)(),void(*op3)()){
             meshPath:"assets/3dmodels/marble_bust_01_4k.obj",
             texPath:"assets/3dmodels/marble_bust_01_diff_4k.jpg",
             renderFlags:1
+        },
+        ModelGenStruct
+        {
+            meshPath:"assets/3dmodels/SphereHigh.obj",
+            texPath:"assets/3dmodels/marble_bust_01_diff_4k.jpg",
+            renderFlags:0
+        },
+        ModelGenStruct
+        {
+            meshPath:"assets/3dmodels/lemon_4k.obj",
+            texPath:"assets/3dmodels/lemon_diff_4k.jpg",
+            renderFlags:1
         }
-
     };
-
     // addModels(3, models);
-    addModels(1, models);
-    // addModels(1, &models[1]);
+    // addModels(1, models + 3);
+    // addModels(4, models);
+    // addModels(1, models);
+    // for(int i = 0; i < camera.renderData.verticesCount/3; i++){
+    //     printf("%d\n",camera.renderData.normalIndex[i]);
+    // }
+    // addModels(4, models);
 
-    // addModels(1, &models[1]);
+    addModels(1, models+2);
+    addModels(1, models+4);
+    indexLampModel = camera.renderData.models.size() -1;
     // unsigned short  a = 0;
     // rmModels(1, &a);
 
@@ -758,7 +816,8 @@ void Render::addModels(unsigned short n, ModelGenStruct *data){
     camera.renderData.renderFlags = (int*)realloc(camera.renderData.renderFlags,
                 sizeof(int) * nModels);
 
-
+    feedbacknumber = 4 * totalVerticesIndexCount;
+    feedbacksize = feedbacknumber * sizeof(float);
     for (unsigned short i = 0; i < n; i++){
 
         Model &actualM = camera.renderData.models[nModels - n + i];
@@ -841,7 +900,7 @@ void Render::addModels(unsigned short n, ModelGenStruct *data){
 
 
         unsigned int *p =camera.renderData.matricesIndex+(camera.renderData.verticesCount- actualM.mesh.verticesCount)/3;
-        for (int j = 0; j < actualM.mesh.verticesCount/3; j++) {
+        for (unsigned int j = 0; j < actualM.mesh.verticesCount/3; j++) {
             p[j] = nModels - n + i;
         }
 
@@ -993,6 +1052,8 @@ void Render::rmModels(unsigned short n, unsigned short *indices){
     camera.renderData.normalIndex = (unsigned int *)realloc(camera.renderData.normalIndex,
                 sizeof(int) * camera.renderData.verticesIndexCount / 3);
 
+    feedbacknumber = 4 * camera.renderData.verticesIndexCount;
+    feedbacksize = feedbacknumber * sizeof(float);
 
     camera.renderData.renderFlags = (int*)realloc(camera.renderData.renderFlags,
                 sizeof(int) * camera.renderData.models.size());
@@ -1035,7 +1096,7 @@ void Render::rmModels(unsigned short n, unsigned short *indices){
                 sizeof(int) * actualM.mesh.verticesIndexCount);
 
         unsigned int *p =camera.renderData.matricesIndex+indexMatricesIndexCount;
-        for (int j = 0; j < actualM.mesh.verticesCount/3; j++) {
+        for (unsigned int j = 0; j < actualM.mesh.verticesCount/3; j++) {
             p[j] = i;
         }
 
