@@ -1,11 +1,11 @@
-#include "glad/glad.h"
+#include "vendor/glad/glad.h"
 #include <string.h>
 
+#include "render.hpp"
 #include "shader.hpp"
 #include "utils.hpp"
 
-Shader::Shader (const char *shadersPath[3])
-{
+Shader::Shader(const char *shadersPath[3]) {
     unsigned int sets[3]
         = { GL_VERTEX_SHADER, GL_FRAGMENT_SHADER, GL_GEOMETRY_SHADER };
     int rt;

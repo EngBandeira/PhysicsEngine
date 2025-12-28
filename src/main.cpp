@@ -1,31 +1,32 @@
-#include "render.hpp"
+
 #include <cstdlib>
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/fwd.hpp>
-#define STB_IMAGE_IMPLEMENTATION
 #include <bits/stdc++.h>
 #include <stdio.h>
 
-#include "glad/glad.h"
+#define GLFW_INCLUDE_NONE
+#include "vendor/glad/glad.h"
 #include <GLFW/glfw3.h>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "imgui/imgui.h"
-#include "imgui/imgui_impl_glfw.h"
-#include "imgui/imgui_impl_opengl3.h"
+#include "vendor/imgui/imgui.h"
+#include "vendor/imgui/imgui_impl_glfw.h"
+#include "vendor/imgui/imgui_impl_opengl3.h"
 
-#include "stb_image/stb_image.h"
+#define STB_IMAGE_IMPLEMENTATION
+#include "vendor/stb_image/stb_image.h"
 
+#include "render.hpp"
 #include "model.hpp"
 #include "shader.hpp"
 #include "texture.hpp"
 #include "utils.hpp"
 #include "vertexArray.hpp"
 
-// #define PI 3.14
 #define VERTEX_SHADERS_LOCALPATH "vShader.vert"
 #define FRAGMENT_SHADERS_LOCALPATH "fShader.frag"
 #define GEOMETRY_SHADERS_LOCALPATH "gShader.geom"
@@ -38,20 +39,10 @@ void error_callback(GLenum source, GLenum type, unsigned int id,
                     GLenum severity, GLsizei length, const GLchar *message,
                     const void *userParam);
 
-// settings
-#define SCR_X 1920
-#define SCR_Y 1080
 
-// float *vertices;
-glm::mat4 projMatrix;
-glm::mat4 viewMatrix;
-glm::mat4 modelMatrix;
-void pr(){
-    // printf("bah\n");
-}
+void pr() {}
 
-int main()
-{
+int main() {
     setenv("XDG_SESSION_TYPE", "x11" , 1); // THIS IN NECESSARY TO USE THE RENDERDOC, IT DONT RUNS ON WAYLAND
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
@@ -61,8 +52,7 @@ int main()
     GLFWwindow *bigWindow =
         glfwCreateWindow(SCR_X, SCR_Y, "PhysicsEngine", NULL, NULL);
 
-    if (bigWindow == NULL)
-    {
+    if (bigWindow == NULL) {
         sendError("failed to crate a Glfw Window");
         glfwTerminate();
         return -1;
@@ -96,24 +86,15 @@ int main()
     io.ConfigFlags |=
         ImGuiConfigFlags_NavEnableGamepad; // Enable Gamepad Controls
 
-    // Setup Dear ImGui style
     ImGui::StyleColorsDark();
-    // ImGui::StyleColorsLight();
 
 
     ImGui_ImplGlfw_InitForOpenGL(bigWindow, true);
     ImGui_ImplOpenGL3_Init("#version 460");
     glfwSetKeyCallback(bigWindow,ImGui_ImplGlfw_KeyCallback);
 
-    projMatrix = glm::perspective(glm::radians(45.0f),
-                                    (float)SCR_X / (float)SCR_Y, 0.1f, 100.0f);
-        // viewMatrix = glm::mat4(1);
-        // viewMatrix = glm::translate(viewMatrix, glm::vec3(0.0f, 0.0f, -5.0f));
-    viewMatrix = glm::lookAt(glm::vec3(0.0f, 0.0f, -5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-
-
     {
-        Render m_render(viewMatrix,projMatrix,bigWindow);
+        Render m_render(bigWindow);
         m_render.start(pr,pr,pr);
     }
     ImGui_ImplOpenGL3_Shutdown();
@@ -125,10 +106,8 @@ int main()
 }
 void error_callback(GLenum source, GLenum type, unsigned int id,
                     GLenum severity, GLsizei length, const GLchar *message,
-                    const void *userParam)
-{
-    if (type == GL_DEBUG_TYPE_ERROR)
-    {
+                    const void *userParam) {
+    if (type == GL_DEBUG_TYPE_ERROR) {
         fprintf(stderr,
                 "GL CALLBACK: %s type = 0x%x, severity = "
                 "0x%x, message = %s\n",

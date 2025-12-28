@@ -32,10 +32,10 @@ my @files = (split (/\n/,$fileCPP), split( /\n/,$fileC));
 # my @files = (split("/\n/",$fileCPP),split("/\n/",$fileC));
 # my $rn ="g++ -Wall -I" . $includePath . " -I" . $vendorPath . " -g -ggdb " . $formatedLibs . " ";
 
-my $rn ="g++ -Wall -I" . $includePath . " -I" . $vendorPath . " -g -ggdb "  . $formatedLibs ." ";
+my $rn ="g++ -Wall -I" . $includePath . " -I." . " -g -ggdb "  . $formatedLibs ." ";
 if($asan)
 {
- $rn ="g++ -Wall -fsanitize=address -I" . $includePath . " -I" . $vendorPath . " -g -ggdb "  . $formatedLibs ." ";
+ $rn ="g++ -Wall -fsanitize=address -I" . $includePath . " -I." . " -g -ggdb "  . $formatedLibs ." ";
 }
 foreach $file (@files){
     if($file =~ /\w*\/(\w+)\.\w+/g){

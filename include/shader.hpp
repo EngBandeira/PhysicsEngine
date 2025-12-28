@@ -1,6 +1,6 @@
 #pragma once
 
-struct Shader{
+struct Shader {
   unsigned int Shaders[3];
   Shader ();
   Shader (const char *shadersPath[3]);

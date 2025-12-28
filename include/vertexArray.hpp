@@ -1,16 +1,14 @@
 #pragma once
-#include "glad/glad.h"
+#include "vendor/glad/glad.h"
 #include <memory>
 #include <vector>
 
-class VBO
-{
+class VBO {
     public:
     unsigned int name = 0;
     VBO ();
     ~VBO();
-    VBO(VBO&& other) noexcept : name(other.name)
-    {
+    VBO(VBO&& other) noexcept : name(other.name) {
         other.name = 0; // evita deleção dupla
     }
 
@@ -29,8 +27,7 @@ class VBO
     }
 };
 
-class VAO
-{
+class VAO {
       public:
         unsigned int name = 0, bindedVBO;
         unsigned short layoutIndex = 0;
@@ -39,11 +36,11 @@ class VAO
 
         void addLayout (unsigned short vboIndex,
                         unsigned char componentsNumber);
-        void createVBO ();
-        void unbindVBO ();
-        void bindVBO (unsigned short vboIndex);
-        void bind ();
-        void unbind ();
+        void createVBO();
+        void unbindVBO();
+        void bindVBO(unsigned short vboIndex);
+        void bind();
+        void unbind();
         VAO ();
         ~VAO();
 };

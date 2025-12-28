@@ -1,11 +1,4 @@
 
-#include "render.hpp"
-#include "model.hpp"
-#include "shader.hpp"
-#include "utils.hpp"
-#include "vertexArray.hpp"
-#include <GLFW/glfw3.h>
-#include <cmath>
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
@@ -16,15 +9,22 @@
 #include <glm/ext/vector_float4.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/matrix.hpp>
-#include <memory>
 #include <stdlib.h>
 
-#include "imgui/imgui.h"
-#include "imgui/imgui_impl_glfw.h"
-#include "imgui/imgui_impl_opengl3.h"
+#include "texture.hpp"
+#include "vendor/glad/glad.h"//GLAD Always upper than GLFW
+#include <GLFW/glfw3.h>
 
-#include "stb_image/stb_image.h"
+#include "vendor/imgui/imgui.h"
+#include "vendor/imgui/imgui_impl_glfw.h"
+#include "vendor/imgui/imgui_impl_opengl3.h"
+#include "vendor/stb_image/stb_image.h"
 
+#include "render.hpp"
+#include "model.hpp"
+#include "shader.hpp"
+#include "utils.hpp"
+#include "vertexArray.hpp"
 
 #define VERTEX_SHADERS_LOCALPATH "vShader.vert"
 #define FRAGMENT_SHADERS_LOCALPATH "fShader.frag"
@@ -32,7 +32,56 @@
 #define LEVEL 0
 #define MOUSE_SENSI 0.05f
 
+#define MAX_RATIO_OF_EMPTY_TEXTURES .5
+#define MIN_EMPTY_TEXTURES_COUNT_TO_RST 3
+#define MAX_EMPTY_TEXTURES_COUNT 10
+
+#define MATERIAL_CHANGE_FLAG 1 << 0
+#define MATRICES_CHANGE_FLAG 1 << 1
+#define MODELS_CHANGE_FLAG 1 << 2
+
+
 int fodase[16] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15};
+
+void sendWarning(const char *msg) {
+
+}
+
+void send(const char *msg) {
+
+}
+
+void sendError(const char *msg) {
+    fprintf (stderr, "\n\nError: %s\n\n", msg);
+}
+
+void getShaderStatus(unsigned int shaderProgram,int status){
+    int linkStatus;
+    glGetShaderiv(shaderProgram, status, &linkStatus);
+    if (!linkStatus) {
+        GLint infoLogLength;
+        glGetShaderiv(shaderProgram, GL_INFO_LOG_LENGTH, &infoLogLength);
+        char *c = (char*)malloc(infoLogLength + 1);
+        glGetShaderInfoLog(shaderProgram, infoLogLength, nullptr, c);
+        c[infoLogLength] = 0;
+        sendError(c);
+        free(c);
+    }
+}
+
+void getProgramStatus(unsigned int shaderProgram,int status){
+    int linkStatus;
+    glGetProgramiv(shaderProgram, status, &linkStatus);
+    if (!linkStatus) {
+        GLint infoLogLength;
+        glGetProgramiv(shaderProgram, GL_INFO_LOG_LENGTH, &infoLogLength);
+        char *c = (char*)malloc(infoLogLength + 1);
+        glGetProgramInfoLog(shaderProgram, infoLogLength, nullptr, c);
+        c[infoLogLength] = 0;
+        sendError(c);
+        free(c);
+    }
+}
 
 void setTexParameter(){
     glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
@@ -43,26 +92,29 @@ void setTexParameter(){
     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAX_LEVEL, LEVEL);
 }
 
-RenderData::RenderData() : models()
+
+RenderData::RenderData() : mesh()
 {
 
-    vertices = (float *)malloc(0);
-    matrices = (float *)malloc(0);
-    textureVertices = (float *)malloc(0);
-    normalVec = (float *)malloc(0);
+    mesh.vertices = (float *)malloc(0);
+    mesh.matrices = (float *)malloc(0);
+    mesh.textureVertices = (float *)malloc(0);
+    mesh.normalVertices = (float *)malloc(0);
 
+    mesh.verticesIndex = (unsigned int *)malloc(0);
+    mesh.modelParent = (unsigned int *)malloc(0);
+    mesh.textureVerticesIndex = (unsigned int *)malloc(0);
+    mesh.normalVerticesIndex = (unsigned int *)malloc(0);
+    mesh.modelMaterial = (unsigned int *)malloc(0);
 
-    verticesIndex = (unsigned int *)malloc(0);
-    matricesIndex = (unsigned int *)malloc(0);
-    textureVerticesIndex = (unsigned int *)malloc(0);
-    normalIndex = (unsigned int *)malloc(0);
-
-    textureIndxDATA = (unsigned int *)malloc(0);
-    renderFlags = (int*)malloc(0);
-
-    for(unsigned int i =0; i < TEXTURE_COUNT; i++){
-        modelsPerTex[i] = (unsigned short *)malloc(0);
+    for(unsigned int i = 0; i < TEXTURE_HANDLERS_COUNT; i++){
+        textureHandlers[i].materialIndex = (unsigned int *)malloc(0);
+        textureHandlers[i].texDimensions = pow(2, i +6);
+        textureHandlers[i].emptyTextures = (unsigned int *)malloc(0);
+        textureHandlers[i].emptyTexturesCount = 0;
     }
+
+    materials = (Material *)malloc(0);
 }
 
 
@@ -71,21 +123,25 @@ void RenderData::freeRenderData()
     for(unsigned int i = 0; i <models.size(); i++){
         models[i].mesh.deleteMesh();
     }
-    for(unsigned int i =0; i < TEXTURE_COUNT; i++){
-        free(modelsPerTex[i]);
+    for(unsigned int i =0; i < TEXTURE_HANDLERS_COUNT; i++){
+        free(textureHandlers[i].materialIndex);
+        free(textureHandlers[i].emptyTextures);
+
     }
-    free(textureIndxDATA);
-    free(renderFlags);
 
-    free(vertices);
-    free(matrices);
-    free(textureVertices);
-    free(normalVec);
+    free(mesh.vertices);
+    free(mesh.matrices);
+    free(mesh.textureVertices);
+    free(mesh.normalVertices);
 
-    free(verticesIndex);
-    free(matricesIndex);
-    free(textureVerticesIndex);
-    free(normalIndex);
+    free(mesh.verticesIndex);
+    free(mesh.modelParent);
+    free(mesh.textureVerticesIndex);
+    free(mesh.normalVerticesIndex);
+    free(mesh.modelMaterial);
+
+    free(materials);
+
 }
 
 // rotation[0][0] = r.x; rotation[1][0] = r.y; rotation[2][0] = r.z;
@@ -105,13 +161,16 @@ glm::vec4 Camera::getPosition(){
     return translation * glm::vec4(0,0,0,1);
 }
 
-// glm::mat4 translation, rotation, localTranslation, viewMatrix, projMatrix;
 
-Camera::Camera(glm::mat4 vMatrix,glm::mat4 pjMatrix):translation(1),rotation(1),localTranslation(1),viewMatrix(vMatrix),
-                    projMatrix(pjMatrix),renderData(){}
+Camera::Camera():translation(1),rotation(1),localTranslation(1)
+                    {
+                        projMatrix = glm::perspective(glm::radians(45.0f),
+                                                        (float)SCR_X / (float)SCR_Y, 0.1f, 100.0f);
+                        viewMatrix = glm::lookAt(glm::vec3(0.0f, 0.0f, -5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+                    }
 
-glm::mat4 *Camera::getNMatrix(unsigned short index){
-    return (glm::mat4*)(renderData.matrices + 16*index);
+glm::mat4 *RenderData::getNMatrix(unsigned short index){
+    return (glm::mat4*)(mesh.matrices + 16*index);
 }
 
 // 0123456789
@@ -143,8 +202,8 @@ unsigned short getNewIndexOfOld(unsigned short i, unsigned short n,unsigned shor
 
 
 
-Render::Render(glm::mat4 vMatrix, glm::mat4 pjMatrix,GLFWwindow *win)
-    : camera(vMatrix,pjMatrix),
+Render::Render(GLFWwindow *win)
+    :   camera(),
       m_VAO(std::make_unique<VAO>()),
       shader((const char *[3]){VERTEX_SHADERS_LOCALPATH,
                                FRAGMENT_SHADERS_LOCALPATH,
@@ -157,17 +216,19 @@ Render::Render(glm::mat4 vMatrix, glm::mat4 pjMatrix,GLFWwindow *win)
         glTransformFeedbackVaryings(shaderProgram, 1, feedbackVaryings,
                                     GL_INTERLEAVED_ATTRIBS);
 
-        feedbacknumber = 4 * camera.renderData.verticesIndexCount;
+        feedbacknumber = 4 * renderData.mesh.verticesIndexCount;
         feedbacksize = feedbacknumber * sizeof(float);
     }
 
     glLinkProgram(shaderProgram);
+    getProgramStatus(shaderProgram,GL_LINK_STATUS);
     glUseProgram(shaderProgram);
+
 }
 
 Render::~Render() {
 
-    camera.renderData.freeRenderData();
+    renderData.freeRenderData();
     if (transFeed) {
         glDeleteQueries(1,&Query);
         glDeleteBuffers(1, &TBO);
@@ -181,10 +242,9 @@ Render::~Render() {
     glDeleteBuffers(1, &EBO);
 }
 
+MaterialGenData a;
 
-glm::vec3 angle;
-glm::vec4 lamp_position;
-unsigned int indexLampModel;
+
 void Render::input()
 {
 
@@ -214,13 +274,43 @@ void Render::input()
         glfwSetCursorPos(glfwWin,windowCenter.x,windowCenter.y);
         ImGui::Dummy(ImVec2(0,0));
 
-        angle.x += MOUSE_SENSI*mouseDelta.x;
-        angle.y += .5f*MOUSE_SENSI*mouseDelta.y;
-        camera.rotation = glm::rotate(glm::mat4(1),glm::radians(angle.x), glm::vec3(0, 1, 0));
-        camera.rotation = glm::rotate(camera.rotation,glm::radians(angle.y), glm::vec3(camera.getRight()));
+        camera.angle.x += MOUSE_SENSI*mouseDelta.x;
+        camera.angle.y += .5f*MOUSE_SENSI*mouseDelta.y;
+        camera.rotation = glm::rotate(glm::mat4(1),glm::radians(camera.angle.x), glm::vec3(0, 1, 0));
+        camera.rotation = glm::rotate(camera.rotation,glm::radians(camera.angle.y), glm::vec3(camera.getRight()));
         float b = .3;
-        if(camera.renderData.models.size() > camera.selectedModelIndex){
-            glm::mat4 *modelMatrix = camera.getNMatrix(camera.selectedModelIndex);
+        if (ImGui::IsKeyPressed(ImGuiKey_UpArrow)){
+
+            printf("batata\n\n\n");
+            allocMaterial(a);
+        }
+        if (ImGui::IsKeyPressed(ImGuiKey_DownArrow)){
+            if(renderData.materialsCount > 0){
+                freeMaterial(renderData.materialsCount-1);
+                renderData.materialsCount--;
+            }
+        }
+
+
+        if (ImGui::IsKeyPressed(ImGuiKey_A)){
+            camera.localTranslation = glm::translate(camera.localTranslation, b*glm::vec3(camera.getRight()));
+            flags = flags | 4;
+        }
+        if (ImGui::IsKeyPressed(ImGuiKey_D)){
+            camera.localTranslation = glm::translate(camera.localTranslation, b*glm::vec3(-camera.getRight()));
+            flags = flags | 4;
+        }
+        if (ImGui::IsKeyPressed(ImGuiKey_W)){
+            camera.localTranslation = glm::translate(camera.localTranslation, b*glm::vec3(camera.getFoward()));
+            flags = flags | 4;
+        }
+        if (ImGui::IsKeyPressed(ImGuiKey_S)){
+            camera.localTranslation = glm::translate(camera.localTranslation, b*glm::vec3(-camera.getFoward()));
+            flags = flags | 4;
+        }
+
+        if(renderData.models.size() > selectedModelIndex){
+            glm::mat4 *modelMatrix = renderData.getNMatrix(selectedModelIndex);
 
             if (ImGui::IsKeyPressed(ImGuiKey_UpArrow)){
                 *modelMatrix =
@@ -244,50 +334,9 @@ void Render::input()
                 flags = flags | 4;
             }
 
-            if (ImGui::IsKeyPressed(ImGuiKey_H)){
-                lamp_position = lamp_position + glm::vec4(.1,0,0,0);
-                // *modelMatrix = glm::translate(*modelMatrix, glm::vec3(1,0,0));
-                flags = flags | 4;
-            }
-            if (ImGui::IsKeyPressed(ImGuiKey_K)){
-                lamp_position = lamp_position + glm::vec4(-.1,0,0,0);
-
-                // *modelMatrix = glm::translate(*modelMatrix, glm::vec3(-1,0,0));
-                flags = flags | 4;
-            }
-            if (ImGui::IsKeyPressed(ImGuiKey_U)){
-                lamp_position = lamp_position + glm::vec4(0,0,.1,0);
-
-                // *modelMatrix = glm::translate(*modelMatrix, glm::vec3(0,0,1));
-                flags = flags | 4;
-            }
-            if (ImGui::IsKeyPressed(ImGuiKey_J)){
-                lamp_position = lamp_position + glm::vec4(0,0,-.1,0);
-
-                // *modelMatrix = glm::translate(*modelMatrix, glm::vec3(0,0,-1));
-                flags = flags | 4;
-            }
-
-            if (ImGui::IsKeyPressed(ImGuiKey_A)){
-                camera.localTranslation = glm::translate(camera.localTranslation, b*glm::vec3(camera.getRight()));
-                flags = flags | 4;
-            }
-            if (ImGui::IsKeyPressed(ImGuiKey_D)){
-                camera.localTranslation = glm::translate(camera.localTranslation, b*glm::vec3(-camera.getRight()));
-                flags = flags | 4;
-            }
-            if (ImGui::IsKeyPressed(ImGuiKey_W)){
-                camera.localTranslation = glm::translate(camera.localTranslation, b*glm::vec3(camera.getFoward()));
-                flags = flags | 4;
-            }
-            if (ImGui::IsKeyPressed(ImGuiKey_S)){
-                camera.localTranslation = glm::translate(camera.localTranslation, b*glm::vec3(-camera.getFoward()));
-                flags = flags | 4;
-            }
         }
         camera.translation = camera.localTranslation;
         camera.viewMatrix = camera.rotation * camera.translation;
-        *camera.getNMatrix(indexLampModel) = glm::translate(glm::mat4(1), glm::vec3(lamp_position));
     }
     else if (ImGui::IsKeyPressed(ImGuiKey_Escape))
     {
@@ -305,22 +354,18 @@ void Render::once()
     }
 
     m_VAO->bind();
+
     m_VAO->createVBO();
     m_VAO->bindVBO(0);
-
-    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * camera.renderData.verticesCount,
-                camera.renderData.vertices, GL_DYNAMIC_DRAW);
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float),
                             (void *)0);
 
     m_VAO->createVBO();
     m_VAO->bindVBO(1);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(int) * camera.renderData.verticesCount/3,
-                camera.renderData.matricesIndex, GL_DYNAMIC_DRAW);
     glEnableVertexAttribArray(1);
     glVertexAttribIPointer(1, 1, GL_UNSIGNED_INT, sizeof(int),
-                            (void *)0); // set vec3 positi
+                            (void *)0);
 
     m_VAO->unbindVBO();
     m_VAO->unbind();
@@ -330,46 +375,15 @@ void Render::once()
     glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "projection"), 1,
                         GL_FALSE, glm::value_ptr(camera.projMatrix));
 
-//-------/-------/-------/----- SSBO -----/-------/-------/-------/-------/
 
-    // ModelMatricesSSBO
-    glGenBuffers(1, &modelMxSSBO);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, modelMxSSBO);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, modelMxSSBO);
+    glGenBuffers(SSBO_COUNT, ssbos);
+    for(unsigned int i = 0; i < SSBO_COUNT; i++){
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbos[i]);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, i, ssbos[i]);
+    }
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
-    // TextureIndxSSBO
-    glGenBuffers(1, &textureIndxSSBO);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, textureIndxSSBO);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, textureIndxSSBO);
 
-    // TextureCoordSSBO
-    glGenBuffers(1, &texCoordSSBO);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, texCoordSSBO);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, texCoordSSBO);
-
-    // TextureIndexSSBO
-    glGenBuffers(1, &texIndexSSBO);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, texIndexSSBO);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, texIndexSSBO);
-
-    // RenderFlagsSSBO
-    glGenBuffers(1, &renderFlagsSSBO);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, renderFlagsSSBO);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, renderFlagsSSBO);
-
-    // NormalVecsSSBO
-    glGenBuffers(1, &normalVecsSSBO);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, normalVecsSSBO);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, normalVecsSSBO);
-
-    // NormalVecsIndexSSBO
-    glGenBuffers(1, &normalVecsIndexSSBO);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, normalVecsIndexSSBO);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 8, normalVecsIndexSSBO);
-
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0); // unbind
-
-//-------/-------/-------/----- FBOs -----/-------/-------/-------/-------/
     glGenFramebuffers(1, &FBO_FROM);
     glBindFramebuffer(GL_FRAMEBUFFER, FBO_FROM);
 
@@ -408,16 +422,19 @@ void Render::once()
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-//-------/-------/-------/----- Textures -----/-------/-------/-------/-------/
 
-    for(int i = 0; i < TEXTURE_COUNT; i++){
-        camera.renderData.texturesCount[i] = 0;
-    }
+    glGenTextures(1, &renderData.texUtilitary);
+    glBindTexture(GL_TEXTURE_2D_ARRAY, renderData.texUtilitary);
+    glTexImage3D(GL_TEXTURE_2D_ARRAY,LEVEL,GL_RGBA8 ,0,0,0,0,GL_RGBA,GL_UNSIGNED_BYTE,NULL);
+    setTexParameter();
+    glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
 
-    glGenTextures(TEXTURE_COUNT,texARRAY);
-    for(unsigned short i = 0; i < TEXTURE_COUNT; i++){
+    for(int i = 0; i < TEXTURE_HANDLERS_COUNT; i++){
         unsigned short k = pow(2,6+i);
-        glBindTexture(GL_TEXTURE_2D_ARRAY,texARRAY[i]);
+        renderData.textureHandlers[i].texturesCount = 0;
+        renderData.textureHandlers[i].texUtilitary = &renderData.texUtilitary;
+        glGenTextures(1,&renderData.textureHandlers[i].texture);
+        glBindTexture(GL_TEXTURE_2D_ARRAY,renderData.textureHandlers[i].texture);
         glTexImage3D(GL_TEXTURE_2D_ARRAY,LEVEL,GL_RGBA8 ,k,k,0,0,GL_RGBA,GL_UNSIGNED_BYTE,NULL);
 
         setTexParameter();
@@ -426,19 +443,13 @@ void Render::once()
     glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
 
 
+    glUniform1iv(glGetUniformLocation(shaderProgram, "textures"), TEXTURE_HANDLERS_COUNT,fodase);
 
-    glGenTextures(1, &texUtilitary);
-    glBindTexture(GL_TEXTURE_2D_ARRAY, texUtilitary);
-    glTexImage3D(GL_TEXTURE_2D_ARRAY,LEVEL,GL_RGBA8 ,0,0,0,0,GL_RGBA,GL_UNSIGNED_BYTE,NULL);
-    setTexParameter();
-    glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
 
-    glUniform1iv(glGetUniformLocation(shaderProgram, "textures"), TEXTURE_COUNT,fodase);
-
+    allocMaterial(MaterialGenData{});
 }
 
-float Ka,Kd,Ks,lightIntensity,alpha;
-bool testV = 0;
+
 void Render::newframe()
 {
     glClearColor(0.7f, 0.3f, 0.17f, 1.0f);
@@ -455,104 +466,41 @@ void Render::newframe()
 
     glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "view"), 1, GL_FALSE,
                      glm::value_ptr(camera.viewMatrix));
-    glm::vec4 po = glm::inverse(camera.viewMatrix)*glm::vec4(0,0,0,1); //w = 1bcs is a point
-    glUniform4f(glGetUniformLocation(shaderProgram,"cameraPosition"),po.x,po.y,po.z,po.w);
-    glm::vec4 lampP = camera.viewMatrix * lamp_position;
-    glUniform4f(glGetUniformLocation(shaderProgram,"lampPosition"),lampP.x,lampP.y,lampP.z,lampP.w);
+    // glm::vec4 po = glm::inverse(camera.viewMatrix)*glm::vec4(0,0,0,1); //w = 1bcs is a point
+    // glUniform4f(glGetUniformLocation(shaderProgram,"cameraPosition"),po.x,po.y,po.z,po.w);
 
-    glUniform1f(glGetUniformLocation(shaderProgram,"Ka"),Ka);
-    glUniform1f(glGetUniformLocation(shaderProgram,"Kd"),Kd);
-    glUniform1f(glGetUniformLocation(shaderProgram,"Ks"),Ks);
-    glUniform1f(glGetUniformLocation(shaderProgram,"lightIntensity"),lightIntensity);
-    glUniform1f(glGetUniformLocation(shaderProgram,"alpha"),alpha);
-
-    glUniform1i(glGetUniformLocation(shaderProgram,"test"),testV);
 }
 
 
 void Render::renderDrawing()
 {
-    if(flags & 4){
-        flags = flags & ~(4);
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, modelMxSSBO);
+    if(flags & MATRICES_CHANGE_FLAG){
+        flags = flags & ~(MATRICES_CHANGE_FLAG);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbos[SSBOS::ModelMatricesSSBO]);
         glBufferData(GL_SHADER_STORAGE_BUFFER,
-                        16 * sizeof(float) * camera.renderData.models.size(),
-                        camera.renderData.matrices,GL_DYNAMIC_DRAW);
+                        16 * sizeof(float) * renderData.mesh.meshesCount,
+                        renderData.mesh.matrices,GL_DYNAMIC_DRAW);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
     }
 
-    if(flags & 1 || flags & 2){
-        m_VAO->bind();
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                        sizeof(unsigned int) * camera.renderData.verticesIndexCount,
-                        camera.renderData.verticesIndex,GL_DYNAMIC_DRAW);
-
-        m_VAO->bindVBO(1);
-        glBufferData(GL_ARRAY_BUFFER,  sizeof(int) * camera.renderData.verticesCount/3,
-                            camera.renderData.matricesIndex,GL_DYNAMIC_DRAW);
-        m_VAO->bindVBO(0);
-        glBufferData(GL_ARRAY_BUFFER,  sizeof(float) * camera.renderData.verticesCount,
-                        camera.renderData.vertices,GL_DYNAMIC_DRAW);
-
-        if(transFeed){
-            glBindBuffer(GL_ARRAY_BUFFER, TBO);
-            glBufferData(GL_ARRAY_BUFFER, feedbacksize, nullptr, GL_STATIC_READ);
-            glBindBuffer(GL_ARRAY_BUFFER, 0);
-        }
-    //-------/-------/-------/----- SSBO -----/-------/-------/-------/-------/
-        //Repassing ModelsMatricesSSBO
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, modelMxSSBO);
+    if(flags & MATERIAL_CHANGE_FLAG){
+        flags = flags & ~(MATERIAL_CHANGE_FLAG);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbos[SSBOS::MaterialsSSBO]);
         glBufferData(GL_SHADER_STORAGE_BUFFER,
-                        16 * sizeof(float) * camera.renderData.models.size(),
-                        camera.renderData.matrices,GL_DYNAMIC_DRAW);
-
-        // TextureCoordSSBO
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, texCoordSSBO);
-        glBufferData(GL_SHADER_STORAGE_BUFFER,
-                    sizeof(float) * camera.renderData.textureVerticesCount,
-                    camera.renderData.textureVertices, GL_DYNAMIC_DRAW);
-
-        // TextureIndexSSBO
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, texIndexSSBO);
-        glBufferData(GL_SHADER_STORAGE_BUFFER,
-                    sizeof(int) * camera.renderData.textureVerticesIndexCount,
-                    camera.renderData.textureVerticesIndex, GL_DYNAMIC_DRAW);
-
-        // RenderFlagsSSBO
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, renderFlagsSSBO);
-        glBufferData(GL_SHADER_STORAGE_BUFFER,
-                    sizeof(int) * camera.renderData.models.size(),
-                    camera.renderData.renderFlags, GL_DYNAMIC_DRAW);
-
-        // TextureIndicesSSBO
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, textureIndxSSBO);
-        glBufferData(GL_SHADER_STORAGE_BUFFER,
-                    sizeof(int) * 2 * camera.renderData.models.size(),
-                    camera.renderData.textureIndxDATA, GL_DYNAMIC_DRAW);
-
-        // TextureIndicesSSBO
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, normalVecsSSBO);
-        glBufferData(GL_SHADER_STORAGE_BUFFER,
-                    sizeof(float) * camera.renderData.normalVecCount,
-                    camera.renderData.normalVec, GL_DYNAMIC_DRAW);
-
-        // TextureIndicesSSBO
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, normalVecsIndexSSBO);
-        glBufferData(GL_SHADER_STORAGE_BUFFER,
-                    sizeof(int) * camera.renderData.verticesIndexCount/3,
-                    camera.renderData.normalIndex, GL_DYNAMIC_DRAW);
-
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0); // unbind
-    }
-    else {
-        m_VAO->bind();
-        m_VAO->bindVBO(1);
-        m_VAO->bindVBO(0);
+                        sizeof(Material) * renderData.materialsCount,
+                        renderData.materials,GL_DYNAMIC_DRAW);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
     }
 
-    for(unsigned short i = 0; i < TEXTURE_COUNT; i++){
+    m_VAO->bind();
+    m_VAO->bindVBO(1);
+    m_VAO->bindVBO(0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+
+
+    for(unsigned short i = 0; i < TEXTURE_HANDLERS_COUNT; i++){
         glActiveTexture(GL_TEXTURE0+i);
-        glBindTexture(GL_TEXTURE_2D_ARRAY,texARRAY[i]);
+        glBindTexture(GL_TEXTURE_2D_ARRAY,renderData.textureHandlers[i].texture);
     }
     glBindFramebuffer(GL_FRAMEBUFFER, FBO_FROM);
 
@@ -563,7 +511,7 @@ void Render::renderDrawing()
         glBeginTransformFeedback(GL_TRIANGLES);
     }
 
-    glDrawElements(GL_TRIANGLES, camera.renderData.verticesIndexCount, GL_UNSIGNED_INT,
+    glDrawElements(GL_TRIANGLES, renderData.mesh.verticesIndexCount, GL_UNSIGNED_INT,
                     0);
 
     glBindTexture(GL_TEXTURE_2D_ARRAY,0);
@@ -611,50 +559,37 @@ void Render::imguiSetting()
         ImGui::End();
     }
     if(ImGui::Begin("Models")){
-        ImGui::SliderFloat("Ka: ", &Ka, 0, 5);
-        ImGui::SliderFloat("Kd: ", &Kd, 0, 5);
-        ImGui::SliderFloat("Ks: ", &Ks, 0, 5);
-        ImGui::SliderFloat("lightIntensity : ", &lightIntensity, 0, 5);
-        ImGui::SliderFloat("alpha: ", &alpha, 0, 5);
-        glm::vec4 car = glm::inverse(camera.viewMatrix) * glm::vec4(0,0,0,1);
-        ImGui::Text("Camera Position:(%f, %f, %f)",car.x,car.y,car.z);
-        ImGui::Text("Lamp Position:(%f, %f, %f)",lamp_position.x,lamp_position.y,lamp_position.z);
-        if(camera.renderData.models.size() > camera.selectedModelIndex){
-            glm::vec4 pintobom = camera.renderData.models[camera.selectedModelIndex].mesh.matrix * glm::vec4(0,0,0,1);
+        if(renderData.models.size() > selectedModelIndex){
+            glm::vec4 pintobom = renderData.models[selectedModelIndex].mesh.matrix * glm::vec4(0,0,0,1);
             ImGui::Text("Selected Model Center:(%f, %f, %f)",pintobom.x,pintobom.y,pintobom.z);
         }
 
-        ImGui::Checkbox("Test", &testV);
         if(ImGui::Button("Add")){
-            if(camera.selectedModelIndex < camera.renderData.models.size()){
-                ModelGenStruct m;
-                m.meshPath = camera.renderData.models[camera.selectedModelIndex].mesh.meshPath;
-                m.texPath  = camera.renderData.models[camera.selectedModelIndex].tex.localPath;
-                addModels(1, &m);
+            if(selectedModelIndex < renderData.models.size()){
+                const char *meshPath = renderData.models[selectedModelIndex].mesh.meshPath;
             }
         }
         if(ImGui::Button("Remove")){
-            if(camera.renderData.models.size() > camera.selectedModelIndex){
-                printf("aa%d\n", camera.selectedModelIndex);
-                rmModels(1, &camera.selectedModelIndex);
-                camera.selectedModelIndex = 0;
+            if(renderData.models.size() > selectedModelIndex){
+                printf("aa%d\n", selectedModelIndex);
+                selectedModelIndex = 0;
             }
 
         }
         if(ImGui::BeginTable("Modelss1", 1)){
             char label[100];
-            for(unsigned int i = 0; i < camera.renderData.models.size(); i++){
+            for(unsigned int i = 0; i < renderData.models.size(); i++){
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex(0);
                 sprintf(label, "Model %d",i);
-                if(i == camera.selectedModelIndex){
+                if(i == selectedModelIndex){
                     ImGui::TableSetBgColor(
                         ImGuiTableBgTarget_RowBg0,
                         IM_COL32(38, 38, 38, 255)
                     );
                 }
                 if(ImGui::Selectable(label)){
-                    camera.selectedModelIndex = i;
+                    selectedModelIndex = i;
                 }
             }
             ImGui::EndTable();
@@ -678,62 +613,39 @@ void Render::imguiSetting()
 
 
 void Render::start(void(*op1)(),void(*op2)(),void(*op3)()){
+    a.K[0] = glm::vec3(1,0,0);
+    a.K[1] = glm::vec3(0,1,0);
+    a.K[2] = glm::vec3(0,0,1);
+    a.Ni = 0;
+    a.bm = 0;
+    a.d = 0;
+    a.maps[0]  = "assets/3dmodels/CubeTexture2.jpg";
+    a.maps[1]  = "assets/3dmodels/lemon_diff_4k.jpg";
+    a.maps[2]  = "assets/3dmodels/lemon_diff_4k.jpg";
+    a.type = SOLID_COLOR;
     once();
-    lamp_position = glm::vec4(0,0,0,1);
+
     camera.translation[3][0] = 0;
     camera.translation[3][1] = 0;
     camera.translation[3][2] = 5;
     camera.rotation = glm::rotate(camera.rotation,3.14f, glm::vec3(0, 1, 0));
 
-    ModelGenStruct models[] =
-    {
-        ModelGenStruct
-        {
-            meshPath:"assets/3dmodels/Cube.obj",
-            texPath:"assets/3dmodels/CubeTexture2.jpg",
-            renderFlags:1
-        },
-        ModelGenStruct
-        {
-            meshPath:"assets/3dmodels/cannon_01_4k.obj",
-            texPath:"assets/3dmodels/cannon_01_diff_4k.jpg",
-            renderFlags:1
+    a.type = TEXTURE;
 
-        },
-        ModelGenStruct
-        {
-            meshPath:"assets/3dmodels/marble_bust_01_4k.obj",
-            texPath:"assets/3dmodels/marble_bust_01_diff_4k.jpg",
-            renderFlags:1
-        },
-        ModelGenStruct
-        {
-            meshPath:"assets/3dmodels/SphereHigh.obj",
-            texPath:"assets/3dmodels/marble_bust_01_diff_4k.jpg",
-            renderFlags:0
-        },
-        ModelGenStruct
-        {
-            meshPath:"assets/3dmodels/lemon_4k.obj",
-            texPath:"assets/3dmodels/lemon_diff_4k.jpg",
-            renderFlags:1
-        }
-    };
-    // addModels(3, models);
-    // addModels(1, models + 3);
-    // addModels(4, models);
-    // addModels(1, models);
-    // for(int i = 0; i < camera.renderData.verticesCount/3; i++){
-    //     printf("%d\n",camera.renderData.normalIndex[i]);
-    // }
-    // addModels(4, models);
-
-    addModels(1, models+2);
-    addModels(1, models+4);
-    indexLampModel = camera.renderData.models.size() -1;
-    // unsigned short  a = 0;
-    // rmModels(1, &a);
-
+    // pushModels(MeshGenData{
+    //     "assets/3dmodels/Cube.obj"
+    // },a);
+    // pushModels(MeshGenData{
+    //     "assets/3dmodels/Cube.obj"
+    // },a);
+    a.maps[0] = "assets/3dmodels/cannon_01_diff_4k.jpg";
+    pushModels(MeshGenData{
+        "assets/3dmodels/cannon_01_4k.obj"
+    },a);
+    a.maps[0] = "assets/3dmodels/marble_bust_01_diff_4k.jpg";
+    pushModels(MeshGenData{
+        "assets/3dmodels/marble_bust_01_4k.obj"
+    },a);
     while(!glfwWindowShouldClose(glfwWin))
     {
         newframe();
@@ -755,7 +667,6 @@ void Render::start(void(*op1)(),void(*op2)(),void(*op3)()){
         op2();
 
         imguiSetting();//Here is where im removing
-        // camera.viewMatrix  = rotation * translation;
 
 
         op3();
@@ -766,380 +677,293 @@ void Render::start(void(*op1)(),void(*op2)(),void(*op3)()){
         glfwSwapBuffers(glfwWin);
         glfwPollEvents();
         flags  = flags & ~(1&2);
+        updatePipeline();
     }
 }
 
+void Render::updatePipeline(){
+    if(minFramesToUp == -1)
+        return;
+    if(minFramesToUp > 0){
+        minFramesToUp--;
+        return;
+    }
+    if(!(flags & MODELS_CHANGE_FLAG))
+        return;
+    flags = flags & ~(MODELS_CHANGE_FLAG);
+    flags = flags | MATRICES_CHANGE_FLAG;
+    // unsigned int  verticesCount = 0, verticesIndexCount = 0, textureVerticesCount=0,
+    //                     textureVerticesIndexCount=0,normalVerticesCount=0,// normalIndexCount = nOfPrimitives = verticesIndexCount /3
+    //                     verticesIndexOffset= 0,textureIndexOffset = 0,normalIndexOffset=0;
+    // float *vertices,*matrices,*textureVertices,*normalVertices;
+    // unsigned int *verticesIndex,*modelParent,*textureVerticesIndex,*normalVerticesIndex,*modelsMaterials;
 
+    renderData.mesh.verticesCount = 0;
+    renderData.mesh.verticesIndexCount = 0;
+    renderData.mesh.textureVerticesCount = 0;
+    renderData.mesh.textureVerticesIndexCount = 0;
+    renderData.mesh.normalVerticesCount = 0;
 
-void Render::addModels(unsigned short n, ModelGenStruct *data){
-    flags = flags | 1; // set Add Flag
+    renderData.mesh.verticesIndexOffset = 0;
+    renderData.mesh.textureIndexOffset = 0;
+    renderData.mesh.normalIndexOffset = 0;
 
-    unsigned int totalVerticesCount = camera.renderData.verticesCount,
-                 totalTextureVerticesCount = camera.renderData.textureVerticesCount,
-                 totalNormalVecCount = camera.renderData.normalVecCount,
-                 totalVerticesIndexCount = camera.renderData.verticesIndexCount,
-                 totalTextureVerticesIndexCount = camera.renderData.textureVerticesIndexCount;
-
-    for (unsigned short i = 0; i < n; i++){
-        camera.renderData.models.push_back(Model(data[i].meshPath,data[i].texPath));
-        Model &actualM = camera.renderData.models.back();
-        actualM.mesh.renderFlags = data[i].renderFlags;
-        totalVerticesCount += actualM.mesh.verticesCount;
-        totalTextureVerticesCount += actualM.mesh.textureVerticesCount;
-        totalNormalVecCount += actualM.mesh.normalVecCount;
-        totalVerticesIndexCount += actualM.mesh.verticesIndexCount;
-        totalTextureVerticesIndexCount += actualM.mesh.textureVerticesIndexCount;
+    for(int i = 0; i < renderData.models.size(); i++){
+        Model actualModel = renderData.models[i];
+        renderData.mesh.verticesCount += actualModel.mesh.verticesCount;
+        renderData.mesh.verticesIndexCount += actualModel.mesh.verticesIndexCount;
+        renderData.mesh.textureVerticesCount += actualModel.mesh.textureVerticesCount;
+        renderData.mesh.textureVerticesIndexCount += actualModel.mesh.textureVerticesIndexCount;
+        renderData.mesh.normalVerticesCount += actualModel.mesh.normalVerticesCount;
     }
 
-    unsigned long nModels = camera.renderData.models.size();
-    camera.renderData.vertices = (float *)realloc(camera.renderData.vertices,
-                sizeof(float) * totalVerticesCount);
-    camera.renderData.matrices = (float *)realloc(camera.renderData.matrices,
-                sizeof(float) * 16 * nModels);
-    camera.renderData.textureVertices = (float *)realloc(camera.renderData.textureVertices,
-                sizeof(float) * totalTextureVerticesCount);
-    camera.renderData.normalVec = (float *)realloc(camera.renderData.normalVec,
-                sizeof(float) * totalNormalVecCount);
+    renderData.mesh.meshesCount = renderData.models.size();
 
-    camera.renderData.verticesIndex = (unsigned int *)realloc(camera.renderData.verticesIndex,
-                sizeof(int) * totalVerticesIndexCount);
-    camera.renderData.matricesIndex = (unsigned int *)realloc(camera.renderData.matricesIndex,
-                sizeof(int) * totalVerticesCount/3);
-    camera.renderData.textureVerticesIndex = (unsigned int *)realloc(camera.renderData.textureVerticesIndex,
-                sizeof(int) * totalTextureVerticesIndexCount);
-    camera.renderData.normalIndex = (unsigned int *)realloc(camera.renderData.normalIndex,
-                sizeof(int) * totalVerticesIndexCount/3);
+    renderData.mesh.vertices = (float*)realloc(renderData.mesh.vertices,
+                        sizeof(float) * renderData.mesh.verticesCount);
+    renderData.mesh.matrices = (float*)realloc(renderData.mesh.matrices,
+                        sizeof(float) * 16 * renderData.mesh.meshesCount);
+    renderData.mesh.textureVertices = (float*)realloc(renderData.mesh.textureVertices,
+                        sizeof(float) * renderData.mesh.textureVerticesCount);
+    renderData.mesh.normalVertices = (float*)realloc(renderData.mesh.normalVertices,
+                        sizeof(float) * renderData.mesh.normalVerticesCount);
 
-
-    camera.renderData.textureIndxDATA = (unsigned int*)realloc(camera.renderData.textureIndxDATA,
-                sizeof(int) * 2 * nModels);
-    camera.renderData.renderFlags = (int*)realloc(camera.renderData.renderFlags,
-                sizeof(int) * nModels);
-
-    feedbacknumber = 4 * totalVerticesIndexCount;
-    feedbacksize = feedbacknumber * sizeof(float);
-    for (unsigned short i = 0; i < n; i++){
-
-        Model &actualM = camera.renderData.models[nModels - n + i];
+    renderData.mesh.verticesIndex = (unsigned int*)realloc(renderData.mesh.verticesIndex,
+                        sizeof(unsigned int) * renderData.mesh.verticesIndexCount);
+    renderData.mesh.modelParent = (unsigned int*)realloc(renderData.mesh.modelParent,
+                        sizeof(unsigned int) * renderData.mesh.verticesCount / 3);
+    renderData.mesh.textureVerticesIndex = (unsigned int*)realloc(renderData.mesh.textureVerticesIndex,
+                        sizeof(unsigned int) * renderData.mesh.textureVerticesIndexCount);
+    renderData.mesh.normalVerticesIndex = (unsigned int*)realloc(renderData.mesh.normalVerticesIndex,
+                        sizeof(unsigned int) * renderData.mesh.verticesIndexCount / 3);
+    renderData.mesh.modelMaterial = (unsigned int*)realloc(renderData.mesh.modelMaterial,
+                        sizeof(unsigned int) * renderData.mesh.meshesCount);
 
 
-    //-------/-------/-------/----- TEXTURE -----/-------/-------/-------/-------/
+    unsigned int localVerticesNumber = 0;
+    unsigned int localVerticesIndexNumber = 0;
+    unsigned int localTextureVerticesNumber = 0;
+    unsigned int localTextureVerticesIndexNumber = 0;
+    unsigned int localNormalVerticesNumber = 0;
+    for(int i = 0; i < renderData.models.size(); i++){
+        Mesh actualMesh = renderData.models[i].mesh;
+        memcpy(renderData.mesh.vertices + localVerticesNumber,
+            actualMesh.vertices, sizeof(float) * actualMesh.verticesCount);
+        memcpy(renderData.mesh.matrices + 16 *  i,
+            glm::value_ptr(actualMesh.matrix), sizeof(float) * 16);
+        memcpy(renderData.mesh.textureVertices + localTextureVerticesNumber,
+            actualMesh.textureVertices, sizeof(float) * actualMesh.textureVerticesCount);
+        memcpy(renderData.mesh.normalVertices + localNormalVerticesNumber,
+            actualMesh.normalVertices, sizeof(float) * actualMesh.normalVerticesCount);
 
-        stbi_set_flip_vertically_on_load (1);
-        unsigned char *localBuffer = stbi_load(actualM.tex.localPath, &actualM.tex.width,  &actualM.tex.height, &actualM.tex.BPP, 4);
-        if(actualM.tex.width != actualM.tex.height){
-            sendError("Width != Height");
-            exit(EXIT_FAILURE);
+
+
+        memcpy(renderData.mesh.verticesIndex + localVerticesIndexNumber,
+            actualMesh.verticesIndex, sizeof(unsigned int) * actualMesh.verticesIndexCount);
+        memcpy(renderData.mesh.textureVerticesIndex + localTextureVerticesIndexNumber,
+            actualMesh.textureVerticesIndex, sizeof(unsigned int) * actualMesh.textureVerticesIndexCount);
+        memcpy(renderData.mesh.normalVerticesIndex + localVerticesIndexNumber / 3,
+            actualMesh.normalVerticesIndex, sizeof(unsigned int) * actualMesh.verticesIndexCount / 3);
+
+
+        renderData.mesh.modelMaterial[i] = renderData.models[i].materialIndex;
+
+        for(int j = 0; j < actualMesh.verticesCount / 3; j++){
+            renderData.mesh.modelParent[j + localVerticesNumber / 3] = i;
         }
-        if(actualM.tex.width > 4096){
-            sendError("Width,Height > 4096");
-            exit(EXIT_FAILURE);
+
+        for(int j = 0; j < actualMesh.verticesIndexCount; j++){
+            *(renderData.mesh.verticesIndex + localVerticesIndexNumber + j) += localVerticesNumber;
         }
-        unsigned char buffIndex = (unsigned char)floor(log2(actualM.tex.height)-6);
-        glBindTexture(GL_TEXTURE_2D_ARRAY, texUtilitary);
-        glTexImage3D(GL_TEXTURE_2D_ARRAY,LEVEL,GL_RGBA8 ,actualM.tex.width,actualM.tex.width,camera.renderData.texturesCount[buffIndex]+1,0,GL_RGBA,GL_UNSIGNED_BYTE,NULL);
-
-        setTexParameter();
-
-        glCopyImageSubData(texARRAY[buffIndex],GL_TEXTURE_2D_ARRAY,LEVEL,0,0,0,texUtilitary,GL_TEXTURE_2D_ARRAY,LEVEL,
-                        0,0,0,actualM.tex.width,actualM.tex.width,camera.renderData.texturesCount[buffIndex]);
-
-        glTexSubImage3D(GL_TEXTURE_2D_ARRAY, LEVEL, 0, 0,
-                            camera.renderData.texturesCount[buffIndex], actualM.tex.width, actualM.tex.width, 1, GL_RGBA, GL_UNSIGNED_BYTE, localBuffer);
-
-        glBindTexture(GL_TEXTURE_2D_ARRAY,texARRAY[buffIndex]);
-
-        glTexImage3D(GL_TEXTURE_2D_ARRAY,LEVEL,GL_RGBA8 ,0,0,0,0,GL_RGBA,GL_UNSIGNED_BYTE,NULL);
-        glBindTexture(GL_TEXTURE_2D_ARRAY,0);
-
-
-
-        actualM.tex.position = glm::vec2(buffIndex,camera.renderData.texturesCount[buffIndex]);
-        camera.renderData.textureIndxDATA[2*(nModels - n + i)] = buffIndex;
-        camera.renderData.textureIndxDATA[2*(nModels - n + i)+1] = camera.renderData.texturesCount[buffIndex];
-        camera.renderData.texturesCount[buffIndex]++;
-        camera.renderData.modelsPerTex[buffIndex] = (unsigned short*)realloc(camera.renderData.modelsPerTex[buffIndex], camera.renderData.texturesCount[buffIndex]*sizeof(short));
-        camera.renderData.modelsPerTex[buffIndex][camera.renderData.texturesCount[buffIndex]-1] =(nModels - n + i);
-        stbi_image_free (localBuffer);
-
-        unsigned int cache = texARRAY[buffIndex];
-        texARRAY[buffIndex] = texUtilitary;
-        texUtilitary = cache;
-
-
-    //-------/-------/-------/----- FLOAT* -----/-------/-------/-------/-------/
-
-        memcpy(camera.renderData.vertices + camera.renderData.verticesCount,
-                actualM.mesh.vertices, sizeof(float) * actualM.mesh.verticesCount);
-        camera.renderData.verticesCount += actualM.mesh.verticesCount;
-
-
-        memcpy(camera.renderData.matrices + 16 * (nModels - n + i),
-                glm::value_ptr(actualM.mesh.matrix), 16 * sizeof(float));
-
-
-        memcpy(camera.renderData.textureVertices + camera.renderData.textureVerticesCount,
-                actualM.mesh.textureVertices, sizeof(float) * actualM.mesh.textureVerticesCount);
-        camera.renderData.textureVerticesCount += actualM.mesh.textureVerticesCount;
-
-
-
-        memcpy(camera.renderData.normalVec + camera.renderData.normalVecCount,
-                actualM.mesh.normalVec, sizeof(float) * actualM.mesh.normalVecCount);
-        camera.renderData.normalVecCount += actualM.mesh.normalVecCount;
-
-
-    //-------/-------/-------/----- UINT* -----/-------/-------/-------/-------/
-
-
-
-        memcpy(camera.renderData.verticesIndex + camera.renderData.verticesIndexCount,
-                actualM.mesh.verticesIndex,
-                sizeof(int) * actualM.mesh.verticesIndexCount);
-
-
-
-        unsigned int *p =camera.renderData.matricesIndex+(camera.renderData.verticesCount- actualM.mesh.verticesCount)/3;
-        for (unsigned int j = 0; j < actualM.mesh.verticesCount/3; j++) {
-            p[j] = nModels - n + i;
+        for(int j = 0; j < actualMesh.textureVerticesIndexCount; j++){
+            *(renderData.mesh.textureVerticesIndex + localVerticesIndexNumber + j) += localTextureVerticesNumber;
+        }
+        for(int j = 0; j < actualMesh.verticesIndexCount / 3; j++){
+            *(renderData.mesh.normalVerticesIndex + localVerticesIndexNumber + j) += localNormalVerticesNumber;
         }
 
 
-        memcpy(camera.renderData.textureVerticesIndex + camera.renderData.textureVerticesIndexCount,
-                actualM.mesh.textureVerticesIndex,
-                sizeof(int) * actualM.mesh.textureVerticesIndexCount);
-
-        memcpy(camera.renderData.normalIndex + camera.renderData.verticesIndexCount/3,
-                actualM.mesh.normalIndex,
-                sizeof(int) * actualM.mesh.verticesIndexCount/3);
-
-        camera.renderData.renderFlags[nModels - n + i] = actualM.mesh.renderFlags;
-
-        for(unsigned int j = 0; j < actualM.mesh.verticesIndexCount; j++){
-            *(camera.renderData.verticesIndex + camera.renderData.verticesIndexCount + j) += camera.renderData.verticesIndexOffset;
-        }
-        for(unsigned int j = 0; j < actualM.mesh.textureVerticesIndexCount; j++){
-            *(camera.renderData.textureVerticesIndex + camera.renderData.textureVerticesIndexCount + j) += camera.renderData.textureIndexOffset;
-        }
-        for(unsigned int j = 0; j < actualM.mesh.verticesIndexCount/3; j++){
-            *(camera.renderData.normalIndex + camera.renderData.verticesIndexCount/3 + j) += camera.renderData.normalIndexOffset;
-        }
-        camera.renderData.verticesIndexCount += actualM.mesh.verticesIndexCount;
-        camera.renderData.textureVerticesIndexCount += actualM.mesh.textureVerticesIndexCount;
-
-        camera.renderData.verticesIndexOffset += actualM.mesh.verticesCount/3;
-        camera.renderData.textureIndexOffset += actualM.mesh.textureVerticesCount/2;
-        camera.renderData.normalIndexOffset += actualM.mesh.normalVecCount/3;
-
-
-    }
-}
-
-
-
-void Render::rmModels(unsigned short n, unsigned short *indices){
-    flags = flags | 2; // set Rm Flag
-    float *antiqueMatrices = (float *)malloc(sizeof(float) * 16 *camera.renderData.models.size());
-    memcpy(antiqueMatrices, camera.renderData.matrices, sizeof(float) * 16 *camera.renderData.models.size());
-    unsigned short antiqueTexturesCount[TEXTURE_COUNT];
-    // memcpy(antiqueTextureIndxDATA, camera.renderData.textureIndxDATA, sizeof(int) * 2 * camera.renderData.models.size());
-    // unsigned short *texPerModel = (unsigned short *)malloc(sizeof(short) * camera.renderData.models.size());
-    // for(unsigned short i = 0; i < camera.renderData.models.size(); i++){
-    //     antiqueTextureIndxDATA[2*i];
-    // }
-    // sort(indices);
-    unsigned short indicesPerTex[TEXTURE_COUNT];
-    unsigned short *rmPerTex[TEXTURE_COUNT];
-
-    for(unsigned short i = 0; i < TEXTURE_COUNT; i++){
-        antiqueTexturesCount[i] = camera.renderData.texturesCount[i];
-        indicesPerTex[i] = 0;
-        rmPerTex[i] = (unsigned short*)malloc(sizeof(short) * n);
+        localVerticesNumber += actualMesh.verticesCount;
+        localVerticesIndexNumber += actualMesh.verticesIndexCount;
+        localTextureVerticesNumber += actualMesh.textureVerticesCount;
+        localTextureVerticesIndexNumber += actualMesh.textureVerticesIndexCount;
+        localNormalVerticesNumber += actualMesh.normalVerticesCount;
     }
 
-    for(unsigned short i = 0; i < n; i++){
-        unsigned short kk = camera.renderData.models[indices[i]].tex.position.x;
-        rmPerTex[kk][indicesPerTex[kk]] = camera.renderData.models[indices[i]].tex.position.y;
-        indicesPerTex[kk]++;
-        camera.renderData.texturesCount[kk]--;
-    }
-
-    for(unsigned short i = 0; i < TEXTURE_COUNT; i++){
-        if(indicesPerTex[i]){
-            unsigned short initOfCopy = 0;
-            unsigned short toPaste = 0;
-            unsigned short *koooo = camera.renderData.modelsPerTex[i];
-            float size = pow(2, i + 6);
-            unsigned short sooofunckingIndices = 0;
-            for(unsigned short j = 0; j < indicesPerTex[i]; j++){
-                // if(initOfCopy == rmPerTex[i][j])
-                //     initOfCopy++;
-
-                unsigned short nToCopy = rmPerTex[i][j] - initOfCopy;
-                if(nToCopy < 1){
-                    initOfCopy = rmPerTex[i][j] + 1;
-                    continue;
-                }
-
-
-                glCopyImageSubData(texARRAY[i], GL_TEXTURE_2D_ARRAY, LEVEL, 0, 0, initOfCopy,
-                                   texARRAY[i], GL_TEXTURE_2D_ARRAY, LEVEL, 0, 0, toPaste, size, size, nToCopy);
-                for(unsigned short k = 0; k < nToCopy; k++){
-                    camera.renderData.models[koooo[initOfCopy+k]].tex.position.y = sooofunckingIndices;
-                    sooofunckingIndices++;
-                }
-                initOfCopy = rmPerTex[i][j] + 1;
-                toPaste += nToCopy;
-            }
-
-
-            unsigned short nToCopy = antiqueTexturesCount[i] - initOfCopy;
-            if(nToCopy > 0)
-                glCopyImageSubData(texARRAY[i],GL_TEXTURE_2D_ARRAY,LEVEL,0,0,initOfCopy,texARRAY[i],GL_TEXTURE_2D_ARRAY,LEVEL,0,0,toPaste,size,size,nToCopy);
-
-
-            glBindTexture(GL_TEXTURE_2D_ARRAY, texUtilitary);
-            glTexImage3D(GL_TEXTURE_2D_ARRAY,LEVEL,GL_RGBA8 ,size,size,camera.renderData.texturesCount[i],0,GL_RGBA,GL_UNSIGNED_BYTE,NULL);
-
-            setTexParameter();
-
-            glCopyImageSubData(texARRAY[i], GL_TEXTURE_2D_ARRAY, LEVEL, 0, 0, 0, texUtilitary, GL_TEXTURE_2D_ARRAY, LEVEL,
-                               0, 0, 0, size, size, camera.renderData.texturesCount[i]);
-
-            glBindTexture(GL_TEXTURE_2D_ARRAY,texARRAY[i]);
-
-            glTexImage3D(GL_TEXTURE_2D_ARRAY, LEVEL, GL_RGBA8, 0, 0, 0, 0,
-                         GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-            glBindTexture(GL_TEXTURE_2D_ARRAY,0);
-
-            unsigned int cache = texARRAY[i];
-            texARRAY[i] = texUtilitary;
-            texUtilitary = cache;
-        }
-    }
-
-
-    for (unsigned short i = 0; i < n; i++)
     {
-        // indexOfRemove = indexOfRemove > index[i] ? index[i] : indexOfRemove;
-        Model actualM = camera.renderData.models.at(indices[i]);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER,ssbos[SSBOS::NormalVecsIndexSSBO]);
+        glBufferData(GL_SHADER_STORAGE_BUFFER,
+                        sizeof(unsigned int) * renderData.mesh.verticesIndexCount/3,
+                        renderData.mesh.normalVerticesIndex,GL_DYNAMIC_DRAW);
 
-        camera.renderData.models.erase(camera.renderData.models.begin() + indices[i]);
-        camera.renderData.verticesCount -= actualM.mesh.verticesCount;
-        camera.renderData.verticesIndexCount -= actualM.mesh.verticesIndexCount;
-        camera.renderData.textureVerticesCount  -= actualM.mesh.textureVerticesCount;
-        camera.renderData.textureVerticesIndexCount -= actualM.mesh.textureVerticesIndexCount;
-        camera.renderData.normalVecCount -= actualM.mesh.normalVecCount;
-        actualM.mesh.deleteMesh();
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER,ssbos[SSBOS::NormalVecsSSBO]);
+        glBufferData(GL_SHADER_STORAGE_BUFFER,
+                        sizeof(float) * renderData.mesh.normalVerticesCount,
+                        renderData.mesh.normalVertices,GL_DYNAMIC_DRAW);
+
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER,ssbos[SSBOS::TextureIndexSSBO]);
+        glBufferData(GL_SHADER_STORAGE_BUFFER,
+                        sizeof(unsigned int) * renderData.mesh.textureVerticesIndexCount,
+                        renderData.mesh.textureVerticesIndex,GL_DYNAMIC_DRAW);
+
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER,ssbos[SSBOS::TextureCoordSSBO]);
+        glBufferData(GL_SHADER_STORAGE_BUFFER,
+                        sizeof(float) * renderData.mesh.textureVerticesCount,
+                        renderData.mesh.textureVertices,GL_DYNAMIC_DRAW);
+
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER,ssbos[SSBOS::ModelsMaterialsSSBO]);
+        glBufferData(GL_SHADER_STORAGE_BUFFER,
+                        sizeof(unsigned int) * renderData.mesh.meshesCount,
+                        renderData.mesh.modelMaterial,GL_DYNAMIC_DRAW);
+
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER,0);
+
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+                        sizeof(unsigned int) * renderData.mesh.verticesIndexCount,
+                        renderData.mesh.verticesIndex,GL_DYNAMIC_DRAW);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+        m_VAO->bind();
+        m_VAO->bindVBO(0);
+        glBufferData(GL_ARRAY_BUFFER,  sizeof(float) * renderData.mesh.verticesCount,
+                            renderData.mesh.vertices,GL_DYNAMIC_DRAW);
+
+        m_VAO->bindVBO(1);
+        glBufferData(GL_ARRAY_BUFFER,  sizeof(int) * renderData.mesh.verticesCount/3,
+                            renderData.mesh.modelParent,GL_DYNAMIC_DRAW);
+
+        m_VAO->unbindVBO();
+        m_VAO->unbind();
+    }
+}
+
+TextureLocation RenderData::addTexToHandler(char *path){
+    int width, height,bpp;
+
+    stbi_set_flip_vertically_on_load (1);
+    unsigned char *localBuffer = stbi_load(path, &width,  &height, &bpp, 4);
+    if(width != height){
+        sendError("Width != Height");
+        exit(EXIT_FAILURE);
+    }
+    if(width > 4096){
+        sendError("Width,Height > 4096");
+        exit(EXIT_FAILURE);
+    }
+    unsigned char handlerIndex = (unsigned char)floor(log2(height)-6);
+    unsigned int index = textureHandlers[handlerIndex].addTex(localBuffer);
+    stbi_image_free (localBuffer);
+    return TextureLocation{
+        handler: handlerIndex,
+        index: index
+    };
+}
+
+unsigned int TextureHandler::addTex(unsigned char *localBuffer){
+    if(emptyTexturesCount){
+        unsigned int i = emptyTextures[0];
+        glBindTexture(GL_TEXTURE_2D_ARRAY,texture);
+        glTexSubImage3D(GL_TEXTURE_2D_ARRAY, LEVEL, 0, 0,
+                            i-1, texDimensions, texDimensions, 1, GL_RGBA, GL_UNSIGNED_BYTE, localBuffer);
+
+        emptyTexturesCount--;
+        emptyTextures = (unsigned int*)realloc(emptyTextures, emptyTexturesCount * sizeof(int));
+        return i;
     }
 
+    glBindTexture(GL_TEXTURE_2D_ARRAY, *texUtilitary);
+    glTexImage3D(GL_TEXTURE_2D_ARRAY,LEVEL,GL_RGBA8 ,texDimensions,texDimensions,texturesCount+1,0,GL_RGBA,GL_UNSIGNED_BYTE,NULL);
 
-    camera.renderData.vertices = (float *)realloc(camera.renderData.vertices,
-                sizeof(float) * camera.renderData.verticesCount);
-    camera.renderData.matrices = (float *)realloc(camera.renderData.matrices,
-                sizeof(float) * 16 * camera.renderData.models.size());
-    camera.renderData.textureVertices = (float *)realloc(camera.renderData.textureVertices,
-                sizeof(float) * camera.renderData.textureVerticesCount);
-    camera.renderData.normalVec = (float *)realloc(camera.renderData.normalVec,
-                sizeof(float) *  camera.renderData.normalVecCount);
+    setTexParameter();
 
-    camera.renderData.verticesIndex = (unsigned int *)realloc(camera.renderData.verticesIndex,
-                sizeof(int) * camera.renderData.verticesIndexCount);
-    camera.renderData.matricesIndex = (unsigned int *)realloc(camera.renderData.matricesIndex,
-                sizeof(int) * camera.renderData.verticesCount/3);
-    camera.renderData.textureVerticesIndex = (unsigned int *)realloc(camera.renderData.textureVerticesIndex,
-                sizeof(int) * camera.renderData.textureVerticesIndexCount);
-    camera.renderData.normalIndex = (unsigned int *)realloc(camera.renderData.normalIndex,
-                sizeof(int) * camera.renderData.verticesIndexCount / 3);
+    glCopyImageSubData(texture,GL_TEXTURE_2D_ARRAY,LEVEL,0,0,0,*texUtilitary,GL_TEXTURE_2D_ARRAY,LEVEL,
+                    0,0,0,texDimensions,texDimensions,texturesCount);
 
-    feedbacknumber = 4 * camera.renderData.verticesIndexCount;
-    feedbacksize = feedbacknumber * sizeof(float);
+    glTexSubImage3D(GL_TEXTURE_2D_ARRAY, LEVEL, 0, 0,
+                        texturesCount, texDimensions, texDimensions, 1, GL_RGBA, GL_UNSIGNED_BYTE, localBuffer);//texturesCount or texturesCount-1 ?
 
-    camera.renderData.renderFlags = (int*)realloc(camera.renderData.renderFlags,
-                sizeof(int) * camera.renderData.models.size());
+    glBindTexture(GL_TEXTURE_2D_ARRAY,texture);
 
-    camera.renderData.verticesIndexOffset = 0;
-    camera.renderData.textureIndexOffset = 0;
-    camera.renderData.normalIndexOffset = 0;
-    unsigned int indexVerticesCount = 0,indexVerticesIndexCount = 0,indexTextureVerticesCount = 0,
-                 indexTextureVerticesIndexCount = 0,indexNormalVecCount = 0,indexMatricesIndexCount = 0;
+    glTexImage3D(GL_TEXTURE_2D_ARRAY,LEVEL,GL_RGBA8 ,0,0,0,0,GL_RGBA,GL_UNSIGNED_BYTE,NULL);
+    glBindTexture(GL_TEXTURE_2D_ARRAY,0);
 
+    texturesCount++;
 
-    for(unsigned int i = 0; i < camera.renderData.models.size(); i++){
-        Model actualM = camera.renderData.models[i];
+    unsigned int cache = texture;
+    texture = *texUtilitary;
+    *texUtilitary = cache;
 
-        camera.renderData.modelsPerTex[actualM.tex.position.x] = (unsigned short*)realloc(camera.renderData.modelsPerTex[actualM.tex.position.x],
-                                                                        camera.renderData.texturesCount[actualM.tex.position.x]*sizeof(short));
-        camera.renderData.modelsPerTex[actualM.tex.position.x][camera.renderData.texturesCount[actualM.tex.position.x]-1] = i;
-        camera.renderData.textureIndxDATA[2*i] = actualM.tex.position.x;
-        camera.renderData.textureIndxDATA[2*i+1] = actualM.tex.position.y;
+    return texturesCount-1;
+}
 
-        //-------/-------/-------/----- FLOAT* -----/-------/-------/-------/-------/
-        memcpy(camera.renderData.vertices + indexVerticesCount,
-                actualM.mesh.vertices, sizeof(float) * actualM.mesh.verticesCount);
-        indexVerticesCount +=actualM.mesh.verticesCount;
-
-        memcpy(camera.renderData.matrices + 16 * i,
-                 antiqueMatrices + 16*getOldIndexOfNew(i, n, indices), 16 * sizeof(float));
-
-        memcpy(camera.renderData.textureVertices + indexTextureVerticesCount,
-                actualM.mesh.textureVertices, sizeof(float) * actualM.mesh.textureVerticesCount);
-        indexTextureVerticesCount +=actualM.mesh.textureVerticesCount;
-
-        memcpy(camera.renderData.normalVec + indexNormalVecCount,
-                actualM.mesh.normalVec, sizeof(float) * actualM.mesh.normalVecCount);
-        indexNormalVecCount +=actualM.mesh.normalVecCount;
-
-        //-------/-------/-------/----- UINT* -----/-------/-------/-------/-------/
-        memcpy(camera.renderData.verticesIndex + indexVerticesIndexCount,
-                actualM.mesh.verticesIndex,
-                sizeof(int) * actualM.mesh.verticesIndexCount);
-
-        unsigned int *p =camera.renderData.matricesIndex+indexMatricesIndexCount;
-        for (unsigned int j = 0; j < actualM.mesh.verticesCount/3; j++) {
-            p[j] = i;
-        }
-
-        memcpy(camera.renderData.textureVerticesIndex + indexTextureVerticesIndexCount,
-                actualM.mesh.textureVerticesIndex,
-                sizeof(int) * actualM.mesh.textureVerticesIndexCount);
-
-
-        memcpy(camera.renderData.normalIndex + indexVerticesIndexCount/3,
-                actualM.mesh.normalIndex,
-                sizeof(int) * actualM.mesh.verticesIndexCount/3);
-
-        camera.renderData.renderFlags[i] = actualM.mesh.renderFlags;
-
-
-        for(unsigned int j = 0; j < actualM.mesh.verticesIndexCount; j++)//PRECISO CORRIGIR TODOS OS INDEX
-        {
-            *(camera.renderData.verticesIndex + indexVerticesIndexCount + j) += camera.renderData.verticesIndexOffset;
-        }
-        for(unsigned int j = 0; j < actualM.mesh.textureVerticesIndexCount; j++)
-        {
-            *(camera.renderData.textureVerticesIndex + indexTextureVerticesIndexCount + j) += camera.renderData.textureIndexOffset;
-        }
-        for(unsigned int j = 0; j < actualM.mesh.verticesIndexCount/3; j++)
-        {
-            *(camera.renderData.normalIndex + indexVerticesIndexCount/3 + j) += camera.renderData.normalIndexOffset;
-        }
-
-        indexVerticesIndexCount += actualM.mesh.verticesIndexCount;
-        indexTextureVerticesIndexCount += actualM.mesh.textureVerticesIndexCount;
-
-        indexMatricesIndexCount += actualM.mesh.verticesCount/3;
-        camera.renderData.verticesIndexOffset += actualM.mesh.verticesCount/3;
-        camera.renderData.textureIndexOffset += actualM.mesh.textureVerticesCount/2;
-        camera.renderData.normalIndexOffset += actualM.mesh.normalVecCount/3;
+void TextureHandler::rmTex(unsigned int index) {
+    emptyTexturesCount++;
+    if(emptyTexturesCount > MAX_EMPTY_TEXTURES_COUNT ||
+        (emptyTexturesCount > MIN_EMPTY_TEXTURES_COUNT_TO_RST &&
+            emptyTexturesCount > texturesCount * MAX_RATIO_OF_EMPTY_TEXTURES)) {
+        printf("bahhh\n\n\n\n");
+        return;
     }
+    emptyTextures = (unsigned int*)realloc(emptyTextures, emptyTexturesCount);
+    emptyTextures[emptyTexturesCount-1] = index;
+}
 
-    camera.renderData.textureIndxDATA = (unsigned int *)realloc(camera.renderData.textureIndxDATA,
-                sizeof(int) * 2 * camera.renderData.models.size());
+unsigned int Render::pushModels(MeshGenData mesh,unsigned int materialIndex) {
+    flags = flags | MODELS_CHANGE_FLAG;
+    minFramesToUp = 0;
+    renderData.models.push_back(Model(Mesh(mesh),materialIndex));
+    return renderData.models.size() -1;
+}
 
-    for(unsigned short i = 0; i < TEXTURE_COUNT; i++){
-        free(rmPerTex[i]);
+unsigned int Render::pushModels(MeshGenData mesh,MaterialGenData material) {
+    return pushModels(mesh,allocMaterial(material));
+}
+
+unsigned int Render::pushModels(MeshGenData mesh) {
+    return pushModels(mesh,0);
+}
+
+void Render::popModels(unsigned int index) {
+    flags = flags | MODELS_CHANGE_FLAG;
+    renderData.models.erase(renderData.models.begin() + index);
+}
+
+
+unsigned int Render::allocMaterial(MaterialGenData data){
+    renderData.materialsCount++;
+    renderData.materials = (Material*)realloc(renderData.materials, sizeof(Material) * renderData.materialsCount);
+    Material *mater = renderData.materials + renderData.materialsCount-1;
+
+    mater->Ni = data.Ni;
+    mater->bm = data.bm;
+    mater->d = data.d;
+    mater->type  = data.type;
+    for(int i = 0; i < 3; i++){
+        mater->K[3 * i] = data.K[i].x;
+        mater->K[3 * i + 1] = data.K[i].y;
+        mater->K[3 * i + 2] = data.K[i].z;
+
+        if(data.type == TEXTURE && data.maps[i] != NULL)
+            mater->maps[i] = renderData.addTexToHandler(data.maps[i]);
     }
+    if(data.maps[3] != NULL)
+        mater->maps[3] = renderData.addTexToHandler(data.maps[3]);
 
-    free(antiqueMatrices);
+    flags = flags | MATERIAL_CHANGE_FLAG;
+    return renderData.materialsCount - 1;
+}
+
+void Render::freeMaterial(unsigned int index){
+    Material *newMat = (Material*)malloc(sizeof(Material) * (renderData.materialsCount - 1));
+    if(index > 0){
+        memcpy(newMat, renderData.materials,index);
+    }
+    if(index > renderData.materialsCount - 1){
+        memcpy(newMat+index+1, renderData.materials,renderData.materialsCount - 1 - index);
+    }
+    free(renderData.materials);
+    renderData.materials = newMat;
+    renderData.materialsCount--;
+    flags = flags | MATERIAL_CHANGE_FLAG;
 }

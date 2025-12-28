@@ -2,73 +2,79 @@
 #version 460 core
 layout(triangles) in;
 layout(triangle_strip, max_vertices = 3) out;
-out vec4 outValue;
-out vec2 g_texCoord;
-out vec3 normalVec;
-out vec3 normalVecT;
-out flat uint modelIndexFrag;
-out noperspective vec4 worldPos;
-out noperspective vec4 worldPosT;
 
-in uint modelIndexGeom[3];
+struct TextureLocation {
+    uint handler, index;
+};
 
-out vec4 transformFeedback;
+const uint MATERIAL_SOLID_COLOR = 0u;
+const uint MATERIAL_TEXTURE = 1u;
 
-uniform mat4 projection;
-uniform mat4 view;
+struct Material {
+    float K[9];
+    float Ni, d, bm;
+    TextureLocation maps[4];
+    uint type;
+};
 
-layout(std430, binding = 2) buffer modelMxBuffer {
+layout(std430, binding = 0) buffer modelMxBuffer {
     mat4 modelsMatrix[];
 };
-layout(std430, binding = 4) buffer TexCoordBuffer {
+layout(std430, binding = 1) buffer TexCoordBuffer {
     vec2 texCoord[];
 };
-layout(std430, binding = 5) buffer TexIndexBuffer {
-    uvec3 indexTexture[];
+layout(std430, binding = 2) buffer TexIndexBuffer {
+    uint indexTexture[];
 };
-layout(std430, binding = 7) buffer NormalVecsBuffer {
+layout(std430, binding = 3) buffer MaterialsBuffer {
+    Material materials[];
+};
+layout(std430, binding = 4) buffer ModelsMaterialsBuffer {
+    uint modelsMaterials[];
+};
+layout(std430, binding = 5) buffer NormalVecsBuffer {
     float normalVecsBuffer[]; // to getway with vec3 limitations
 };
-layout(std430, binding = 8) buffer NormalVecsIndexBuffer {
+layout(std430, binding = 6) buffer NormalVecsIndexBuffer {
     uint normalVecsIndexBuffer[];
 };
+
+out flat Material material;
+out vec2 g_texCoord;
+out flat uint modelParentFrag;
+out vec3 normalVec;
+out vec4 worldPos;
+
+in uint modelParentGeom[3];
+
+uniform sampler2DArray textures[16];
+uniform mat4 projection;
+uniform mat4 view;
 
 void main() {
     //
     vec4 niopaVec = vec4(normalVecsBuffer[3 * normalVecsIndexBuffer[gl_PrimitiveIDIn]],
             normalVecsBuffer[3 * normalVecsIndexBuffer[gl_PrimitiveIDIn] + 1],
-            normalVecsBuffer[3 * normalVecsIndexBuffer[gl_PrimitiveIDIn] + 2],0);
+            normalVecsBuffer[3 * normalVecsIndexBuffer[gl_PrimitiveIDIn] + 2], 0);
 
     vec4 posito[3] = {
-        (inverse(projection)*gl_in[0].gl_Position),
-        (inverse(projection)*gl_in[1].gl_Position),
-        (inverse(projection)*gl_in[2].gl_Position)
+            (inverse(projection) * gl_in[0].gl_Position),
+            (inverse(projection) * gl_in[1].gl_Position),
+            (inverse(projection) * gl_in[2].gl_Position)
         };
-    vec4 positoT[3] = {
-        (inverse(projection)*gl_in[2].gl_Position),
-        (inverse(projection)*gl_in[2].gl_Position),
-        (inverse(projection)*gl_in[2].gl_Position)
-    };
-    vec4 a = posito[0] - posito[1]; //need to try with four dimensions
-    vec4 b = posito[2] - posito[1]; //need to try with four dimensions
+    vec4 a = posito[0] - posito[1];
+    vec4 b = posito[2] - posito[1];
     normalVec = normalize(cross(a.xyz, b.xyz));
 
-    vec4 aT = positoT[0] - positoT[1]; //need to try with four dimensions
-    vec4 bT = positoT[2] - positoT[1]; //need to try with four dimensions
-    normalVecT = normalize(cross(aT.xyz, bT.xyz));
-
-    // mat3 pica = mat3(inverse(transpose(view * modelsMatrix[modelIndexGeom[1]])));
-
-    // normalVecT = normalize(pica * niopaVec);
-    modelIndexFrag = modelIndexGeom[1];
+    modelParentFrag = modelParentGeom[1];
     gl_PrimitiveID = gl_PrimitiveIDIn;
-    transformFeedback = vec4(normalVec - normalVecT, 1);
 
-    uvec3 inxTex = indexTexture[gl_PrimitiveIDIn];
+    material = materials[modelsMaterials[modelParentGeom[1]]];
+
+    uvec3 inxTex = uvec3(indexTexture[3 * gl_PrimitiveIDIn], indexTexture[3 * gl_PrimitiveIDIn + 1], indexTexture[3 * gl_PrimitiveIDIn + 2]);
     for (int i = 0; i < 3; i++) {
         gl_Position = gl_in[i].gl_Position;
         worldPos = posito[i];
-        worldPosT = positoT[i];
         g_texCoord = texCoord[inxTex[i]];
         EmitVertex();
     }
