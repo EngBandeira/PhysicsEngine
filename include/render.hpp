@@ -3,21 +3,32 @@
 #include "model.hpp"
 #include "log.hpp"
 #include "shader.hpp"
-#include "vertexArray.hpp"
 #include <GLFW/glfw3.h>
 #include <vector>
+
+
 #define TEXTURE_HANDLERS_COUNT 7
 #define SSBO_COUNT 7
-
+#define VBO_COUNT 2
 #define SCR_X 1920
 #define SCR_Y 1080
-
+#define MAX_FILE_EXTENSION_LENGHT 6
+#define RAW_TEX_EXTENSION "raw"
+#define RAW_TEX_EXTENSION_LENGHT 3
 
 void sendWarning(const char *msg);
 
 void send(const char *msg);
 
 void sendError(const char *msg);
+
+template<typename T, size_t N>
+bool matchPairs(T *buffer, int j, const T (&pairs)[N]) {
+    for(size_t i = 0; i < N; i++) {
+        if(buffer[i+j] != pairs[i]) return false;
+    }
+    return true;
+}
 
 
 enum materialType{
@@ -61,7 +72,7 @@ class RenderData {
     Material *materials;
     unsigned int materialsCount = 0;
     std::vector<Model> models;
-    TextureLocation addTexToHandler(char *path);
+    TextureLocation addTexToHandler(char *path,bool toProcess=1);
     struct MeshRenderData {
         unsigned int meshesCount = 0;
         unsigned int  verticesCount = 0, verticesIndexCount = 0, textureVerticesCount=0,
@@ -111,14 +122,13 @@ class Render {
     public:
     unsigned int ssbos[SSBO_COUNT];
     unsigned int flags; // abcd efgh: h = Update renderData
-    unsigned int EBO, FBO_FROM,FBO_TO,RBO, TBO, Query,
+    unsigned int EBO, FBO_FROM,FBO_TO,RBO, TBO, QUERY,
                  texToRenderOver,texToShowFrom;
     unsigned int feedbacksize,feedbacknumber,samples=4;
-
+    unsigned int VBOS[VBO_COUNT], VAO;
 
     Camera camera;
     bool transFeed = false;
-    std::unique_ptr<VAO> m_VAO;
 
     void start(void(*op1)(),void(*op2)(),void(*op3)());
 

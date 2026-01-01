@@ -21,11 +21,7 @@
 #include "vendor/stb_image/stb_image.h"
 
 #include "render.hpp"
-#include "model.hpp"
-#include "shader.hpp"
-#include "texture.hpp"
-#include "utils.hpp"
-#include "vertexArray.hpp"
+
 
 #define VERTEX_SHADERS_LOCALPATH "vShader.vert"
 #define FRAGMENT_SHADERS_LOCALPATH "fShader.frag"

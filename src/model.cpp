@@ -43,6 +43,7 @@ void Mesh::deleteMesh() {
 
 Mesh::Mesh(MeshGenData genData): matrix(1),meshPath(genData.path) {
 
+    o = (char**)malloc(0);
     std::vector<float> vertices_,textureVertices_,normalVertices_;
     std::vector<unsigned int> verticesIndex_, textureVerticesIndex_,normalVerticesIndex_;
     unsigned int fileLenght = 0;

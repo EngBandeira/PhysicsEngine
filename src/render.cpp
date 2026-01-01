@@ -1,9 +1,7 @@
-
-#include <cstddef>
 #include <cstdio>
+#include <unistd.h>
 #include <cstdlib>
 #include <cstring>
-#include <ctime>
 #include <glm/ext/matrix_float4x4.hpp>
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/ext/vector_float4.hpp>
@@ -11,7 +9,7 @@
 #include <glm/matrix.hpp>
 #include <stdlib.h>
 
-#include "texture.hpp"
+#include "utils.hpp"
 #include "vendor/glad/glad.h"//GLAD Always upper than GLFW
 #include <GLFW/glfw3.h>
 
@@ -23,8 +21,6 @@
 #include "render.hpp"
 #include "model.hpp"
 #include "shader.hpp"
-#include "utils.hpp"
-#include "vertexArray.hpp"
 
 #define VERTEX_SHADERS_LOCALPATH "vShader.vert"
 #define FRAGMENT_SHADERS_LOCALPATH "fShader.frag"
@@ -149,25 +145,25 @@ void RenderData::freeRenderData()
 // rotation[0][2] = -f.x; rotation[1][2] = -f.y; rotation[2][2] = -f.z;
 //
 glm::vec4 Camera::getUp(){
-    return translation* glm::vec4(rotation[0][1],rotation[1][1],rotation[2][1],rotation[3][1]);
+    return translation * glm::vec4(rotation[0][1],rotation[1][1],rotation[2][1],rotation[3][1]);
 }
 glm::vec4 Camera::getFoward(){
-    return translation* glm::vec4(rotation[0][2],rotation[1][2],rotation[2][2],rotation[3][2]);
+    return translation * glm::vec4(rotation[0][2],rotation[1][2],rotation[2][2],rotation[3][2]);
 }
 glm::vec4 Camera::getRight(){
-    return translation* glm::vec4(rotation[0][0],rotation[1][0],rotation[2][0],rotation[3][0]);
+    return translation * glm::vec4(rotation[0][0],rotation[1][0],rotation[2][0],rotation[3][0]);
 }
 glm::vec4 Camera::getPosition(){
     return translation * glm::vec4(0,0,0,1);
 }
 
 
-Camera::Camera():translation(1),rotation(1),localTranslation(1)
-                    {
-                        projMatrix = glm::perspective(glm::radians(45.0f),
-                                                        (float)SCR_X / (float)SCR_Y, 0.1f, 100.0f);
-                        viewMatrix = glm::lookAt(glm::vec3(0.0f, 0.0f, -5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-                    }
+Camera::Camera():translation(1), rotation(1), localTranslation(1)
+{
+    projMatrix = glm::perspective(glm::radians(45.0f),
+                                    (float)SCR_X / (float)SCR_Y, 0.1f, 100.0f);
+    viewMatrix = glm::lookAt(glm::vec3(0.0f, 0.0f, -5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+}
 
 glm::mat4 *RenderData::getNMatrix(unsigned short index){
     return (glm::mat4*)(mesh.matrices + 16*index);
@@ -202,12 +198,12 @@ unsigned short getNewIndexOfOld(unsigned short i, unsigned short n,unsigned shor
 
 
 
-Render::Render(GLFWwindow *win)
-    :   camera(),
-      m_VAO(std::make_unique<VAO>()),
-      shader((const char *[3]){VERTEX_SHADERS_LOCALPATH,
-                               FRAGMENT_SHADERS_LOCALPATH,
-                               GEOMETRY_SHADERS_LOCALPATH}),glfwWin(win){
+Render::Render(GLFWwindow *win):  camera(),
+            shader((const char *[3]){
+                VERTEX_SHADERS_LOCALPATH,
+                FRAGMENT_SHADERS_LOCALPATH,
+                GEOMETRY_SHADERS_LOCALPATH}),glfwWin(win) {
+
     shaderProgram = glCreateProgram();
     shader.attach(shaderProgram);
 
@@ -227,19 +223,21 @@ Render::Render(GLFWwindow *win)
 }
 
 Render::~Render() {
-
     renderData.freeRenderData();
     if (transFeed) {
-        glDeleteQueries(1,&Query);
+        glDeleteQueries(1,&QUERY);
         glDeleteBuffers(1, &TBO);
     }
-    m_VAO.reset();
-    glDeleteProgram(shaderProgram);
+    glDeleteVertexArrays(1,&VAO);
+    glDeleteBuffers(SSBO_COUNT,ssbos);
+    glDeleteBuffers(VBO_COUNT,VBOS);
     glDeleteFramebuffers(1, &FBO_FROM);
+    glDeleteFramebuffers(1, &FBO_TO);
     glDeleteRenderbuffers(1, &RBO);
-    // glDeleteTextures(1,&renderTex);
-    glDeleteQueries(1, &Query);
     glDeleteBuffers(1, &EBO);
+    glDeleteTextures(1,&texToRenderOver);
+    glDeleteTextures(1,&texToShowFrom);
+    glDeleteProgram(shaderProgram);
 }
 
 MaterialGenData a;
@@ -247,11 +245,13 @@ MaterialGenData a;
 
 void Render::input()
 {
-
+    if(ImGui::IsMouseDragging(ImGuiMouseButton_Left)){
+        printf("bahkk\n");
+    }
     if (ImGui::IsWindowFocused() && ImGui::GetMousePos().y >=ImGui::GetCursorScreenPos().y)
     {
         if (ImGui::IsKeyPressed(ImGuiKey_Escape)){
-            ImGui::SetWindowFocus(NULL);
+            ImGui::SetWindowFocus(nullptr);
             ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
         }
 
@@ -273,7 +273,7 @@ void Render::input()
 
         glfwSetCursorPos(glfwWin,windowCenter.x,windowCenter.y);
         ImGui::Dummy(ImVec2(0,0));
-
+        // printf("ba:%f  kk %f\n",mouseDelta.x,mouseDelta.y);
         camera.angle.x += MOUSE_SENSI*mouseDelta.x;
         camera.angle.y += .5f*MOUSE_SENSI*mouseDelta.y;
         camera.rotation = glm::rotate(glm::mat4(1),glm::radians(camera.angle.x), glm::vec3(0, 1, 0));
@@ -349,26 +349,26 @@ void Render::input()
 void Render::once()
 {
     if (transFeed) {
-        glGenQueries(1, &Query);
+        glGenQueries(1, &QUERY);
         glGenBuffers(1, &TBO);
     }
 
-    m_VAO->bind();
+    glGenVertexArrays(1,&VAO);
+    glBindVertexArray(VAO);
 
-    m_VAO->createVBO();
-    m_VAO->bindVBO(0);
+    glGenBuffers(2,VBOS);
+    glBindBuffer(GL_ARRAY_BUFFER,VBOS[0]);
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float),
                             (void *)0);
 
-    m_VAO->createVBO();
-    m_VAO->bindVBO(1);
+    glBindBuffer(GL_ARRAY_BUFFER,VBOS[1]);
     glEnableVertexAttribArray(1);
     glVertexAttribIPointer(1, 1, GL_UNSIGNED_INT, sizeof(int),
                             (void *)0);
 
-    m_VAO->unbindVBO();
-    m_VAO->unbind();
+    glBindVertexArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER,0);
 
     glGenBuffers(1, &EBO);
 
@@ -412,7 +412,7 @@ void Render::once()
     glGenTextures(1, &texToShowFrom);
     glBindTexture(GL_TEXTURE_2D, texToShowFrom);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1920, 1080, 0, GL_RGB,
-                GL_UNSIGNED_BYTE, NULL);
+                GL_UNSIGNED_BYTE, nullptr);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -425,7 +425,7 @@ void Render::once()
 
     glGenTextures(1, &renderData.texUtilitary);
     glBindTexture(GL_TEXTURE_2D_ARRAY, renderData.texUtilitary);
-    glTexImage3D(GL_TEXTURE_2D_ARRAY,LEVEL,GL_RGBA8 ,0,0,0,0,GL_RGBA,GL_UNSIGNED_BYTE,NULL);
+    glTexImage3D(GL_TEXTURE_2D_ARRAY,LEVEL,GL_RGBA8 ,0,0,0,0,GL_RGBA,GL_UNSIGNED_BYTE,nullptr);
     setTexParameter();
     glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
 
@@ -435,7 +435,7 @@ void Render::once()
         renderData.textureHandlers[i].texUtilitary = &renderData.texUtilitary;
         glGenTextures(1,&renderData.textureHandlers[i].texture);
         glBindTexture(GL_TEXTURE_2D_ARRAY,renderData.textureHandlers[i].texture);
-        glTexImage3D(GL_TEXTURE_2D_ARRAY,LEVEL,GL_RGBA8 ,k,k,0,0,GL_RGBA,GL_UNSIGNED_BYTE,NULL);
+        glTexImage3D(GL_TEXTURE_2D_ARRAY,LEVEL,GL_RGBA8 ,k,k,0,0,GL_RGBA,GL_UNSIGNED_BYTE,nullptr);
 
         setTexParameter();
     }
@@ -446,7 +446,10 @@ void Render::once()
     glUniform1iv(glGetUniformLocation(shaderProgram, "textures"), TEXTURE_HANDLERS_COUNT,fodase);
 
 
-    allocMaterial(MaterialGenData{});
+    // allocMaterial(MaterialGenData{});
+
+    ImGuiIO& io = ImGui::GetIO();
+    io.FontGlobalScale = 2;
 }
 
 
@@ -492,9 +495,10 @@ void Render::renderDrawing()
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
     }
 
-    m_VAO->bind();
-    m_VAO->bindVBO(1);
-    m_VAO->bindVBO(0);
+    glBindVertexArray(VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBOS[0]);
+    glBindBuffer(GL_ARRAY_BUFFER, VBOS[1]);
+
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 
 
@@ -507,7 +511,7 @@ void Render::renderDrawing()
     if (transFeed) {
         glBindBuffer(GL_ARRAY_BUFFER, TBO);
         glBindBufferBase(GL_TRANSFORM_FEEDBACK_BUFFER, 0, TBO);
-        glBeginQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN, Query);
+        glBeginQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN, QUERY);
         glBeginTransformFeedback(GL_TRIANGLES);
     }
 
@@ -518,18 +522,17 @@ void Render::renderDrawing()
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-    m_VAO->unbindVBO();
-    m_VAO->unbind();
+    glBindBuffer(GL_ARRAY_BUFFER,0);
+    glBindVertexArray(0);
 
-    if (transFeed)
-    {
+    if(transFeed) {
         glEndTransformFeedback();
         glEndQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN);
 
         glFlush();
 
         GLuint primitives;
-        glGetQueryObjectuiv(Query, GL_QUERY_RESULT, &primitives);
+        glGetQueryObjectuiv(QUERY, GL_QUERY_RESULT, &primitives);
 
         GLfloat *feedback = (GLfloat *)malloc(feedbacksize);
         glGetBufferSubData(GL_TRANSFORM_FEEDBACK_BUFFER, 0, feedbacksize, feedback);
@@ -548,35 +551,35 @@ void Render::renderDrawing()
 void Render::imguiSetting()
 {
     ImGui::NewFrame();
-    if(ImGui::BeginMainMenuBar()){
-        if(ImGui::BeginMenu("File")){
+    if(ImGui::BeginMainMenuBar()) {
+        if(ImGui::BeginMenu("File")) {
             ImGui::MenuItem("Pinto");
             ImGui::EndMenu();
         }
         ImGui::EndMainMenuBar();
     }
-    if(ImGui::Begin("Assets")){
+    if(ImGui::Begin("Assets")) {
         ImGui::End();
     }
-    if(ImGui::Begin("Models")){
-        if(renderData.models.size() > selectedModelIndex){
+    if(ImGui::Begin("Models")) {
+        if(renderData.models.size() > selectedModelIndex) {
             glm::vec4 pintobom = renderData.models[selectedModelIndex].mesh.matrix * glm::vec4(0,0,0,1);
             ImGui::Text("Selected Model Center:(%f, %f, %f)",pintobom.x,pintobom.y,pintobom.z);
         }
 
-        if(ImGui::Button("Add")){
-            if(selectedModelIndex < renderData.models.size()){
+        if(ImGui::Button("Add")) {
+            if(selectedModelIndex < renderData.models.size()) {
                 const char *meshPath = renderData.models[selectedModelIndex].mesh.meshPath;
             }
         }
-        if(ImGui::Button("Remove")){
-            if(renderData.models.size() > selectedModelIndex){
+        if(ImGui::Button("Remove")) {
+            if(renderData.models.size() > selectedModelIndex) {
                 printf("aa%d\n", selectedModelIndex);
                 selectedModelIndex = 0;
             }
 
         }
-        if(ImGui::BeginTable("Modelss1", 1)){
+        if(ImGui::BeginTable("Modelss1", 1)) {
             char label[100];
             for(unsigned int i = 0; i < renderData.models.size(); i++){
                 ImGui::TableNextRow();
@@ -619,9 +622,9 @@ void Render::start(void(*op1)(),void(*op2)(),void(*op3)()){
     a.Ni = 0;
     a.bm = 0;
     a.d = 0;
-    a.maps[0]  = "assets/3dmodels/CubeTexture2.jpg";
-    a.maps[1]  = "assets/3dmodels/lemon_diff_4k.jpg";
-    a.maps[2]  = "assets/3dmodels/lemon_diff_4k.jpg";
+    a.maps[0]  = "assets/3dmodels/lemon_diff_4k.jpg";
+    // a.maps[1]  = "assets/3dmodels/a.raw";
+    // a.maps[2]  = "assets/3dmodels/a.raw";
     a.type = SOLID_COLOR;
     once();
 
@@ -638,11 +641,11 @@ void Render::start(void(*op1)(),void(*op2)(),void(*op3)()){
     // pushModels(MeshGenData{
     //     "assets/3dmodels/Cube.obj"
     // },a);
-    a.maps[0] = "assets/3dmodels/cannon_01_diff_4k.jpg";
+    // a.maps[0] = "assets/3dmodels/cannon_01_diff_4k.jpg";
     pushModels(MeshGenData{
         "assets/3dmodels/cannon_01_4k.obj"
     },a);
-    a.maps[0] = "assets/3dmodels/marble_bust_01_diff_4k.jpg";
+    // a.maps[0] = "assets/3dmodels/marble_bust_01_diff_4k.jpg";
     pushModels(MeshGenData{
         "assets/3dmodels/marble_bust_01_4k.obj"
     },a);
@@ -708,7 +711,7 @@ void Render::updatePipeline(){
     renderData.mesh.textureIndexOffset = 0;
     renderData.mesh.normalIndexOffset = 0;
 
-    for(int i = 0; i < renderData.models.size(); i++){
+    for(unsigned int i = 0; i < renderData.models.size(); i++){
         Model actualModel = renderData.models[i];
         renderData.mesh.verticesCount += actualModel.mesh.verticesCount;
         renderData.mesh.verticesIndexCount += actualModel.mesh.verticesIndexCount;
@@ -745,7 +748,7 @@ void Render::updatePipeline(){
     unsigned int localTextureVerticesNumber = 0;
     unsigned int localTextureVerticesIndexNumber = 0;
     unsigned int localNormalVerticesNumber = 0;
-    for(int i = 0; i < renderData.models.size(); i++){
+    for(unsigned int i = 0; i < renderData.models.size(); i++){
         Mesh actualMesh = renderData.models[i].mesh;
         memcpy(renderData.mesh.vertices + localVerticesNumber,
             actualMesh.vertices, sizeof(float) * actualMesh.verticesCount);
@@ -768,18 +771,18 @@ void Render::updatePipeline(){
 
         renderData.mesh.modelMaterial[i] = renderData.models[i].materialIndex;
 
-        for(int j = 0; j < actualMesh.verticesCount / 3; j++){
+        for(unsigned int j = 0; j < actualMesh.verticesCount / 3; j++){
             renderData.mesh.modelParent[j + localVerticesNumber / 3] = i;
         }
 
-        for(int j = 0; j < actualMesh.verticesIndexCount; j++){
+        for(unsigned int j = 0; j < actualMesh.verticesIndexCount; j++){
             *(renderData.mesh.verticesIndex + localVerticesIndexNumber + j) += localVerticesNumber;
         }
-        for(int j = 0; j < actualMesh.textureVerticesIndexCount; j++){
+        for(unsigned int j = 0; j < actualMesh.textureVerticesIndexCount; j++){
             *(renderData.mesh.textureVerticesIndex + localVerticesIndexNumber + j) += localTextureVerticesNumber;
         }
-        for(int j = 0; j < actualMesh.verticesIndexCount / 3; j++){
-            *(renderData.mesh.normalVerticesIndex + localVerticesIndexNumber + j) += localNormalVerticesNumber;
+        for(unsigned int j = 0; j < actualMesh.verticesIndexCount / 3; j++){
+            *(renderData.mesh.normalVerticesIndex + localVerticesIndexNumber/3 + j) += localNormalVerticesNumber;
         }
 
 
@@ -824,44 +827,110 @@ void Render::updatePipeline(){
                         renderData.mesh.verticesIndex,GL_DYNAMIC_DRAW);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
-        m_VAO->bind();
-        m_VAO->bindVBO(0);
+        glBindVertexArray(VAO);
+        glBindBuffer(GL_ARRAY_BUFFER,VBOS[0]);
         glBufferData(GL_ARRAY_BUFFER,  sizeof(float) * renderData.mesh.verticesCount,
                             renderData.mesh.vertices,GL_DYNAMIC_DRAW);
 
-        m_VAO->bindVBO(1);
+        glBindBuffer(GL_ARRAY_BUFFER,VBOS[1]);
         glBufferData(GL_ARRAY_BUFFER,  sizeof(int) * renderData.mesh.verticesCount/3,
                             renderData.mesh.modelParent,GL_DYNAMIC_DRAW);
 
-        m_VAO->unbindVBO();
-        m_VAO->unbind();
+        glBindBuffer(GL_ARRAY_BUFFER,0);
+        glBindVertexArray(0);
     }
 }
 
-TextureLocation RenderData::addTexToHandler(char *path){
-    int width, height,bpp;
+// WW:widht
+// HH:height
+// BB: bpp
+//0xFFRAWIMGWWHHBB
+//0123
+TextureLocation RenderData::addTexToHandler(char *localPath,bool toProcess) {
+    char *path = localPath;
+    if(toProcess) {
+        int i = 0,k;
+        while(path[i] != 0) {
+            if(path[i] == '.')
+                k = i;
+            i++;
+        }
+        char *newPath = (char*)malloc(k+RAW_TEX_EXTENSION_LENGHT+2);//path + '.' + RAW_TEX_EXTENSION + '\0'
+        memcpy(newPath, path, k+1);
+        for(int j = 0; j < RAW_TEX_EXTENSION_LENGHT; j++) {
+            newPath[k+1+j] = RAW_TEX_EXTENSION[j];
+        }
+        newPath[k+1+RAW_TEX_EXTENSION_LENGHT] = 0;
+        if(access(newPath,F_OK)) {
+            int width, height,bpp;
+            stbi_set_flip_vertically_on_load (1);
+            //localBuffeSize = 4 * width * width
+            unsigned char *localBuffer = stbi_load(path, &width,  &height, &bpp, 4);
+            if(localPath == nullptr){
+                sendError("image do not exist");
+                exit(EXIT_FAILURE);
+            }
+            if(width != height) {
+                sendError("Width != Height");
+                exit(EXIT_FAILURE);
+            }
+            if(width > 4096) {
+                sendError("Width,Height > 4096");
+                exit(EXIT_FAILURE);
+            }
 
-    stbi_set_flip_vertically_on_load (1);
-    unsigned char *localBuffer = stbi_load(path, &width,  &height, &bpp, 4);
-    if(width != height){
-        sendError("Width != Height");
-        exit(EXIT_FAILURE);
+            path = newPath;
+            FILE *file = fopen(path,"wb");
+            char c[14];//13 is the lenght of 0xFFRAWIMGWWHHBB
+            sprintf(c, "\xffRAWIMG");
+            fwrite(c, sizeof(char), 7, file);
+            char f[6];
+            f[0] = (unsigned char)width;
+            f[1] = (unsigned char)(width >> 8);
+            f[2] = (unsigned char)height;
+            f[3] = (unsigned char)(height >> 8);
+            f[4] = (unsigned char)bpp;
+            f[5] = (unsigned char)(bpp >> 8);
+            fwrite(f, sizeof(char), 6, file);
+
+            fwrite(localBuffer, 1, 4 * width * width, file);
+            fclose(file);
+        }
+        else {
+            path = newPath;
+            // free(newPath);
+        }
     }
-    if(width > 4096){
-        sendError("Width,Height > 4096");
-        exit(EXIT_FAILURE);
+
+
+    // i - k - 1;
+    // stbi_set_flip_vertically_on_load (1);
+    unsigned int lenght;
+    unsigned char* localBuffer = (unsigned char*)readFile(path, &lenght,"rb");
+    if(!matchPairs(localBuffer, 0, (unsigned char[]){(unsigned char)'\xff','R','A','W','I','M','G'})) {
+        sendError("addTexToHandler, file of wrong type");
+        return TextureLocation();
     }
-    unsigned char handlerIndex = (unsigned char)floor(log2(height)-6);
-    unsigned int index = textureHandlers[handlerIndex].addTex(localBuffer);
-    stbi_image_free (localBuffer);
-    return TextureLocation{
+
+    unsigned short width = *((unsigned short*)(localBuffer + 7));
+    // unsigned short height = *((unsigned short*)(localBuffer + 9));
+    // unsigned short bpp = *((unsigned short*)(localBuffer + 11));
+
+
+    unsigned char handlerIndex = (unsigned char)floor(log2(width)-6);
+    unsigned int index = textureHandlers[handlerIndex].addTex((unsigned char*)localBuffer+13);
+    free(localBuffer);
+    if(toProcess){
+        free(path);
+    }
+    return TextureLocation {
         handler: handlerIndex,
         index: index
     };
 }
 
 unsigned int TextureHandler::addTex(unsigned char *localBuffer){
-    if(emptyTexturesCount){
+    if(emptyTexturesCount) {
         unsigned int i = emptyTextures[0];
         glBindTexture(GL_TEXTURE_2D_ARRAY,texture);
         glTexSubImage3D(GL_TEXTURE_2D_ARRAY, LEVEL, 0, 0,
@@ -873,7 +942,7 @@ unsigned int TextureHandler::addTex(unsigned char *localBuffer){
     }
 
     glBindTexture(GL_TEXTURE_2D_ARRAY, *texUtilitary);
-    glTexImage3D(GL_TEXTURE_2D_ARRAY,LEVEL,GL_RGBA8 ,texDimensions,texDimensions,texturesCount+1,0,GL_RGBA,GL_UNSIGNED_BYTE,NULL);
+    glTexImage3D(GL_TEXTURE_2D_ARRAY,LEVEL,GL_RGBA8 ,texDimensions,texDimensions,texturesCount+1,0,GL_RGBA,GL_UNSIGNED_BYTE,nullptr);
 
     setTexParameter();
 
@@ -885,7 +954,7 @@ unsigned int TextureHandler::addTex(unsigned char *localBuffer){
 
     glBindTexture(GL_TEXTURE_2D_ARRAY,texture);
 
-    glTexImage3D(GL_TEXTURE_2D_ARRAY,LEVEL,GL_RGBA8 ,0,0,0,0,GL_RGBA,GL_UNSIGNED_BYTE,NULL);
+    glTexImage3D(GL_TEXTURE_2D_ARRAY,LEVEL,GL_RGBA8 ,0,0,0,0,GL_RGBA,GL_UNSIGNED_BYTE,nullptr);
     glBindTexture(GL_TEXTURE_2D_ARRAY,0);
 
     texturesCount++;
@@ -944,10 +1013,10 @@ unsigned int Render::allocMaterial(MaterialGenData data){
         mater->K[3 * i + 1] = data.K[i].y;
         mater->K[3 * i + 2] = data.K[i].z;
 
-        if(data.type == TEXTURE && data.maps[i] != NULL)
+        if(data.type == TEXTURE && data.maps[i] != nullptr)
             mater->maps[i] = renderData.addTexToHandler(data.maps[i]);
     }
-    if(data.maps[3] != NULL)
+    if(data.maps[3] != nullptr)
         mater->maps[3] = renderData.addTexToHandler(data.maps[3]);
 
     flags = flags | MATERIAL_CHANGE_FLAG;

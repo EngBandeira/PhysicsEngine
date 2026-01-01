@@ -3,8 +3,9 @@
 #include "render.hpp"
 #include <stdio.h>
 
-char *readFile(const char *localPath, unsigned int *fileLenght) {
-    FILE *file = fopen (localPath, "r");
+
+char *readFile(const char *localPath, unsigned int *fileLenght,const char *flags) {
+    FILE *file = fopen (localPath, flags);
     char *buffer;
     if (file == NULL){
         char message[100];

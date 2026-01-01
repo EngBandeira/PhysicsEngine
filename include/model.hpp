@@ -14,7 +14,7 @@ class Mesh {
     // {vertices[verticesCount],vertices[verticesCount+1],vertices[verticesCount+2]}
     // Ponto[textureVerticesCount/2] =
     // {textureVertices[textureVerticesCount],textureVertices[textureVerticesCount+1]}
-    unsigned int oCount;
+    unsigned int oCount = 0;
     char *mtl;
     char **o;
     glm::mat4 matrix;
