@@ -1,0 +1,26 @@
+GLuint createComputeShader(const char* source) {
+    GLuint shader = glCreateShader(GL_COMPUTE_SHADER);
+    glShaderSource(shader, 1, &source, nullptr);
+    glCompileShader(shader);
+
+    GLuint program = glCreateProgram();
+    glAttachShader(program, shader);
+    glLinkProgram(program);
+
+    return program;
+}
+
+// Compute shader for image processing
+const char* computeShaderSource = R"(
+    #version 430
+    layout(local_size_x = 16, local_size_y = 16) in;
+    layout(rgba8, binding = 0) uniform readonly image2D inputImage;
+    layout(rgba8, binding = 1) uniform writeonly image2D outputImage;
+
+    void main() {
+        ivec2 texelCoord = ivec2(gl_GlobalInvocationID.xy);
+        vec4 pixel = imageLoad(inputImage, texelCoord);
+        float gray = dot(pixel.rgb, vec3(0.299, 0.587, 0.114));
+        imageStore(outputImage, texelCoord, vec4(gray, gray, gray, 1.0));
+    }
+)";
