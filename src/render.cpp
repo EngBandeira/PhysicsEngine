@@ -294,10 +294,7 @@ void Render::input()
         camera.rotation = glm::rotate(camera.rotation,glm::radians(camera.angle.y), glm::vec3(camera.getRight()));
         float b = .3;
 
-        if (ImGui::IsKeyPressed(ImGuiKey_UpArrow)){
-            camera.localTranslation = glm::translate(camera.localTranslation, b*glm::vec3(camera.getRight()));
-            flags = flags | 4;
-        }
+
         if (ImGui::IsKeyPressed(ImGuiKey_A)){
             camera.localTranslation = glm::translate(camera.localTranslation, b*glm::vec3(camera.getRight()));
             flags = flags | 4;
@@ -711,6 +708,7 @@ ImGuiWindowFlags dockspace_flags =
         }
         ImGui::End();
 
+        // ============================================================
         bool a = 1;
         ImGui::ShowDemoWindow(&a);
     }

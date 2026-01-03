@@ -15,7 +15,7 @@ my $includePath = "include";
 my $vendorPath = "vendor";
 my $buildPath = "build";
 
-my @libs = ("GL","GLU","glfw","X11");
+my @libs = ("GL","GLU","glfw");
 my $formatedLibs = "";
 foreach $lib (@libs)
 {
