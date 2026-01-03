@@ -26,17 +26,17 @@ layout(std430, binding = 1) buffer TexCoordBuffer {
 layout(std430, binding = 2) buffer TexIndexBuffer {
     uint indexTexture[];
 };
-layout(std430, binding = 3) buffer MaterialsBuffer {
-    Material materials[];
-};
-layout(std430, binding = 4) buffer ModelsMaterialsBuffer {
+layout(std430, binding = 3) buffer ModelsMaterialsBuffer {
     uint modelsMaterials[];
 };
-layout(std430, binding = 5) buffer NormalVecsBuffer {
+layout(std430, binding = 4) buffer NormalVecsBuffer {
     float normalVecsBuffer[]; // to getway with vec3 limitations
 };
-layout(std430, binding = 6) buffer NormalVecsIndexBuffer {
+layout(std430, binding = 5) buffer NormalVecsIndexBuffer {
     uint normalVecsIndexBuffer[];
+};
+layout(std430, binding = 6) buffer MaterialsBuffer {
+    Material materials[];
 };
 
 out flat Material material;

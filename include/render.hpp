@@ -6,9 +6,10 @@
 #include <GLFW/glfw3.h>
 #include <vector>
 
-
+#define COMMON_LAYER 1
 #define TEXTURE_HANDLERS_COUNT 7
-#define SSBO_COUNT 7
+#define LAYERS_COUNT 2
+#define SSBO_PER_LAYER_COUNT 6
 #define VBO_COUNT 2
 #define SCR_X 1920
 #define SCR_Y 1080
@@ -31,7 +32,7 @@ bool matchPairs(T *buffer, int j, const T (&pairs)[N]) {
 }
 
 
-enum materialType{
+enum materialType {
     SOLID_COLOR,
     TEXTURE
 };
@@ -43,7 +44,7 @@ struct TextureHandler {
     void rmTex(unsigned int index);
     TextureHandler(){};
 };
-struct TextureLocation{
+struct TextureLocation {
     unsigned int handler, index;
 };
 
@@ -55,40 +56,46 @@ class Material {
     enum materialType type;
 };
 
-enum SSBOS{
-    ModelMatricesSSBO,
+enum SSBOS {
+    ModelMatricesSSBO ,
     TextureCoordSSBO,
     TextureIndexSSBO,
-    MaterialsSSBO,
     ModelsMaterialsSSBO,
     NormalVecsSSBO,
-    NormalVecsIndexSSBO
+    NormalVecsIndexSSBO,
+    MaterialsSSBO
+};
+
+struct MeshRenderData {
+    unsigned int ssbos[SSBO_PER_LAYER_COUNT];
+    std::vector<Model> models;
+    unsigned int ebo,vbos[VBO_COUNT], vao;
+    unsigned int meshesCount = 0;
+    unsigned int  verticesCount = 0, verticesIndexCount = 0, textureVerticesCount=0,
+                        textureVerticesIndexCount=0,normalVerticesCount=0,// normalIndexCount = nOfPrimitives = verticesIndexCount /3
+                        verticesIndexOffset= 0,textureIndexOffset = 0,normalIndexOffset=0;
+    float *vertices,*matrices,*textureVertices,*normalVertices;
+    unsigned int *verticesIndex,*modelParent,*textureVerticesIndex,*normalVerticesIndex,*modelMaterial;
+    void init();
+    void freeData();
 };
 
 class RenderData {
     public:
+    unsigned int materialsSSBO;
     TextureHandler textureHandlers[TEXTURE_HANDLERS_COUNT];
     unsigned int texUtilitary;
     Material *materials;
     unsigned int materialsCount = 0;
-    std::vector<Model> models;
+
     TextureLocation addTexToHandler(char *path,bool toProcess=1);
-    struct MeshRenderData {
-        unsigned int meshesCount = 0;
-        unsigned int  verticesCount = 0, verticesIndexCount = 0, textureVerticesCount=0,
-                            textureVerticesIndexCount=0,normalVerticesCount=0,// normalIndexCount = nOfPrimitives = verticesIndexCount /3
-                            verticesIndexOffset= 0,textureIndexOffset = 0,normalIndexOffset=0;
-        float *vertices,*matrices,*textureVertices,*normalVertices;
-        unsigned int *verticesIndex,*modelParent,*textureVerticesIndex,*normalVerticesIndex,*modelMaterial;
-        // modelIndex: witch
-        //count(matricesIndex) = count(vertices) = verticesCount
-    } mesh;
+    MeshRenderData LayersData[LAYERS_COUNT];
 
 
 
     RenderData();
-    glm::mat4 *getNMatrix(unsigned short index);
-    void freeRenderData();
+    glm::mat4 *getNMatrix(unsigned short index,MeshRenderData *contexLayer);
+    void freeData();
 };
 
 class Camera {
@@ -117,15 +124,12 @@ struct ModelGenData {
 };
 
 
-
 class Render {
     public:
-    unsigned int ssbos[SSBO_COUNT];
     unsigned int flags; // abcd efgh: h = Update renderData
-    unsigned int EBO, FBO_FROM,FBO_TO,RBO, TBO, QUERY,
+    unsigned int FBO_FROM, FBO_TO, RBO, TBO, QUERY,
                  texToRenderOver,texToShowFrom;
     unsigned int feedbacksize,feedbacknumber,samples=4;
-    unsigned int VBOS[VBO_COUNT], VAO;
 
     Camera camera;
     bool transFeed = false;
@@ -135,10 +139,10 @@ class Render {
     unsigned int allocMaterial(MaterialGenData data);
     void freeMaterial(unsigned int index);
 
-    unsigned int pushModels(MeshGenData mesh,unsigned int materialIndex);//Pass a mesh and a material to the pipeline
-    unsigned int pushModels(MeshGenData mesh,MaterialGenData material);
-    unsigned int pushModels(MeshGenData mesh);//Pass a mesh and a material to the pipeline
-    void popModels(unsigned int index);
+    unsigned int pushModels(MeshGenData mesh,unsigned int materialIndex, unsigned int layerIndex);//Pass a mesh and a material to the pipeline
+    unsigned int pushModels(MeshGenData mesh,MaterialGenData material, unsigned int layerIndex);
+    unsigned int pushModels(MeshGenData mesh, unsigned int layerIndex);//Pass a mesh and a material to the pipeline
+    void popModels(unsigned int index,unsigned int layerIndex);
 
 
     Render(GLFWwindow *win);
@@ -154,11 +158,12 @@ class Render {
     Shader shader;
     GLFWwindow *glfwWin;
 
-    void updatePipeline();
+    void updatePipeline(unsigned int layerIndex);
     void once();
-    void runTime();
+
+    void update();
     void newframe();
-    void renderDrawing();
+    void renderDrawing(unsigned int layerIndex);
     void imguiSetting();
     void input();
 

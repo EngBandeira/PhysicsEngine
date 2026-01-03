@@ -1,3 +1,6 @@
+#include <iterator>
+#define IMGUI_DEFINE_MATH_OPERATORS
+#include "vendor/imgui/imgui_internal.h"
 #include <cstdio>
 #include <unistd.h>
 #include <cstdlib>
@@ -35,7 +38,6 @@
 #define MATERIAL_CHANGE_FLAG 1 << 0
 #define MATRICES_CHANGE_FLAG 1 << 1
 #define MODELS_CHANGE_FLAG 1 << 2
-
 
 int fodase[16] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15};
 
@@ -88,20 +90,37 @@ void setTexParameter(){
     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAX_LEVEL, LEVEL);
 }
 
+void MeshRenderData::init(){
 
-RenderData::RenderData() : mesh()
+    vertices = (float *)malloc(0);
+    matrices = (float *)malloc(0);
+    textureVertices = (float *)malloc(0);
+    normalVertices = (float *)malloc(0);
+
+    verticesIndex = (unsigned int *)malloc(0);
+    modelParent = (unsigned int *)malloc(0);
+    textureVerticesIndex = (unsigned int *)malloc(0);
+    normalVerticesIndex = (unsigned int *)malloc(0);
+    modelMaterial = (unsigned int *)malloc(0);
+}
+
+void MeshRenderData::freeData(){
+    free(vertices);
+    free(matrices);
+    free(textureVertices);
+    free(normalVertices);
+    free(verticesIndex);
+    free(modelParent);
+    free(textureVerticesIndex);
+    free(normalVerticesIndex);
+    free(modelMaterial);
+}
+
+RenderData::RenderData()
 {
-
-    mesh.vertices = (float *)malloc(0);
-    mesh.matrices = (float *)malloc(0);
-    mesh.textureVertices = (float *)malloc(0);
-    mesh.normalVertices = (float *)malloc(0);
-
-    mesh.verticesIndex = (unsigned int *)malloc(0);
-    mesh.modelParent = (unsigned int *)malloc(0);
-    mesh.textureVerticesIndex = (unsigned int *)malloc(0);
-    mesh.normalVerticesIndex = (unsigned int *)malloc(0);
-    mesh.modelMaterial = (unsigned int *)malloc(0);
+    for(int i = 0; i < LAYERS_COUNT; i++){
+        LayersData[i].init();
+    }
 
     for(unsigned int i = 0; i < TEXTURE_HANDLERS_COUNT; i++){
         textureHandlers[i].materialIndex = (unsigned int *)malloc(0);
@@ -114,27 +133,20 @@ RenderData::RenderData() : mesh()
 }
 
 
-void RenderData::freeRenderData()
+void RenderData::freeData()
 {
-    for(unsigned int i = 0; i <models.size(); i++){
-        models[i].mesh.deleteMesh();
-    }
+
     for(unsigned int i =0; i < TEXTURE_HANDLERS_COUNT; i++){
         free(textureHandlers[i].materialIndex);
         free(textureHandlers[i].emptyTextures);
-
     }
 
-    free(mesh.vertices);
-    free(mesh.matrices);
-    free(mesh.textureVertices);
-    free(mesh.normalVertices);
-
-    free(mesh.verticesIndex);
-    free(mesh.modelParent);
-    free(mesh.textureVerticesIndex);
-    free(mesh.normalVerticesIndex);
-    free(mesh.modelMaterial);
+    for(int i = 0; i < LAYERS_COUNT; i++){
+        for(Model m: LayersData[i].models){
+            m.mesh.deleteMesh();
+        }
+        LayersData[i].freeData();
+    }
 
     free(materials);
 
@@ -165,8 +177,8 @@ Camera::Camera():translation(1), rotation(1), localTranslation(1)
     viewMatrix = glm::lookAt(glm::vec3(0.0f, 0.0f, -5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 }
 
-glm::mat4 *RenderData::getNMatrix(unsigned short index){
-    return (glm::mat4*)(mesh.matrices + 16*index);
+glm::mat4 *RenderData::getNMatrix(unsigned short index,MeshRenderData *contexLayer){
+    return (glm::mat4*)(contexLayer->matrices + 16*index);
 }
 
 // 0123456789
@@ -212,7 +224,7 @@ Render::Render(GLFWwindow *win):  camera(),
         glTransformFeedbackVaryings(shaderProgram, 1, feedbackVaryings,
                                     GL_INTERLEAVED_ATTRIBS);
 
-        feedbacknumber = 4 * renderData.mesh.verticesIndexCount;
+        feedbacknumber = 4 * renderData.LayersData[1].verticesIndexCount;
         feedbacksize = feedbacknumber * sizeof(float);
     }
 
@@ -223,18 +235,23 @@ Render::Render(GLFWwindow *win):  camera(),
 }
 
 Render::~Render() {
-    renderData.freeRenderData();
+    renderData.freeData();
     if (transFeed) {
         glDeleteQueries(1,&QUERY);
         glDeleteBuffers(1, &TBO);
     }
-    glDeleteVertexArrays(1,&VAO);
-    glDeleteBuffers(SSBO_COUNT,ssbos);
-    glDeleteBuffers(VBO_COUNT,VBOS);
+    for(int i = 0; i < LAYERS_COUNT; i++){
+
+        glDeleteBuffers(1, &renderData.LayersData[i].ebo);
+        glDeleteBuffers(VBO_COUNT,renderData.LayersData[i].vbos);
+        glDeleteVertexArrays(1,&renderData.LayersData[i].vao);
+        glDeleteBuffers(SSBO_PER_LAYER_COUNT,renderData.LayersData[i].ssbos);
+    }
+    glDeleteBuffers(1,&renderData.materialsSSBO);
+
     glDeleteFramebuffers(1, &FBO_FROM);
     glDeleteFramebuffers(1, &FBO_TO);
     glDeleteRenderbuffers(1, &RBO);
-    glDeleteBuffers(1, &EBO);
     glDeleteTextures(1,&texToRenderOver);
     glDeleteTextures(1,&texToShowFrom);
     glDeleteProgram(shaderProgram);
@@ -245,9 +262,6 @@ MaterialGenData a;
 
 void Render::input()
 {
-    if(ImGui::IsMouseDragging(ImGuiMouseButton_Left)){
-        printf("bahkk\n");
-    }
     if (ImGui::IsWindowFocused() && ImGui::GetMousePos().y >=ImGui::GetCursorScreenPos().y)
     {
         if (ImGui::IsKeyPressed(ImGuiKey_Escape)){
@@ -279,17 +293,6 @@ void Render::input()
         camera.rotation = glm::rotate(glm::mat4(1),glm::radians(camera.angle.x), glm::vec3(0, 1, 0));
         camera.rotation = glm::rotate(camera.rotation,glm::radians(camera.angle.y), glm::vec3(camera.getRight()));
         float b = .3;
-        if (ImGui::IsKeyPressed(ImGuiKey_UpArrow)){
-
-            printf("batata\n\n\n");
-            allocMaterial(a);
-        }
-        if (ImGui::IsKeyPressed(ImGuiKey_DownArrow)){
-            if(renderData.materialsCount > 0){
-                freeMaterial(renderData.materialsCount-1);
-                renderData.materialsCount--;
-            }
-        }
 
 
         if (ImGui::IsKeyPressed(ImGuiKey_A)){
@@ -309,32 +312,32 @@ void Render::input()
             flags = flags | 4;
         }
 
-        if(renderData.models.size() > selectedModelIndex){
-            glm::mat4 *modelMatrix = renderData.getNMatrix(selectedModelIndex);
+        // if(renderData.models.size() > selectedModelIndex){
+        //     glm::mat4 *modelMatrix = renderData.getNMatrix(selectedModelIndex);
 
-            if (ImGui::IsKeyPressed(ImGuiKey_UpArrow)){
-                *modelMatrix =
-                    glm::rotate(*modelMatrix, glm::radians(-10.0f), glm::vec3(1, 0, 0));
-                flags = flags | 4;
-            }
-            if (ImGui::IsKeyPressed(ImGuiKey_DownArrow)){
-                *modelMatrix =
-                    glm::rotate(*modelMatrix, glm::radians(2.0f), glm::vec3(1, 0, 0));
-                flags = flags | 4;
-            }
-            if (ImGui::IsKeyPressed(ImGuiKey_LeftArrow)){
-                *modelMatrix =
-                    glm::rotate(*modelMatrix, glm::radians(-10.0f), glm::vec3(0, 1, 0));
-                flags = flags | 4;
+        //     if (ImGui::IsKeyPressed(ImGuiKey_UpArrow)){
+        //         *modelMatrix =
+        //             glm::rotate(*modelMatrix, glm::radians(-10.0f), glm::vec3(1, 0, 0));
+        //         flags = flags | 4;
+        //     }
+        //     if (ImGui::IsKeyPressed(ImGuiKey_DownArrow)){
+        //         *modelMatrix =
+        //             glm::rotate(*modelMatrix, glm::radians(2.0f), glm::vec3(1, 0, 0));
+        //         flags = flags | 4;
+        //     }
+        //     if (ImGui::IsKeyPressed(ImGuiKey_LeftArrow)){
+        //         *modelMatrix =
+        //             glm::rotate(*modelMatrix, glm::radians(-10.0f), glm::vec3(0, 1, 0));
+        //         flags = flags | 4;
 
-            }
-            if (ImGui::IsKeyPressed(ImGuiKey_RightArrow)){
-                *modelMatrix =
-                    glm::rotate(*modelMatrix, glm::radians(2.0f), glm::vec3(0, 1, 0));
-                flags = flags | 4;
-            }
+        //     }
+        //     if (ImGui::IsKeyPressed(ImGuiKey_RightArrow)){
+        //         *modelMatrix =
+        //             glm::rotate(*modelMatrix, glm::radians(2.0f), glm::vec3(0, 1, 0));
+        //         flags = flags | 4;
+        //     }
 
-        }
+        // }
         camera.translation = camera.localTranslation;
         camera.viewMatrix = camera.rotation * camera.translation;
     }
@@ -352,36 +355,43 @@ void Render::once()
         glGenQueries(1, &QUERY);
         glGenBuffers(1, &TBO);
     }
+    for(int i = 0; i < LAYERS_COUNT; i++){
+        MeshRenderData *data = renderData.LayersData +i;
+        glGenVertexArrays(1,&data->vao);
+        glBindVertexArray(data->vao);
 
-    glGenVertexArrays(1,&VAO);
-    glBindVertexArray(VAO);
+        glGenBuffers(VBO_COUNT,data->vbos);
+        glBindBuffer(GL_ARRAY_BUFFER,data->vbos[0]);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float),
+                                (void *)0);
 
-    glGenBuffers(2,VBOS);
-    glBindBuffer(GL_ARRAY_BUFFER,VBOS[0]);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float),
-                            (void *)0);
+        glBindBuffer(GL_ARRAY_BUFFER,data->vbos[1]);
+        glEnableVertexAttribArray(1);
+        glVertexAttribIPointer(1, 1, GL_UNSIGNED_INT, sizeof(int),
+                                (void *)0);
 
-    glBindBuffer(GL_ARRAY_BUFFER,VBOS[1]);
-    glEnableVertexAttribArray(1);
-    glVertexAttribIPointer(1, 1, GL_UNSIGNED_INT, sizeof(int),
-                            (void *)0);
+        glBindVertexArray(0);
+        glBindBuffer(GL_ARRAY_BUFFER,0);
 
-    glBindVertexArray(0);
-    glBindBuffer(GL_ARRAY_BUFFER,0);
+        glGenBuffers(1, &data->ebo);
 
-    glGenBuffers(1, &EBO);
+
+        glGenBuffers(SSBO_PER_LAYER_COUNT, renderData.LayersData[i].ssbos);
+        for(unsigned int j = 0; j < SSBO_PER_LAYER_COUNT; j++){
+            glBindBuffer(GL_SHADER_STORAGE_BUFFER, renderData.LayersData[i].ssbos[j]);
+            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, j, renderData.LayersData[i].ssbos[j]);
+        }
+    }
+
+    glGenBuffers(1, &renderData.materialsSSBO);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, renderData.materialsSSBO);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, SSBOS::MaterialsSSBO, renderData.materialsSSBO);
+
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
     glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "projection"), 1,
                         GL_FALSE, glm::value_ptr(camera.projMatrix));
-
-
-    glGenBuffers(SSBO_COUNT, ssbos);
-    for(unsigned int i = 0; i < SSBO_COUNT; i++){
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbos[i]);
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, i, ssbos[i]);
-    }
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
 
     glGenFramebuffers(1, &FBO_FROM);
@@ -475,57 +485,50 @@ void Render::newframe()
 }
 
 
-void Render::renderDrawing()
+void Render::renderDrawing(unsigned int layerIndex)
 {
-    if(flags & MATRICES_CHANGE_FLAG){
-        flags = flags & ~(MATRICES_CHANGE_FLAG);
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbos[SSBOS::ModelMatricesSSBO]);
-        glBufferData(GL_SHADER_STORAGE_BUFFER,
-                        16 * sizeof(float) * renderData.mesh.meshesCount,
-                        renderData.mesh.matrices,GL_DYNAMIC_DRAW);
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-    }
+    MeshRenderData *layerData = renderData.LayersData + layerIndex;
 
-    if(flags & MATERIAL_CHANGE_FLAG){
-        flags = flags & ~(MATERIAL_CHANGE_FLAG);
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbos[SSBOS::MaterialsSSBO]);
-        glBufferData(GL_SHADER_STORAGE_BUFFER,
-                        sizeof(Material) * renderData.materialsCount,
-                        renderData.materials,GL_DYNAMIC_DRAW);
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-    }
-
-    glBindVertexArray(VAO);
-    glBindBuffer(GL_ARRAY_BUFFER, VBOS[0]);
-    glBindBuffer(GL_ARRAY_BUFFER, VBOS[1]);
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-
-
-    for(unsigned short i = 0; i < TEXTURE_HANDLERS_COUNT; i++){
+    for(unsigned short i = 0; i < TEXTURE_HANDLERS_COUNT; i++) {
         glActiveTexture(GL_TEXTURE0+i);
         glBindTexture(GL_TEXTURE_2D_ARRAY,renderData.textureHandlers[i].texture);
     }
     glBindFramebuffer(GL_FRAMEBUFFER, FBO_FROM);
 
-    if (transFeed) {
+    if(flags & MATRICES_CHANGE_FLAG) {
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, layerData->ssbos[SSBOS::ModelMatricesSSBO]);
+        glBufferData(GL_SHADER_STORAGE_BUFFER,
+                        16 * sizeof(float) * layerData->meshesCount,
+                        layerData->matrices,GL_DYNAMIC_DRAW);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+    }
+
+    for(unsigned int i = 0; i < SSBO_PER_LAYER_COUNT; i++){
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, layerData->ssbos[i]);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, i, layerData->ssbos[i]);
+    }
+
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+    glBindVertexArray(layerData->vao);
+    glBindBuffer(GL_ARRAY_BUFFER, layerData->vbos[0]);
+    glBindBuffer(GL_ARRAY_BUFFER, layerData->vbos[1]);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, layerData->ebo);
+
+
+    if (transFeed && layerIndex == 1) {
         glBindBuffer(GL_ARRAY_BUFFER, TBO);
         glBindBufferBase(GL_TRANSFORM_FEEDBACK_BUFFER, 0, TBO);
         glBeginQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN, QUERY);
         glBeginTransformFeedback(GL_TRIANGLES);
     }
 
-    glDrawElements(GL_TRIANGLES, renderData.mesh.verticesIndexCount, GL_UNSIGNED_INT,
+    glDrawElements(GL_TRIANGLES, layerData->verticesIndexCount, GL_UNSIGNED_INT,
                     0);
 
-    glBindTexture(GL_TEXTURE_2D_ARRAY,0);
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-    glBindBuffer(GL_ARRAY_BUFFER,0);
-    glBindVertexArray(0);
 
-    if(transFeed) {
+    if(transFeed && layerIndex == 1) {
         glEndTransformFeedback();
         glEndQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN);
 
@@ -545,75 +548,170 @@ void Render::renderDrawing()
         printf("\n");
         glBindBufferBase(GL_TRANSFORM_FEEDBACK_BUFFER, 0, 0);
     }
+
+    glBindTexture(GL_TEXTURE_2D_ARRAY,0);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+    glBindBuffer(GL_ARRAY_BUFFER,0);
+    glBindVertexArray(0);
 }
 
+ImGuiWindowFlags dockspace_flags =
+    ImGuiWindowFlags_NoDocking |
+    ImGuiWindowFlags_NoTitleBar |
+    ImGuiWindowFlags_NoCollapse |
+    ImGuiWindowFlags_NoResize |
+    ImGuiWindowFlags_NoMove |
+    ImGuiWindowFlags_NoBringToFrontOnFocus |
+    ImGuiWindowFlags_NoNavFocus;
 
-void Render::imguiSetting()
-{
-    ImGui::NewFrame();
-    if(ImGui::BeginMainMenuBar()) {
-        if(ImGui::BeginMenu("File")) {
-            ImGui::MenuItem("Pinto");
-            ImGui::EndMenu();
-        }
-        ImGui::EndMainMenuBar();
-    }
-    if(ImGui::Begin("Assets")) {
-        ImGui::End();
-    }
-    if(ImGui::Begin("Models")) {
-        if(renderData.models.size() > selectedModelIndex) {
-            glm::vec4 pintobom = renderData.models[selectedModelIndex].mesh.matrix * glm::vec4(0,0,0,1);
-            ImGui::Text("Selected Model Center:(%f, %f, %f)",pintobom.x,pintobom.y,pintobom.z);
-        }
 
-        if(ImGui::Button("Add")) {
-            if(selectedModelIndex < renderData.models.size()) {
-                const char *meshPath = renderData.models[selectedModelIndex].mesh.meshPath;
+    void Render::imguiSetting()
+    {
+        ImGuiViewport *view = ImGui::GetMainViewport();
+
+        // Dimensões totais da janela principal
+        int totalLeng = view->Size.x;
+        int totalHeight = view->Size.y;
+
+        int k = 30;  // Altura da barra de menus
+
+        ImGuiID dockspace_id = ImGuiID(), dockspace_id2;
+        dockspace_id2 = dockspace_id;
+        ImGui::NewFrame();
+
+        if(ImGui::BeginMainMenuBar()) {
+            if(ImGui::BeginMenu("File")) {
+                ImGui::MenuItem("Pinto");
+                ImGui::EndMenu();
             }
-        }
-        if(ImGui::Button("Remove")) {
-            if(renderData.models.size() > selectedModelIndex) {
-                printf("aa%d\n", selectedModelIndex);
-                selectedModelIndex = 0;
+            if(ImGui::BeginMenu("Preferences")) {
+                ImGui::MenuItem("Pinto");
+                ImGui::EndMenu();
             }
-
-        }
-        if(ImGui::BeginTable("Modelss1", 1)) {
-            char label[100];
-            for(unsigned int i = 0; i < renderData.models.size(); i++){
-                ImGui::TableNextRow();
-                ImGui::TableSetColumnIndex(0);
-                sprintf(label, "Model %d",i);
-                if(i == selectedModelIndex){
-                    ImGui::TableSetBgColor(
-                        ImGuiTableBgTarget_RowBg0,
-                        IM_COL32(38, 38, 38, 255)
-                    );
+            if(ImGui::BeginMenu("Models")) {
+                if(ImGui::BeginMenu("Standarts")) {
+                    ImGui::MenuItem("Cube");
+                    ImGui::EndMenu();
                 }
-                if(ImGui::Selectable(label)){
-                    selectedModelIndex = i;
-                }
+                ImGui::EndMenu();
             }
-            ImGui::EndTable();
+            ImGui::EndMainMenuBar();
+        }
+
+        int x = 0, actualLenght;
+
+        ImGui::SetNextWindowPos(ImVec2(x, k));
+
+        // Largura: 300px em 1920x1080
+        actualLenght = (int)(300.0/1920.0 * totalLeng);
+
+        ImGui::SetNextWindowSize(ImVec2(actualLenght, totalHeight));
+        x += actualLenght;
+
+        // Cria janela com docking para Debug e World
+        if(ImGui::Begin("Debug & World", nullptr, ImGuiWindowFlags_NoTitleBar)) {
+            dockspace_id2 = ImGui::GetID("MyDockSpacePintassimo");
+            ImGui::DockSpace(dockspace_id2, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_None);
         }
         ImGui::End();
+
+        ImGui::SetNextWindowDockID(dockspace_id2, ImGuiCond_Once);
+        if(ImGui::Begin("Debug", nullptr, ImGuiWindowFlags_None)) {
+            // Conteúdo da janela Debug
+        }
+        ImGui::End();
+
+        ImGui::SetNextWindowDockID(dockspace_id2, ImGuiCond_Once);
+        if(ImGui::Begin("World", nullptr, ImGuiWindowFlags_None)) {
+            if(ImGui::Button("Add")) {
+                if(selectedModelIndex < renderData.LayersData[COMMON_LAYER].models.size()) {
+                    const char *meshPath = renderData.LayersData[COMMON_LAYER].models[selectedModelIndex].mesh.meshPath;
+                }
+            }
+            ImGui::SameLine();
+            if(ImGui::Button("Remove")) {
+                if(renderData.LayersData[COMMON_LAYER].models.size() > selectedModelIndex) {
+                    popModels(selectedModelIndex, COMMON_LAYER);
+                    if(selectedModelIndex > 0) selectedModelIndex--;
+                }
+            }
+
+            if(ImGui::BeginTable("Modelss1", 1)) {
+                char label[100];
+                for(unsigned int i = 0; i < renderData.LayersData[COMMON_LAYER].models.size(); i++) {
+                    ImGui::TableNextRow();
+                    ImGui::TableSetColumnIndex(0);
+                    sprintf(label, "Model %d", i);
+                    if(i == selectedModelIndex) {
+                        ImGui::TableSetBgColor(
+                            ImGuiTableBgTarget_RowBg0,
+                            IM_COL32(38, 38, 38, 255)
+                        );
+                    }
+                    if(ImGui::Selectable(label)) {
+                        selectedModelIndex = i;
+                        printf("pinto %d\n", i);
+                    }
+                }
+                ImGui::EndTable();
+            }
+        }
+        ImGui::End();
+
+        ImGui::SetNextWindowPos(ImVec2(x, k));
+
+        actualLenght = (int)(1220.0/1920.0 * totalLeng);
+
+        int b = (int)(670.0/1920.0 * totalLeng);
+
+        ImGui::SetNextWindowSize(ImVec2(actualLenght, b));
+
+        if(ImGui::Begin("Central Space", nullptr, dockspace_flags)) {
+            dockspace_id = ImGui::GetID("MyDockSpace");
+            ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_None);
+        }
+        ImGui::End();
+
+        ImGui::SetNextWindowDockID(dockspace_id, ImGuiCond_Once);
+        if(ImGui::Begin("Game", nullptr, ImGuiWindowFlags_None)) {
+            input();
+            ImGui::GetWindowDrawList()->AddImage((void *)texToShowFrom,
+                                                ImGui::GetWindowPos(),
+                                                ImGui::GetWindowSize() + ImGui::GetWindowPos(),
+                                                ImVec2(0, 1),
+                                                ImVec2(1, 0));
+        }
+        ImGui::End();
+
+        ImGui::SetNextWindowDockID(dockspace_id, ImGuiCond_Once);
+        if(ImGui::Begin("Final", nullptr, ImGuiWindowFlags_None)) {
+        }
+        ImGui::End();
+
+        ImGui::SetNextWindowPos(ImVec2(x, b));
+        ImGui::SetNextWindowSize(ImVec2(actualLenght, totalHeight - b));
+        x += actualLenght;
+
+        if(ImGui::Begin("Assets", nullptr, ImGuiWindowFlags_None)) {
+        }
+        ImGui::End();
+
+        ImGui::SetNextWindowPos(ImVec2(x, k));
+
+        actualLenght = (int)(400.0/1920.0 * totalLeng);
+
+        ImGui::SetNextWindowSize(ImVec2(actualLenght, totalHeight));
+
+        if(ImGui::Begin("File", nullptr, ImGuiWindowFlags_None)) {
+        }
+        ImGui::End();
+
+        // ============================================================
+        bool a = 1;
+        ImGui::ShowDemoWindow(&a);
     }
-
-
-
-    ImGui::Begin("Render",nullptr);
-    input();
-    ImGui::GetWindowDrawList()->AddImage((void *)texToShowFrom, ImGui::GetWindowPos(),
-                                        ImGui::GetWindowSize() +
-                                            ImGui::GetWindowPos(),
-                                        ImVec2(0, 1), ImVec2(1, 0));
-    ImGui::End();
-
-    bool a = 1;
-    ImGui::ShowDemoWindow(&a);
-}
-
 
 void Render::start(void(*op1)(),void(*op2)(),void(*op3)()){
     a.K[0] = glm::vec3(1,0,0);
@@ -623,8 +721,6 @@ void Render::start(void(*op1)(),void(*op2)(),void(*op3)()){
     a.bm = 0;
     a.d = 0;
     a.maps[0]  = "assets/3dmodels/lemon_diff_4k.jpg";
-    // a.maps[1]  = "assets/3dmodels/a.raw";
-    // a.maps[2]  = "assets/3dmodels/a.raw";
     a.type = SOLID_COLOR;
     once();
 
@@ -635,44 +731,28 @@ void Render::start(void(*op1)(),void(*op2)(),void(*op3)()){
 
     a.type = TEXTURE;
 
-    // pushModels(MeshGenData{
-    //     "assets/3dmodels/Cube.obj"
-    // },a);
-    // pushModels(MeshGenData{
-    //     "assets/3dmodels/Cube.obj"
-    // },a);
-    // a.maps[0] = "assets/3dmodels/cannon_01_diff_4k.jpg";
+    a.maps[0] = "assets/3dmodels/cannon_01_diff_4k.jpg";
     pushModels(MeshGenData{
         "assets/3dmodels/cannon_01_4k.obj"
-    },a);
-    // a.maps[0] = "assets/3dmodels/marble_bust_01_diff_4k.jpg";
+    },a,0);
+    a.maps[0] = "assets/3dmodels/marble_bust_01_diff_4k.jpg";
     pushModels(MeshGenData{
         "assets/3dmodels/marble_bust_01_4k.obj"
-    },a);
+    },a,COMMON_LAYER);
     while(!glfwWindowShouldClose(glfwWin))
     {
         newframe();
 
         op1();
 
-        renderDrawing();
-
-        {
-            glBindFramebuffer(GL_READ_FRAMEBUFFER,FBO_FROM);
-            glBindFramebuffer(GL_DRAW_FRAMEBUFFER,FBO_TO);
-            glBlitFramebuffer(0, 0, 1920, 1080,
-                              0, 0, 1920, 1080,
-                              GL_COLOR_BUFFER_BIT, GL_LINEAR);
-            glBindFramebuffer(GL_READ_FRAMEBUFFER,0);
-            glBindFramebuffer(GL_DRAW_FRAMEBUFFER,0);
-        }
+        update();
 
         op2();
 
-        imguiSetting();//Here is where im removing
-
+        imguiSetting();
 
         op3();
+
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -680,20 +760,50 @@ void Render::start(void(*op1)(),void(*op2)(),void(*op3)()){
         glfwSwapBuffers(glfwWin);
         glfwPollEvents();
         flags  = flags & ~(1&2);
-        updatePipeline();
     }
 }
 
-void Render::updatePipeline(){
+
+void Render::update() {
+    if(flags & MATERIAL_CHANGE_FLAG) {
+        flags = flags & ~(MATERIAL_CHANGE_FLAG);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, renderData.materialsSSBO);
+        glBufferData(GL_SHADER_STORAGE_BUFFER,
+                        sizeof(Material) * renderData.materialsCount,
+                        renderData.materials,GL_DYNAMIC_DRAW);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+    }
+
+
+    for(int i = 0; i < LAYERS_COUNT; i++){
+        if(minFramesToUp == 0 && flags & MODELS_CHANGE_FLAG) {
+            updatePipeline(i);
+        }
+        renderDrawing(i);
+    }
+
+    if(minFramesToUp > 0)
+            minFramesToUp--;
+    flags = flags & ~(MODELS_CHANGE_FLAG);
+    flags = flags & ~(MATRICES_CHANGE_FLAG);
+
+    {
+        glBindFramebuffer(GL_READ_FRAMEBUFFER,FBO_FROM);
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER,FBO_TO);
+        glBlitFramebuffer(0, 0, 1920, 1080,
+                          0, 0, 1920, 1080,
+                          GL_COLOR_BUFFER_BIT, GL_LINEAR);
+        glBindFramebuffer(GL_READ_FRAMEBUFFER,0);
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER,0);
+    }
+}
+
+void Render::updatePipeline(unsigned int layerIndex){
+    MeshRenderData *layerData = renderData.LayersData + layerIndex;
     if(minFramesToUp == -1)
         return;
-    if(minFramesToUp > 0){
-        minFramesToUp--;
-        return;
-    }
-    if(!(flags & MODELS_CHANGE_FLAG))
-        return;
-    flags = flags & ~(MODELS_CHANGE_FLAG);
+
+
     flags = flags | MATRICES_CHANGE_FLAG;
     // unsigned int  verticesCount = 0, verticesIndexCount = 0, textureVerticesCount=0,
     //                     textureVerticesIndexCount=0,normalVerticesCount=0,// normalIndexCount = nOfPrimitives = verticesIndexCount /3
@@ -701,46 +811,48 @@ void Render::updatePipeline(){
     // float *vertices,*matrices,*textureVertices,*normalVertices;
     // unsigned int *verticesIndex,*modelParent,*textureVerticesIndex,*normalVerticesIndex,*modelsMaterials;
 
-    renderData.mesh.verticesCount = 0;
-    renderData.mesh.verticesIndexCount = 0;
-    renderData.mesh.textureVerticesCount = 0;
-    renderData.mesh.textureVerticesIndexCount = 0;
-    renderData.mesh.normalVerticesCount = 0;
-
-    renderData.mesh.verticesIndexOffset = 0;
-    renderData.mesh.textureIndexOffset = 0;
-    renderData.mesh.normalIndexOffset = 0;
-
-    for(unsigned int i = 0; i < renderData.models.size(); i++){
-        Model actualModel = renderData.models[i];
-        renderData.mesh.verticesCount += actualModel.mesh.verticesCount;
-        renderData.mesh.verticesIndexCount += actualModel.mesh.verticesIndexCount;
-        renderData.mesh.textureVerticesCount += actualModel.mesh.textureVerticesCount;
-        renderData.mesh.textureVerticesIndexCount += actualModel.mesh.textureVerticesIndexCount;
-        renderData.mesh.normalVerticesCount += actualModel.mesh.normalVerticesCount;
+    layerData->verticesCount = 0;
+    layerData->verticesIndexCount = 0;
+    layerData->textureVerticesCount = 0;
+    layerData->textureVerticesIndexCount = 0;
+    layerData->normalVerticesCount = 0;
+    layerData->verticesIndexOffset = 0;if(minFramesToUp > 0){
+            minFramesToUp--;
+            return;
+        }
+    layerData->textureIndexOffset = 0;
+    layerData->normalIndexOffset = 0;
+    unsigned int nModels = layerData->models.size();
+    for(unsigned int i = 0; i < nModels; i++){
+        Model actualModel = layerData->models[i];
+        layerData->verticesCount += actualModel.mesh.verticesCount;
+        layerData->verticesIndexCount += actualModel.mesh.verticesIndexCount;
+        layerData->textureVerticesCount += actualModel.mesh.textureVerticesCount;
+        layerData->textureVerticesIndexCount += actualModel.mesh.textureVerticesIndexCount;
+        layerData->normalVerticesCount += actualModel.mesh.normalVerticesCount;
     }
 
-    renderData.mesh.meshesCount = renderData.models.size();
+    layerData->meshesCount = nModels;
 
-    renderData.mesh.vertices = (float*)realloc(renderData.mesh.vertices,
-                        sizeof(float) * renderData.mesh.verticesCount);
-    renderData.mesh.matrices = (float*)realloc(renderData.mesh.matrices,
-                        sizeof(float) * 16 * renderData.mesh.meshesCount);
-    renderData.mesh.textureVertices = (float*)realloc(renderData.mesh.textureVertices,
-                        sizeof(float) * renderData.mesh.textureVerticesCount);
-    renderData.mesh.normalVertices = (float*)realloc(renderData.mesh.normalVertices,
-                        sizeof(float) * renderData.mesh.normalVerticesCount);
+    layerData->vertices = (float*)realloc(layerData->vertices,
+                        sizeof(float) * layerData->verticesCount);
+    layerData->matrices = (float*)realloc(layerData->matrices,
+                        sizeof(float) * 16 * layerData->meshesCount);
+    layerData->textureVertices = (float*)realloc(layerData->textureVertices,
+                        sizeof(float) * layerData->textureVerticesCount);
+    layerData->normalVertices = (float*)realloc(layerData->normalVertices,
+                        sizeof(float) * layerData->normalVerticesCount);
 
-    renderData.mesh.verticesIndex = (unsigned int*)realloc(renderData.mesh.verticesIndex,
-                        sizeof(unsigned int) * renderData.mesh.verticesIndexCount);
-    renderData.mesh.modelParent = (unsigned int*)realloc(renderData.mesh.modelParent,
-                        sizeof(unsigned int) * renderData.mesh.verticesCount / 3);
-    renderData.mesh.textureVerticesIndex = (unsigned int*)realloc(renderData.mesh.textureVerticesIndex,
-                        sizeof(unsigned int) * renderData.mesh.textureVerticesIndexCount);
-    renderData.mesh.normalVerticesIndex = (unsigned int*)realloc(renderData.mesh.normalVerticesIndex,
-                        sizeof(unsigned int) * renderData.mesh.verticesIndexCount / 3);
-    renderData.mesh.modelMaterial = (unsigned int*)realloc(renderData.mesh.modelMaterial,
-                        sizeof(unsigned int) * renderData.mesh.meshesCount);
+    layerData->verticesIndex = (unsigned int*)realloc(layerData->verticesIndex,
+                        sizeof(unsigned int) * layerData->verticesIndexCount);
+    layerData->modelParent = (unsigned int*)realloc(layerData->modelParent,
+                        sizeof(unsigned int) * layerData->verticesCount / 3);
+    layerData->textureVerticesIndex = (unsigned int*)realloc(layerData->textureVerticesIndex,
+                        sizeof(unsigned int) * layerData->textureVerticesIndexCount);
+    layerData->normalVerticesIndex = (unsigned int*)realloc(layerData->normalVerticesIndex,
+                        sizeof(unsigned int) * layerData->verticesIndexCount / 3);
+    layerData->modelMaterial = (unsigned int*)realloc(layerData->modelMaterial,
+                        sizeof(unsigned int) * layerData->meshesCount);
 
 
     unsigned int localVerticesNumber = 0;
@@ -748,41 +860,41 @@ void Render::updatePipeline(){
     unsigned int localTextureVerticesNumber = 0;
     unsigned int localTextureVerticesIndexNumber = 0;
     unsigned int localNormalVerticesNumber = 0;
-    for(unsigned int i = 0; i < renderData.models.size(); i++){
-        Mesh actualMesh = renderData.models[i].mesh;
-        memcpy(renderData.mesh.vertices + localVerticesNumber,
+    for(unsigned int i = 0; i < nModels; i++){
+        Mesh actualMesh = layerData->models[i].mesh;
+        memcpy(layerData->vertices + localVerticesNumber,
             actualMesh.vertices, sizeof(float) * actualMesh.verticesCount);
-        memcpy(renderData.mesh.matrices + 16 *  i,
+        memcpy(layerData->matrices + 16 *  i,
             glm::value_ptr(actualMesh.matrix), sizeof(float) * 16);
-        memcpy(renderData.mesh.textureVertices + localTextureVerticesNumber,
+        memcpy(layerData->textureVertices + localTextureVerticesNumber,
             actualMesh.textureVertices, sizeof(float) * actualMesh.textureVerticesCount);
-        memcpy(renderData.mesh.normalVertices + localNormalVerticesNumber,
+        memcpy(layerData->normalVertices + localNormalVerticesNumber,
             actualMesh.normalVertices, sizeof(float) * actualMesh.normalVerticesCount);
 
 
 
-        memcpy(renderData.mesh.verticesIndex + localVerticesIndexNumber,
+        memcpy(layerData->verticesIndex + localVerticesIndexNumber,
             actualMesh.verticesIndex, sizeof(unsigned int) * actualMesh.verticesIndexCount);
-        memcpy(renderData.mesh.textureVerticesIndex + localTextureVerticesIndexNumber,
+        memcpy(layerData->textureVerticesIndex + localTextureVerticesIndexNumber,
             actualMesh.textureVerticesIndex, sizeof(unsigned int) * actualMesh.textureVerticesIndexCount);
-        memcpy(renderData.mesh.normalVerticesIndex + localVerticesIndexNumber / 3,
+        memcpy(layerData->normalVerticesIndex + localVerticesIndexNumber / 3,
             actualMesh.normalVerticesIndex, sizeof(unsigned int) * actualMesh.verticesIndexCount / 3);
 
 
-        renderData.mesh.modelMaterial[i] = renderData.models[i].materialIndex;
+        layerData->modelMaterial[i] = layerData->models[i].materialIndex;
 
         for(unsigned int j = 0; j < actualMesh.verticesCount / 3; j++){
-            renderData.mesh.modelParent[j + localVerticesNumber / 3] = i;
+            layerData->modelParent[j + localVerticesNumber / 3] = i;
         }
 
         for(unsigned int j = 0; j < actualMesh.verticesIndexCount; j++){
-            *(renderData.mesh.verticesIndex + localVerticesIndexNumber + j) += localVerticesNumber;
+            *(layerData->verticesIndex + localVerticesIndexNumber + j) += localVerticesNumber;
         }
         for(unsigned int j = 0; j < actualMesh.textureVerticesIndexCount; j++){
-            *(renderData.mesh.textureVerticesIndex + localVerticesIndexNumber + j) += localTextureVerticesNumber;
+            *(layerData->textureVerticesIndex + localVerticesIndexNumber + j) += localTextureVerticesNumber;
         }
         for(unsigned int j = 0; j < actualMesh.verticesIndexCount / 3; j++){
-            *(renderData.mesh.normalVerticesIndex + localVerticesIndexNumber/3 + j) += localNormalVerticesNumber;
+            *(layerData->normalVerticesIndex + localVerticesIndexNumber/3 + j) += localNormalVerticesNumber;
         }
 
 
@@ -794,51 +906,52 @@ void Render::updatePipeline(){
     }
 
     {
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER,ssbos[SSBOS::NormalVecsIndexSSBO]);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER,layerData->ssbos[SSBOS::NormalVecsIndexSSBO]);
         glBufferData(GL_SHADER_STORAGE_BUFFER,
-                        sizeof(unsigned int) * renderData.mesh.verticesIndexCount/3,
-                        renderData.mesh.normalVerticesIndex,GL_DYNAMIC_DRAW);
+                        sizeof(unsigned int) * layerData->verticesIndexCount/3,
+                        layerData->normalVerticesIndex,GL_DYNAMIC_DRAW);
 
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER,ssbos[SSBOS::NormalVecsSSBO]);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER,layerData->ssbos[SSBOS::NormalVecsSSBO]);
         glBufferData(GL_SHADER_STORAGE_BUFFER,
-                        sizeof(float) * renderData.mesh.normalVerticesCount,
-                        renderData.mesh.normalVertices,GL_DYNAMIC_DRAW);
+                        sizeof(float) * layerData->normalVerticesCount,
+                        layerData->normalVertices,GL_DYNAMIC_DRAW);
 
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER,ssbos[SSBOS::TextureIndexSSBO]);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER,layerData->ssbos[SSBOS::TextureIndexSSBO]);
         glBufferData(GL_SHADER_STORAGE_BUFFER,
-                        sizeof(unsigned int) * renderData.mesh.textureVerticesIndexCount,
-                        renderData.mesh.textureVerticesIndex,GL_DYNAMIC_DRAW);
+                        sizeof(unsigned int) * layerData->textureVerticesIndexCount,
+                        layerData->textureVerticesIndex,GL_DYNAMIC_DRAW);
 
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER,ssbos[SSBOS::TextureCoordSSBO]);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER,layerData->ssbos[SSBOS::TextureCoordSSBO]);
         glBufferData(GL_SHADER_STORAGE_BUFFER,
-                        sizeof(float) * renderData.mesh.textureVerticesCount,
-                        renderData.mesh.textureVertices,GL_DYNAMIC_DRAW);
+                        sizeof(float) * layerData->textureVerticesCount,
+                        layerData->textureVertices,GL_DYNAMIC_DRAW);
 
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER,ssbos[SSBOS::ModelsMaterialsSSBO]);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER,layerData->ssbos[SSBOS::ModelsMaterialsSSBO]);
         glBufferData(GL_SHADER_STORAGE_BUFFER,
-                        sizeof(unsigned int) * renderData.mesh.meshesCount,
-                        renderData.mesh.modelMaterial,GL_DYNAMIC_DRAW);
+                        sizeof(unsigned int) * layerData->meshesCount,
+                        layerData->modelMaterial,GL_DYNAMIC_DRAW);
 
         glBindBuffer(GL_SHADER_STORAGE_BUFFER,0);
 
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, layerData->ebo);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                        sizeof(unsigned int) * renderData.mesh.verticesIndexCount,
-                        renderData.mesh.verticesIndex,GL_DYNAMIC_DRAW);
+                        sizeof(unsigned int) * layerData->verticesIndexCount,
+                        layerData->verticesIndex,GL_DYNAMIC_DRAW);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
-        glBindVertexArray(VAO);
-        glBindBuffer(GL_ARRAY_BUFFER,VBOS[0]);
-        glBufferData(GL_ARRAY_BUFFER,  sizeof(float) * renderData.mesh.verticesCount,
-                            renderData.mesh.vertices,GL_DYNAMIC_DRAW);
+        glBindVertexArray(layerData->vao);
+        glBindBuffer(GL_ARRAY_BUFFER,layerData->vbos[0]);
+        glBufferData(GL_ARRAY_BUFFER,  sizeof(float) * layerData->verticesCount,
+                            layerData->vertices,GL_DYNAMIC_DRAW);
 
-        glBindBuffer(GL_ARRAY_BUFFER,VBOS[1]);
-        glBufferData(GL_ARRAY_BUFFER,  sizeof(int) * renderData.mesh.verticesCount/3,
-                            renderData.mesh.modelParent,GL_DYNAMIC_DRAW);
+        glBindBuffer(GL_ARRAY_BUFFER,layerData->vbos[1]);
+        glBufferData(GL_ARRAY_BUFFER,  sizeof(int) * layerData->verticesCount/3,
+                            layerData->modelParent,GL_DYNAMIC_DRAW);
 
         glBindBuffer(GL_ARRAY_BUFFER,0);
         glBindVertexArray(0);
     }
+
 }
 
 // WW:widht
@@ -978,24 +1091,28 @@ void TextureHandler::rmTex(unsigned int index) {
     emptyTextures[emptyTexturesCount-1] = index;
 }
 
-unsigned int Render::pushModels(MeshGenData mesh,unsigned int materialIndex) {
+unsigned int Render::pushModels(MeshGenData mesh,unsigned int materialIndex, unsigned int layerIndex) {
     flags = flags | MODELS_CHANGE_FLAG;
     minFramesToUp = 0;
-    renderData.models.push_back(Model(Mesh(mesh),materialIndex));
-    return renderData.models.size() -1;
+    renderData.LayersData[layerIndex].models.push_back(Model(Mesh(mesh),materialIndex));
+    return renderData.LayersData[layerIndex].models.size() -1;
 }
 
-unsigned int Render::pushModels(MeshGenData mesh,MaterialGenData material) {
-    return pushModels(mesh,allocMaterial(material));
+unsigned int Render::pushModels(MeshGenData mesh,MaterialGenData material, unsigned int layerIndex) {
+    return pushModels(mesh,allocMaterial(material),layerIndex);
 }
 
-unsigned int Render::pushModels(MeshGenData mesh) {
-    return pushModels(mesh,0);
+unsigned int Render::pushModels(MeshGenData mesh, unsigned int layerIndex) {
+    return pushModels(mesh,0,layerIndex);
 }
 
-void Render::popModels(unsigned int index) {
+void Render::popModels(unsigned int index,unsigned int layerIndex) {
+    if(index >= renderData.LayersData[layerIndex].models.size()){
+        sendError("Render::popModels :index > models.size()\n");
+        exit(EXIT_FAILURE);
+    }
     flags = flags | MODELS_CHANGE_FLAG;
-    renderData.models.erase(renderData.models.begin() + index);
+    renderData.LayersData[layerIndex].models.erase(renderData.LayersData[layerIndex].models.begin() + index);
 }
 
 
