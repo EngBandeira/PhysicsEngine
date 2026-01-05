@@ -1,7 +1,9 @@
-#include <iterator>
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include "vendor/imgui/imgui_internal.h"
+#include <iterator>
 #include <cstdio>
+#include <glm/geometric.hpp>
+#include <glm/exponential.hpp>
 #include <unistd.h>
 #include <cstdlib>
 #include <cstring>
@@ -39,6 +41,7 @@
 #define MATRICES_CHANGE_FLAG 1 << 1
 #define MODELS_CHANGE_FLAG 1 << 2
 
+unsigned int flags; // abcd efgh: h = Update renderData
 int fodase[16] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15};
 
 void sendWarning(const char *msg) {
@@ -136,7 +139,7 @@ RenderData::RenderData()
 void RenderData::freeData()
 {
 
-    for(unsigned int i =0; i < TEXTURE_HANDLERS_COUNT; i++){
+    for(unsigned int i =0; i < TEXTURE_HANDLERS_COUNT; i++) {
         free(textureHandlers[i].materialIndex);
         free(textureHandlers[i].emptyTextures);
     }
@@ -150,6 +153,24 @@ void RenderData::freeData()
 
     free(materials);
 
+}
+void RenderData::setModelScale(glm::vec3 scale, unsigned short index,unsigned int layerIndex) {
+    if(scale.x == LayersData[layerIndex].models[index].scale.x &&
+       scale.y == LayersData[layerIndex].models[index].scale.y &&
+       scale.z == LayersData[layerIndex].models[index].scale.z)
+        return;
+    glm::mat4 *p = getNMatrix(index, layerIndex);
+    glm::mat4 sc(1);
+    sc[0][0] = scale.x / LayersData[layerIndex].models[index].scale.x;
+    sc[1][1] = scale.y / LayersData[layerIndex].models[index].scale.y;
+    sc[2][2] = scale.z / LayersData[layerIndex].models[index].scale.z;
+    LayersData[layerIndex].models[index].scale = scale;
+    *p = *p * sc;
+    flags = flags | MATRICES_CHANGE_FLAG;
+}
+
+void RenderData::setModelScale(float scale, unsigned short index,unsigned int layerIndex) {
+    setModelScale(glm::vec3(scale),index,layerIndex);
 }
 
 // rotation[0][0] = r.x; rotation[1][0] = r.y; rotation[2][0] = r.z;
@@ -169,6 +190,10 @@ glm::vec4 Camera::getPosition(){
     return translation * glm::vec4(0,0,0,1);
 }
 
+glm::vec4 RenderData::getPositionOfModel(unsigned short index,unsigned int layerIndex) {
+    return *getNMatrix(index, layerIndex) * glm::vec4(0,0,0,1);
+}
+
 
 Camera::Camera():translation(1), rotation(1), localTranslation(1)
 {
@@ -177,8 +202,8 @@ Camera::Camera():translation(1), rotation(1), localTranslation(1)
     viewMatrix = glm::lookAt(glm::vec3(0.0f, 0.0f, -5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 }
 
-glm::mat4 *RenderData::getNMatrix(unsigned short index,MeshRenderData *contexLayer){
-    return (glm::mat4*)(contexLayer->matrices + 16*index);
+glm::mat4 *RenderData::getNMatrix(unsigned short index,unsigned int layerIndex){
+    return (glm::mat4*)(LayersData[layerIndex].matrices + 16*index);
 }
 
 // 0123456789
@@ -256,10 +281,7 @@ Render::~Render() {
     glDeleteTextures(1,&texToShowFrom);
     glDeleteProgram(shaderProgram);
 }
-
 MaterialGenData a;
-
-
 void Render::input()
 {
     if (ImGui::IsWindowFocused() && ImGui::GetMousePos().y >=ImGui::GetCursorScreenPos().y)
@@ -279,7 +301,6 @@ void Render::input()
 
         ImGui::SetMouseCursor(ImGuiMouseCursor_None);
 
-        // printf("ca %f %f\n", io.MouseDelta.x,io.MouseDelta.y);
         ImVec2  mouseDelta = ImVec2(0,0);
         if(io.MouseDelta.x && io.MouseDelta.y)
             mouseDelta = ImVec2(mousePos.x - windowCenter.x,mousePos.y - windowCenter.y);
@@ -287,57 +308,29 @@ void Render::input()
 
         glfwSetCursorPos(glfwWin,windowCenter.x,windowCenter.y);
         ImGui::Dummy(ImVec2(0,0));
-        // printf("ba:%f  kk %f\n",mouseDelta.x,mouseDelta.y);
+
         camera.angle.x += MOUSE_SENSI*mouseDelta.x;
         camera.angle.y += .5f*MOUSE_SENSI*mouseDelta.y;
         camera.rotation = glm::rotate(glm::mat4(1),glm::radians(camera.angle.x), glm::vec3(0, 1, 0));
         camera.rotation = glm::rotate(camera.rotation,glm::radians(camera.angle.y), glm::vec3(camera.getRight()));
         float b = .3;
 
+        renderData.setModelScale(glm::max(0.015f * glm::length(camera.getPosition() - renderData.getPositionOfModel(0, 0)),0.00001f), 0, 0);
 
-        if (ImGui::IsKeyPressed(ImGuiKey_A)){
+
+        if (ImGui::IsKeyPressed(ImGuiKey_A)) {
             camera.localTranslation = glm::translate(camera.localTranslation, b*glm::vec3(camera.getRight()));
-            flags = flags | 4;
         }
-        if (ImGui::IsKeyPressed(ImGuiKey_D)){
+        if (ImGui::IsKeyPressed(ImGuiKey_D)) {
             camera.localTranslation = glm::translate(camera.localTranslation, b*glm::vec3(-camera.getRight()));
-            flags = flags | 4;
         }
-        if (ImGui::IsKeyPressed(ImGuiKey_W)){
+        if (ImGui::IsKeyPressed(ImGuiKey_W)) {
             camera.localTranslation = glm::translate(camera.localTranslation, b*glm::vec3(camera.getFoward()));
-            flags = flags | 4;
         }
-        if (ImGui::IsKeyPressed(ImGuiKey_S)){
+        if (ImGui::IsKeyPressed(ImGuiKey_S)) {
             camera.localTranslation = glm::translate(camera.localTranslation, b*glm::vec3(-camera.getFoward()));
-            flags = flags | 4;
         }
 
-        // if(renderData.models.size() > selectedModelIndex){
-        //     glm::mat4 *modelMatrix = renderData.getNMatrix(selectedModelIndex);
-
-        //     if (ImGui::IsKeyPressed(ImGuiKey_UpArrow)){
-        //         *modelMatrix =
-        //             glm::rotate(*modelMatrix, glm::radians(-10.0f), glm::vec3(1, 0, 0));
-        //         flags = flags | 4;
-        //     }
-        //     if (ImGui::IsKeyPressed(ImGuiKey_DownArrow)){
-        //         *modelMatrix =
-        //             glm::rotate(*modelMatrix, glm::radians(2.0f), glm::vec3(1, 0, 0));
-        //         flags = flags | 4;
-        //     }
-        //     if (ImGui::IsKeyPressed(ImGuiKey_LeftArrow)){
-        //         *modelMatrix =
-        //             glm::rotate(*modelMatrix, glm::radians(-10.0f), glm::vec3(0, 1, 0));
-        //         flags = flags | 4;
-
-        //     }
-        //     if (ImGui::IsKeyPressed(ImGuiKey_RightArrow)){
-        //         *modelMatrix =
-        //             glm::rotate(*modelMatrix, glm::radians(2.0f), glm::vec3(0, 1, 0));
-        //         flags = flags | 4;
-        //     }
-
-        // }
         camera.translation = camera.localTranslation;
         camera.viewMatrix = camera.rotation * camera.translation;
     }
@@ -566,9 +559,9 @@ ImGuiWindowFlags dockspace_flags =
     ImGuiWindowFlags_NoBringToFrontOnFocus |
     ImGuiWindowFlags_NoNavFocus;
 
+float buceta;
 
-    void Render::imguiSetting()
-    {
+void Render::imguiSetting() {
         ImGuiViewport *view = ImGui::GetMainViewport();
 
         // Dimensões totais da janela principal
@@ -704,7 +697,7 @@ ImGuiWindowFlags dockspace_flags =
 
         ImGui::SetNextWindowSize(ImVec2(actualLenght, totalHeight));
 
-        if(ImGui::Begin("File", nullptr, ImGuiWindowFlags_None)) {
+        if(ImGui::Begin("Properties", nullptr, ImGuiWindowFlags_None)) {
         }
         ImGui::End();
 
@@ -730,11 +723,15 @@ void Render::start(void(*op1)(),void(*op2)(),void(*op3)()){
     camera.rotation = glm::rotate(camera.rotation,3.14f, glm::vec3(0, 1, 0));
 
     a.type = TEXTURE;
+    a.maps[0] = "assets/3dmodels/Seta.png";
+    pushModels(MeshGenData{
+        "assets/3dmodels/Seta.obj"
+    },a,0);
 
     a.maps[0] = "assets/3dmodels/cannon_01_diff_4k.jpg";
     pushModels(MeshGenData{
         "assets/3dmodels/cannon_01_4k.obj"
-    },a,0);
+    },a,COMMON_LAYER);
     a.maps[0] = "assets/3dmodels/marble_bust_01_diff_4k.jpg";
     pushModels(MeshGenData{
         "assets/3dmodels/marble_bust_01_4k.obj"
@@ -810,7 +807,6 @@ void Render::updatePipeline(unsigned int layerIndex){
     //                     verticesIndexOffset= 0,textureIndexOffset = 0,normalIndexOffset=0;
     // float *vertices,*matrices,*textureVertices,*normalVertices;
     // unsigned int *verticesIndex,*modelParent,*textureVerticesIndex,*normalVerticesIndex,*modelsMaterials;
-
     layerData->verticesCount = 0;
     layerData->verticesIndexCount = 0;
     layerData->textureVerticesCount = 0;
@@ -1063,7 +1059,7 @@ unsigned int TextureHandler::addTex(unsigned char *localBuffer){
                     0,0,0,texDimensions,texDimensions,texturesCount);
 
     glTexSubImage3D(GL_TEXTURE_2D_ARRAY, LEVEL, 0, 0,
-                        texturesCount, texDimensions, texDimensions, 1, GL_RGBA, GL_UNSIGNED_BYTE, localBuffer);//texturesCount or texturesCount-1 ?
+                        texturesCount, texDimensions, texDimensions, 1, GL_RGBA, GL_UNSIGNED_BYTE, localBuffer);
 
     glBindTexture(GL_TEXTURE_2D_ARRAY,texture);
 

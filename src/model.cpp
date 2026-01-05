@@ -200,4 +200,29 @@ Mesh::Mesh(MeshGenData genData): matrix(1),meshPath(genData.path) {
 
 Mesh::~Mesh() {}
 
-Model::Model(Mesh mesh,unsigned int materialIndex):mesh(mesh),materialIndex(materialIndex){}
+Model::Model(Mesh mesh,unsigned int materialIndex):rotationM(1),translationM(1),scaleM(1),mesh(mesh),materialIndex(materialIndex){}
+void Model::scale(glm::vec3 scale){
+    scaleM[0][0] = scale.x;
+    scaleM[1][1] = scale.y;
+    scaleM[2][2] = scale.z;
+    matrix = rotationM * translationM * scaleM;
+}
+void Model::rotate(glm::vec3 rotation,Referencial ref){
+    rotationM[0][0] = rotation.x;
+    rotationM[1][1] = rotation.y;
+    rotationM[2][2] = rotation.z;
+}
+void Model::translate(glm::vec3 translation,Referencial ref){
+    translationM[0][0] = translation.x;
+    translationM[1][1] = translation.y;
+    translationM[2][2] = translation.z;
+}
+glm::vec3 Model::getScale(){
+    return glm::vec3(scaleM * glm::vec4(0,0,0,1));
+}
+glm::vec3 Model::getRotation(){
+    return glm::vec3(rotationM * glm::vec4(0,0,0,1));
+}
+glm::vec3 Model::getTranslation(){
+    return glm::vec3(translationM * glm::vec4(0,0,0,1));
+}

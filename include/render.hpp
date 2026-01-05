@@ -82,6 +82,7 @@ struct MeshRenderData {
 
 class RenderData {
     public:
+    glm::vec4 getPositionOfModel(unsigned short index,unsigned int layerIndex);
     unsigned int materialsSSBO;
     TextureHandler textureHandlers[TEXTURE_HANDLERS_COUNT];
     unsigned int texUtilitary;
@@ -94,7 +95,10 @@ class RenderData {
 
 
     RenderData();
-    glm::mat4 *getNMatrix(unsigned short index,MeshRenderData *contexLayer);
+    void setModelScale(glm::vec3 scale, unsigned short index,unsigned int layerIndex);
+    void setModelScale(float scale, unsigned short index,unsigned int layerIndex);
+    glm::mat4 *getNMatrix(unsigned short index,unsigned int layerIndex);
+
     void freeData();
 };
 
@@ -126,7 +130,6 @@ struct ModelGenData {
 
 class Render {
     public:
-    unsigned int flags; // abcd efgh: h = Update renderData
     unsigned int FBO_FROM, FBO_TO, RBO, TBO, QUERY,
                  texToRenderOver,texToShowFrom;
     unsigned int feedbacksize,feedbacknumber,samples=4;

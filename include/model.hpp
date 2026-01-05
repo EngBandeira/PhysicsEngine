@@ -8,6 +8,12 @@ struct MeshGenData {
 };
 
 
+enum Referencial
+{
+    LOCAL,
+    UNIVERSAL
+};
+
 class Mesh {
     public:
     // Ponto[verticeCount/3] =
@@ -17,7 +23,6 @@ class Mesh {
     unsigned int oCount = 0;
     char *mtl;
     char **o;
-    glm::mat4 matrix;
     unsigned int verticesCount = 0, verticesIndexCount = 0, textureVerticesCount=0,
                  textureVerticesIndexCount=0,normalVerticesCount=0,verticesOffsetIndex= 0;// normalIndexCount = nOfPrimitives = verticesIndexCount /3
     float *vertices,*textureVertices,*normalVertices;
@@ -31,8 +36,15 @@ class Mesh {
 
 class Model{
     public:
+    glm::mat4 rotationM,translationM,scaleM,matrix;
     Mesh mesh;
     unsigned int materialIndex;
+    void scale(glm::vec3 scale);// scale is always universal
+    void rotate(glm::vec3 rotation, Referencial ref);
+    void translate(glm::vec3 translation, Referencial ref);
+    glm::vec3 getScale();
+    glm::vec3 getRotation();
+    glm::vec3 getTranslation();
     Model(){};
     Model(Mesh mesh,unsigned int materialIndex);
 };

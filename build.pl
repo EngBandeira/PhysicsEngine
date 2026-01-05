@@ -15,7 +15,7 @@ my $includePath = "include";
 my $vendorPath = "vendor";
 my $buildPath = "build";
 
-my @libs = ("GL","GLU","glfw");
+my @libs = ("GL","GLU","glfw","X11");
 my $formatedLibs = "";
 foreach $lib (@libs)
 {
@@ -32,7 +32,7 @@ my @files = (split (/\n/,$fileCPP), split( /\n/,$fileC));
 # my @files = (split("/\n/",$fileCPP),split("/\n/",$fileC));
 # my $rn ="g++ -Wall -I" . $includePath . " -I" . $vendorPath . " -g -ggdb " . $formatedLibs . " ";
 
-my $rn ="g++ -Wall -I" . $includePath . " -I." . " -g -ggdb "  . $formatedLibs ." ";
+my $rn ="g++ -std=c++17 -Wall -I" . $includePath . " -I." . " -g -ggdb "  . $formatedLibs ." ";
 if($asan)
 {
  $rn ="g++ -Wall -fsanitize=address -I" . $includePath . " -I." . " -g -ggdb "  . $formatedLibs ." ";
