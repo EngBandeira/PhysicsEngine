@@ -1,18 +1,17 @@
 #pragma once
-
 #include <glm/ext/matrix_float4x4.hpp>
+
+enum AXIS{
+  X,
+  Y,
+  Z
+};
 
 
 struct MeshGenData {
     char *path;
 };
 
-
-enum Referencial
-{
-    LOCAL,
-    UNIVERSAL
-};
 
 class Mesh {
     public:
@@ -37,14 +36,16 @@ class Mesh {
 class Model{
     public:
     glm::mat4 rotationM,translationM,scaleM,matrix;
+    glm::vec3 angle;
     Mesh mesh;
     unsigned int materialIndex;
     void scale(glm::vec3 scale);// scale is always universal
-    void rotate(glm::vec3 rotation, Referencial ref);
-    void translate(glm::vec3 translation, Referencial ref);
+    void rotate(float angl,AXIS axis);
+    void translate(glm::vec3 translation);
+    void positionate(glm::vec3 position);
     glm::vec3 getScale();
     glm::vec3 getRotation();
-    glm::vec3 getTranslation();
+    glm::vec3 getPosition();
     Model(){};
     Model(Mesh mesh,unsigned int materialIndex);
 };

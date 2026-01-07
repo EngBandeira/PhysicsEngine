@@ -4,9 +4,9 @@
 #include "log.hpp"
 #include "shader.hpp"
 #include <GLFW/glfw3.h>
+#include <asm-generic/errno.h>
 #include <vector>
 
-#define COMMON_LAYER 1
 #define TEXTURE_HANDLERS_COUNT 7
 #define LAYERS_COUNT 2
 #define SSBO_PER_LAYER_COUNT 6
@@ -23,19 +23,17 @@ void send(const char *msg);
 
 void sendError(const char *msg);
 
-template<typename T, size_t N>
-bool matchPairs(T *buffer, int j, const T (&pairs)[N]) {
-    for(size_t i = 0; i < N; i++) {
-        if(buffer[i+j] != pairs[i]) return false;
-    }
-    return true;
-}
 
+enum LAYER{
+    SPECIAL_LAYER,
+    COMMON_LAYER
+};
 
 enum materialType {
     SOLID_COLOR,
     TEXTURE
 };
+
 
 struct TextureHandler {
     unsigned int texture,texDimensions, texturesCount = 0,emptyTexturesCount;
@@ -95,8 +93,11 @@ class RenderData {
 
 
     RenderData();
-    void setModelScale(glm::vec3 scale, unsigned short index,unsigned int layerIndex);
-    void setModelScale(float scale, unsigned short index,unsigned int layerIndex);
+    void scaleModel(glm::vec3 scale, unsigned short index,unsigned int layerIndex);
+    void scaleModel(float scale, unsigned short index,unsigned int layerIndex);
+    void translateModel(glm::vec3 translation, unsigned short index,unsigned int layerIndex);
+    void rotateModel(float angl, AXIS axis, unsigned short index,unsigned int layerIndex);
+    void positionateModel(glm::vec3 position, unsigned short index,unsigned int layerIndex);
     glm::mat4 *getNMatrix(unsigned short index,unsigned int layerIndex);
 
     void freeData();
@@ -120,11 +121,34 @@ struct MaterialGenData{
     float Ni, d,bm;
     char *maps[4];// Ka Kd Ks Normal
     enum materialType type;
+    MaterialGenData();
 };
 
 struct ModelGenData {
     MeshGenData mesh;
     unsigned int materialIndex;
+};
+
+enum FILE_TYPES{
+    COMMON_FILE,
+    FOLDER_FILE,
+    MESH_FILE,
+    IMAGE_FILE,
+    CODE_FILE
+};
+
+struct File{
+    char *simpleName; // complete name = simpleName + '.' + extension
+    char *extension;
+    char *completeName;
+    FILE_TYPES type = FILE_TYPES::COMMON_FILE;
+};
+
+struct Assets{
+    std::vector<File> files;
+    unsigned int framesDelay = 120;
+    char *directory = nullptr;
+    void update();
 };
 
 
@@ -153,13 +177,16 @@ class Render {
     private:
 
     int minFramesToUp = -1;
+    unsigned int assetsDelayCounter = 0;
 
-
+    Assets assets;
     RenderData renderData;
     unsigned short selectedModelIndex=0;
     unsigned int shaderProgram;
     Shader shader;
     GLFWwindow *glfwWin;
+
+    unsigned int setAVector(glm::vec3 positon,glm::vec3 direction);
 
     void updatePipeline(unsigned int layerIndex);
     void once();

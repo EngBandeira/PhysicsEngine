@@ -10,3 +10,4 @@ else
   echo $frag
   echo $geom
 fi
+/home/bandeira/Documents/GIT/PhysicsEngine/../../

@@ -1,5 +1,7 @@
 #include <cstddef>
 #include <cstdlib>
+#include <glm/ext/quaternion_transform.hpp>
+#include <glm/ext/matrix_transform.hpp>
 #include <stdio.h>
 #include <string.h>
 
@@ -9,13 +11,7 @@
 #define BUFFER_LENGHT 64
 #define KEYWORDS_LENGTH 8
 
-template<typename T, size_t N>
-bool matchPairs(T *buffer, int j, const T (&pairs)[N]) {
-    for(size_t i = 0; i < N; i++) {
-        if(buffer[i+j] != pairs[i]) return false;
-    }
-    return true;
-}
+
 
 template <typename T>
 T *exportvec(unsigned int *count, std::vector<T> vec) {
@@ -24,6 +20,15 @@ T *exportvec(unsigned int *count, std::vector<T> vec) {
   memcpy(rt,vec.data(),sizeof(T) * (*count));
   return rt;
 }
+
+template<typename T, size_t N>
+bool matchPairs(T *buffer, int j, const T (&pairs)[N]) {
+    for(size_t i = 0; i < N; i++) {
+        if(buffer[i+j] != pairs[i]) return false;
+    }
+    return true;
+}
+
 
 
 void Mesh::deleteMesh() {
@@ -41,7 +46,7 @@ void Mesh::deleteMesh() {
     // free(meshPath);
 }
 
-Mesh::Mesh(MeshGenData genData): matrix(1),meshPath(genData.path) {
+Mesh::Mesh(MeshGenData genData): meshPath(genData.path) {
 
     o = (char**)malloc(0);
     std::vector<float> vertices_,textureVertices_,normalVertices_;
@@ -200,29 +205,38 @@ Mesh::Mesh(MeshGenData genData): matrix(1),meshPath(genData.path) {
 
 Mesh::~Mesh() {}
 
-Model::Model(Mesh mesh,unsigned int materialIndex):rotationM(1),translationM(1),scaleM(1),mesh(mesh),materialIndex(materialIndex){}
+Model::Model(Mesh mesh,unsigned int materialIndex):rotationM(1),translationM(1),scaleM(1),matrix(1),mesh(mesh),materialIndex(materialIndex){}
 void Model::scale(glm::vec3 scale){
     scaleM[0][0] = scale.x;
     scaleM[1][1] = scale.y;
     scaleM[2][2] = scale.z;
     matrix = rotationM * translationM * scaleM;
 }
-void Model::rotate(glm::vec3 rotation,Referencial ref){
-    rotationM[0][0] = rotation.x;
-    rotationM[1][1] = rotation.y;
-    rotationM[2][2] = rotation.z;
+void Model::rotate(float angl,AXIS axis){
+    glm::vec3 ax(0);
+    ax[axis] = 1;
+    rotationM = glm::rotate(rotationM, glm::radians(angl),ax);
+    angle[axis] += angl;
+    matrix = rotationM * translationM * scaleM;
 }
-void Model::translate(glm::vec3 translation,Referencial ref){
-    translationM[0][0] = translation.x;
-    translationM[1][1] = translation.y;
-    translationM[2][2] = translation.z;
+void Model::translate(glm::vec3 translation){
+    translationM[3][0] += translation.x;
+    translationM[3][1] += translation.y;
+    translationM[3][2] += translation.z;
+    matrix = rotationM * translationM * scaleM;
+}
+void Model::positionate(glm::vec3 position){
+    translationM[3][0] = position.x;
+    translationM[3][1] = position.y;
+    translationM[3][2] = position.z;
+    matrix = rotationM * translationM * scaleM;
 }
 glm::vec3 Model::getScale(){
-    return glm::vec3(scaleM * glm::vec4(0,0,0,1));
+    return glm::vec3(scaleM * glm::vec4(1));
 }
 glm::vec3 Model::getRotation(){
-    return glm::vec3(rotationM * glm::vec4(0,0,0,1));
+    return angle;
 }
-glm::vec3 Model::getTranslation(){
+glm::vec3 Model::getPosition() {
     return glm::vec3(translationM * glm::vec4(0,0,0,1));
 }

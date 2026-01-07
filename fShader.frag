@@ -25,6 +25,11 @@ uniform sampler2DArray textures[16];
 
 void main() {
     fragColor = vec4(1, 0, 0, 1);
-    fragColor = texture(textures[material.maps[0].handler],
-            vec3(g_texCoord, material.maps[0].index));
+    if (material.type == MATERIAL_TEXTURE) {
+        fragColor = texture(textures[material.maps[0].handler],
+                vec3(g_texCoord, material.maps[0].index));
+    }
+    else {
+        fragColor = vec4(1, 0, 0, 1);
+    }
 }

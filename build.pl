@@ -15,7 +15,7 @@ my $includePath = "include";
 my $vendorPath = "vendor";
 my $buildPath = "build";
 
-my @libs = ("GL","GLU","glfw","X11");
+my @libs = ("GL","GLU","glfw","X11","Qt6Widgets");
 my $formatedLibs = "";
 foreach $lib (@libs)
 {
@@ -25,7 +25,6 @@ my $k = " ";
 if($vendor){
     $k = $vendorPath;
 }
-
 my $fileCPP = `find $srcPath $k -name '*.cpp' -print`;
 my $fileC = `find $srcPath $k -name '*.c' -print`;
 my @files = (split (/\n/,$fileCPP), split( /\n/,$fileC));

@@ -1,3 +1,4 @@
+#include <complex>
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include "vendor/imgui/imgui_internal.h"
 #include <iterator>
@@ -43,6 +44,14 @@
 
 unsigned int flags; // abcd efgh: h = Update renderData
 int fodase[16] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15};
+
+template<typename T, size_t N>
+bool matchPairs(T *buffer, int j, const T (&pairs)[N]) {
+    for(size_t i = 0; i < N; i++) {
+        if(buffer[i+j] != pairs[i]) return false;
+    }
+    return true;
+}
 
 void sendWarning(const char *msg) {
 
@@ -154,24 +163,36 @@ void RenderData::freeData()
     free(materials);
 
 }
-void RenderData::setModelScale(glm::vec3 scale, unsigned short index,unsigned int layerIndex) {
-    if(scale.x == LayersData[layerIndex].models[index].scale.x &&
-       scale.y == LayersData[layerIndex].models[index].scale.y &&
-       scale.z == LayersData[layerIndex].models[index].scale.z)
-        return;
-    glm::mat4 *p = getNMatrix(index, layerIndex);
-    glm::mat4 sc(1);
-    sc[0][0] = scale.x / LayersData[layerIndex].models[index].scale.x;
-    sc[1][1] = scale.y / LayersData[layerIndex].models[index].scale.y;
-    sc[2][2] = scale.z / LayersData[layerIndex].models[index].scale.z;
-    LayersData[layerIndex].models[index].scale = scale;
-    *p = *p * sc;
+void RenderData::scaleModel(glm::vec3 scale, unsigned short index,unsigned int layerIndex) {
+    LayersData[layerIndex].models[index].scale(scale);
+
+    *getNMatrix(index, layerIndex) = LayersData[layerIndex].models[index].matrix;
     flags = flags | MATRICES_CHANGE_FLAG;
 }
 
-void RenderData::setModelScale(float scale, unsigned short index,unsigned int layerIndex) {
-    setModelScale(glm::vec3(scale),index,layerIndex);
+void RenderData::scaleModel(float scale, unsigned short index,unsigned int layerIndex) {
+    scaleModel(glm::vec3(scale),index,layerIndex);
 }
+
+void RenderData::translateModel(glm::vec3 translation, unsigned short index,unsigned int layerIndex) {
+    LayersData[layerIndex].models[index].translate(translation);
+
+    *getNMatrix(index, layerIndex) = LayersData[layerIndex].models[index].matrix;
+    flags = flags | MATRICES_CHANGE_FLAG;
+}
+void RenderData::rotateModel(float angl, AXIS axis, unsigned short index,unsigned int layerIndex){
+    LayersData[layerIndex].models[index].rotate(angl, axis);
+
+    *getNMatrix(index, layerIndex) = LayersData[layerIndex].models[index].matrix;
+    flags = flags | MATRICES_CHANGE_FLAG;
+}
+void RenderData::positionateModel(glm::vec3 position, unsigned short index,unsigned int layerIndex) {
+    LayersData[layerIndex].models[index].positionate(position);
+
+    *getNMatrix(index, layerIndex) = LayersData[layerIndex].models[index].matrix;
+    flags = flags | MATRICES_CHANGE_FLAG;
+}
+
 
 // rotation[0][0] = r.x; rotation[1][0] = r.y; rotation[2][0] = r.z;
 // rotation[0][1] = u.x; rotation[1][1] = u.y; rotation[2][1] = u.z;
@@ -232,8 +253,98 @@ unsigned short getNewIndexOfOld(unsigned short i, unsigned short n,unsigned shor
     return  rt;
 }
 
+unsigned int vectorMaterialI;
 
+unsigned int Render::setAVector(glm::vec3 positon,glm::vec3 direction){
+    unsigned int modelI = pushModels(MeshGenData {
+        .path = "assets/3dmodels/Vector.obj"
+    },vectorMaterialI,LAYER::SPECIAL_LAYER);
+    updatePipeline(LAYER::SPECIAL_LAYER);
+    glm::vec3 normali = glm::normalize(direction);
+    float theta = acos(normali.z);
+    float phi = atan2(normali.y, normali.x);
+    renderData.rotateModel(phi, AXIS::Z, modelI, LAYER::SPECIAL_LAYER);
+    renderData.rotateModel(theta, AXIS::Y, modelI, LAYER::SPECIAL_LAYER);
 
+    renderData.translateModel(positon, modelI, LAYER::SPECIAL_LAYER);
+    flags = flags | MODELS_CHANGE_FLAG;
+    return modelI;
+}
+
+MaterialGenData::MaterialGenData(){
+    maps[0] = nullptr;
+    maps[1] = nullptr;
+    maps[2] = nullptr;
+    maps[3] = nullptr;
+}
+//returns the index of the point on the extension
+unsigned int getExtension(char *str,unsigned int size){
+    unsigned int i = size - 2;
+    while(str[i] != '.' && i > 0)
+        i--;
+    return i;
+}
+// abc.def
+// 0123456
+
+void Assets::update() {
+    if(files.size()) {
+        files.clear();
+    }
+    if(directory == nullptr)
+        return;
+    char *command = (char*)malloc(strlen(directory) + 19);
+    sprintf(command, "ls %s -p > .assets",directory);
+    pclose(popen(command,"r"));
+
+    unsigned int fileLenght;
+    char* buffer = readFile(".assets", &fileLenght);
+    unsigned int i = 0;
+    while(1){
+        unsigned int k = i;
+        while(buffer[i] != '\n' && buffer[i] != 0){
+            i++;
+        }
+        if(buffer[i] == 0)
+            break;
+        if(i == k){
+            i++;
+            continue;
+        }
+        char *c = (char*)malloc(i - k + 1);
+        memcpy(c,buffer+k,i - k);
+
+        c[i - k] = 0;
+
+        unsigned int exteIndex = getExtension(c, i - k + 1);
+        File file;
+        if(c[i - k - 1] == '/')
+            file.type = FILE_TYPES::FOLDER_FILE;
+        file.completeName = c;
+        if(exteIndex == 0) {
+            file.extension = nullptr;
+            file.simpleName = c;
+        }
+
+        else {
+            file.extension = (char*)malloc(i - k + 1 - exteIndex);
+            memcpy(file.extension, c+exteIndex, i - k + 1 - exteIndex);
+            file.extension[i - k - exteIndex] = 0;
+
+            file.simpleName = (char*)malloc(exteIndex+1);
+            memcpy(file.simpleName, c, exteIndex);
+            file.simpleName[exteIndex] = 0;
+        }
+
+        files.push_back(file);
+        i++;
+    }
+    File fParent;
+    fParent.completeName = "../";
+    fParent.type = FILE_TYPES::FOLDER_FILE;
+    files.push_back(fParent);
+    free(buffer);
+}
 
 Render::Render(GLFWwindow *win):  camera(),
             shader((const char *[3]){
@@ -284,57 +395,71 @@ Render::~Render() {
 MaterialGenData a;
 void Render::input()
 {
-    if (ImGui::IsWindowFocused() && ImGui::GetMousePos().y >=ImGui::GetCursorScreenPos().y)
-    {
-        if (ImGui::IsKeyPressed(ImGuiKey_Escape)){
-            ImGui::SetWindowFocus(nullptr);
+    if(selectedModelIndex <renderData.LayersData[LAYER::COMMON_LAYER].models.size()){
+        renderData.positionateModel(renderData.LayersData[LAYER::COMMON_LAYER].models[selectedModelIndex].getPosition(), 0, LAYER::SPECIAL_LAYER);
+    }
+    ImGuiIO& io = ImGui::GetIO();
+    if (ImGui::IsWindowFocused() && ImGui::GetMousePos().y >=ImGui::GetCursorScreenPos().y) {
+        if(ImGui::IsKeyPressed(ImGuiKey_UpArrow)) {
+            glm::vec3 camP = camera.getPosition();
+            glm::vec3 normal = camera.getFoward();
+            ImVec2 per = (io.MousePos/ ImGui::GetWindowSize()- ImVec2(0.5f,0.5f));
+            glm::vec3 pica = camera.getRight() * -1.f * per.x + camera.getUp() * -1.f * per.y;
+            glm::vec3 ajtd = pica + normal;
+            // renderData.positionateModel(camP + ajtd * 3.0f, 0, LAYER::COMMON);
+            setAVector(glm::vec3(0,0,0), glm::vec3(1,0,0));
+        }
+        if(io.MouseDown[1]) {
+            ImVec2 mousePos = io.MousePos;
+            ImVec2 windowCenter = ImGui::GetWindowSize();
+            windowCenter.x *= .5;
+            windowCenter.y *= .5;
+            windowCenter = windowCenter +ImGui::GetWindowPos();
+
+            ImGui::SetMouseCursor(ImGuiMouseCursor_None);
+
+            ImVec2  mouseDelta = ImVec2(0,0);
+            if(io.MouseDelta.x && io.MouseDelta.y)
+                mouseDelta = ImVec2(mousePos.x - windowCenter.x,mousePos.y - windowCenter.y);
+
+
+            glfwSetCursorPos(glfwWin,windowCenter.x,windowCenter.y);
+            ImGui::Dummy(ImVec2(0,0));
+
+            camera.angle.x += MOUSE_SENSI*mouseDelta.x;
+            camera.angle.y += .5f*MOUSE_SENSI*mouseDelta.y;
+            camera.rotation = glm::rotate(glm::mat4(1),glm::radians(camera.angle.x), glm::vec3(0, 1, 0));
+            camera.rotation = glm::rotate(camera.rotation,glm::radians(camera.angle.y), glm::vec3(camera.getRight()));
+            float b = .3;
+
+            renderData.scaleModel(glm::max(0.015f * glm::length(camera.getPosition() - renderData.getPositionOfModel(0, 0)),0.00001f), 0, 0);
+
+            if (ImGui::IsKeyPressed(ImGuiKey_UpArrow)) {
+                renderData.translateModel(glm::vec3(.1,0,0), 0, LAYER::COMMON_LAYER);
+            }
+            if (ImGui::IsKeyPressed(ImGuiKey_A)) {
+                camera.localTranslation = glm::translate(camera.localTranslation, b*glm::vec3(camera.getRight()));
+            }
+            if (ImGui::IsKeyPressed(ImGuiKey_D)) {
+                camera.localTranslation = glm::translate(camera.localTranslation, b*glm::vec3(-camera.getRight()));
+            }
+            if (ImGui::IsKeyPressed(ImGuiKey_W)) {
+                camera.localTranslation = glm::translate(camera.localTranslation, b*glm::vec3(camera.getFoward()));
+            }
+            if (ImGui::IsKeyPressed(ImGuiKey_S)) {
+                camera.localTranslation = glm::translate(camera.localTranslation, b*glm::vec3(-camera.getFoward()));
+            }
+
+            camera.translation = camera.localTranslation;
+            camera.viewMatrix = camera.rotation * camera.translation;
+        }
+
+        if(io.MouseReleased[1]) {
             ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
         }
-
-        ImGuiIO& io = ImGui::GetIO();
-
-        ImVec2 mousePos = io.MousePos;
-        ImVec2 windowCenter = ImGui::GetWindowSize();
-        windowCenter.x *= .5;
-        windowCenter.y *= .5;
-        windowCenter = windowCenter +ImGui::GetWindowPos();
-
-        ImGui::SetMouseCursor(ImGuiMouseCursor_None);
-
-        ImVec2  mouseDelta = ImVec2(0,0);
-        if(io.MouseDelta.x && io.MouseDelta.y)
-            mouseDelta = ImVec2(mousePos.x - windowCenter.x,mousePos.y - windowCenter.y);
-
-
-        glfwSetCursorPos(glfwWin,windowCenter.x,windowCenter.y);
-        ImGui::Dummy(ImVec2(0,0));
-
-        camera.angle.x += MOUSE_SENSI*mouseDelta.x;
-        camera.angle.y += .5f*MOUSE_SENSI*mouseDelta.y;
-        camera.rotation = glm::rotate(glm::mat4(1),glm::radians(camera.angle.x), glm::vec3(0, 1, 0));
-        camera.rotation = glm::rotate(camera.rotation,glm::radians(camera.angle.y), glm::vec3(camera.getRight()));
-        float b = .3;
-
-        renderData.setModelScale(glm::max(0.015f * glm::length(camera.getPosition() - renderData.getPositionOfModel(0, 0)),0.00001f), 0, 0);
-
-
-        if (ImGui::IsKeyPressed(ImGuiKey_A)) {
-            camera.localTranslation = glm::translate(camera.localTranslation, b*glm::vec3(camera.getRight()));
-        }
-        if (ImGui::IsKeyPressed(ImGuiKey_D)) {
-            camera.localTranslation = glm::translate(camera.localTranslation, b*glm::vec3(-camera.getRight()));
-        }
-        if (ImGui::IsKeyPressed(ImGuiKey_W)) {
-            camera.localTranslation = glm::translate(camera.localTranslation, b*glm::vec3(camera.getFoward()));
-        }
-        if (ImGui::IsKeyPressed(ImGuiKey_S)) {
-            camera.localTranslation = glm::translate(camera.localTranslation, b*glm::vec3(-camera.getFoward()));
-        }
-
-        camera.translation = camera.localTranslation;
-        camera.viewMatrix = camera.rotation * camera.translation;
     }
-    else if (ImGui::IsKeyPressed(ImGuiKey_Escape))
+
+    if (ImGui::IsKeyPressed(ImGuiKey_Escape))
     {
         glfwSetWindowShouldClose(glfwWin, true);
     }
@@ -559,8 +684,6 @@ ImGuiWindowFlags dockspace_flags =
     ImGuiWindowFlags_NoBringToFrontOnFocus |
     ImGuiWindowFlags_NoNavFocus;
 
-float buceta;
-
 void Render::imguiSetting() {
         ImGuiViewport *view = ImGui::GetMainViewport();
 
@@ -618,22 +741,24 @@ void Render::imguiSetting() {
 
         ImGui::SetNextWindowDockID(dockspace_id2, ImGuiCond_Once);
         if(ImGui::Begin("World", nullptr, ImGuiWindowFlags_None)) {
-            if(ImGui::Button("Add")) {
-                if(selectedModelIndex < renderData.LayersData[COMMON_LAYER].models.size()) {
-                    const char *meshPath = renderData.LayersData[COMMON_LAYER].models[selectedModelIndex].mesh.meshPath;
+            ImGui::Text("Assets path: %s",assets.directory);
+            ImGui::Text("Assets numner: %d",assets.files.size());
+            ImGui::Text("LAYER::COMMON");
+            if(ImGui::Button("AddC")) {
+                if(selectedModelIndex < renderData.LayersData[LAYER::COMMON_LAYER].models.size()) {
+                    const char *meshPath = renderData.LayersData[LAYER::COMMON_LAYER].models[selectedModelIndex].mesh.meshPath;
                 }
             }
             ImGui::SameLine();
-            if(ImGui::Button("Remove")) {
-                if(renderData.LayersData[COMMON_LAYER].models.size() > selectedModelIndex) {
-                    popModels(selectedModelIndex, COMMON_LAYER);
+            if(ImGui::Button("RemoveC")) {
+                if(renderData.LayersData[LAYER::COMMON_LAYER].models.size() > selectedModelIndex) {
+                    popModels(selectedModelIndex, LAYER::COMMON_LAYER);
                     if(selectedModelIndex > 0) selectedModelIndex--;
                 }
             }
-
-            if(ImGui::BeginTable("Modelss1", 1)) {
+            if(ImGui::BeginTable("LAYER::COMMON", 1)) {
                 char label[100];
-                for(unsigned int i = 0; i < renderData.LayersData[COMMON_LAYER].models.size(); i++) {
+                for(unsigned int i = 0; i < renderData.LayersData[LAYER::COMMON_LAYER].models.size(); i++) {
                     ImGui::TableNextRow();
                     ImGui::TableSetColumnIndex(0);
                     sprintf(label, "Model %d", i);
@@ -645,7 +770,37 @@ void Render::imguiSetting() {
                     }
                     if(ImGui::Selectable(label)) {
                         selectedModelIndex = i;
-                        printf("pinto %d\n", i);
+                    }
+                }
+                ImGui::EndTable();
+            }
+            ImGui::Text("LAYER::SPECIAL");
+            if(ImGui::Button("AddS")) {
+                if(selectedModelIndex < renderData.LayersData[LAYER::SPECIAL_LAYER].models.size()) {
+                    const char *meshPath = renderData.LayersData[LAYER::SPECIAL_LAYER].models[selectedModelIndex].mesh.meshPath;
+                }
+            }
+            ImGui::SameLine();
+            if(ImGui::Button("RemoveS")) {
+                if(renderData.LayersData[LAYER::SPECIAL_LAYER].models.size() > selectedModelIndex) {
+                    popModels(selectedModelIndex, LAYER::SPECIAL_LAYER);
+                    if(selectedModelIndex > 0) selectedModelIndex--;
+                }
+            }
+            if(ImGui::BeginTable("LAYER::SPECIAL", 1)) {
+                char label[100];
+                for(unsigned int i = 0; i < renderData.LayersData[LAYER::SPECIAL_LAYER].models.size(); i++) {
+                    ImGui::TableNextRow();
+                    ImGui::TableSetColumnIndex(0);
+                    sprintf(label, "Model %d", i);
+                    if(i == selectedModelIndex) {
+                        ImGui::TableSetBgColor(
+                            ImGuiTableBgTarget_RowBg0,
+                            IM_COL32(38, 38, 38, 255)
+                        );
+                    }
+                    if(ImGui::Selectable(label)) {
+                        selectedModelIndex = i;
                     }
                 }
                 ImGui::EndTable();
@@ -688,13 +843,52 @@ void Render::imguiSetting() {
         x += actualLenght;
 
         if(ImGui::Begin("Assets", nullptr, ImGuiWindowFlags_None)) {
+            if(ImGui::BeginTable("Files",6)){
+                for(int i = 0; i < assets.files.size(); i ++){
+                    if(!(i % 6))
+                        ImGui::TableNextRow();
+                    ImGui::TableSetColumnIndex(i % 6);
+
+                    // ImGui::ColorButton(const char *desc_id, const ImVec4 &col)
+                    // ImGuiStyle style = ImGui::GetStyle();
+                    if(assets.files[i].type == FILE_TYPES::FOLDER_FILE) {
+                        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 0.8f, 1.0f)); // normal
+                    }
+                    else if(assets.files[i].type == FILE_TYPES::COMMON_FILE) {
+                        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.7f, 0.1f, 0.8f, 1.0f)); // normal
+                    }
+                    if(ImGui::Button(assets.files[i].completeName ,ImVec2(120,30))){
+                        switch (assets.files[i].type) {
+                            case FOLDER_FILE:{
+                                unsigned int lenght = strlen(assets.directory) + strlen(assets.files[i].completeName) + 1;
+                                char *p = (char*)malloc(lenght);
+                                memcpy(p, assets.directory, strlen(assets.directory));
+                                memcpy(p + strlen(assets.directory), assets.files[i].completeName, strlen(assets.files[i].completeName));
+                                p[lenght - 1] = 0;
+                                free(assets.directory);
+                                assets.directory = p;
+                                assets.update();
+                                break;
+                            };
+                            case COMMON_FILE:{
+
+                                break;
+                            };
+                        }
+                    }
+                    ImGui::PopStyleColor();
+                }
+                ImGui::EndTable();
+            }
         }
         ImGui::End();
 
         ImGui::SetNextWindowPos(ImVec2(x, k));
+        ImGui::SetNextWindowPos(ImVec2(x, k));
 
         actualLenght = (int)(400.0/1920.0 * totalLeng);
 
+        ImGui::SetNextWindowPos(ImVec2(x, k));
         ImGui::SetNextWindowSize(ImVec2(actualLenght, totalHeight));
 
         if(ImGui::Begin("Properties", nullptr, ImGuiWindowFlags_None)) {
@@ -702,11 +896,20 @@ void Render::imguiSetting() {
         ImGui::End();
 
         // ============================================================
-        bool a = 1;
+        bool a = 0;
+        ImGui::SetNextWindowDockID(dockspace_id, ImGuiCond_Once);
         ImGui::ShowDemoWindow(&a);
     }
 
 void Render::start(void(*op1)(),void(*op2)(),void(*op3)()){
+    stbi_set_flip_vertically_on_load (1);
+
+
+
+    char b[] = "/home/bandeira/Documents/GIT/PhysicsEngine/";
+    assets.directory = (char*)malloc(sizeof(b));
+    memcpy(assets.directory, b, sizeof(b));
+
     a.K[0] = glm::vec3(1,0,0);
     a.K[1] = glm::vec3(0,1,0);
     a.K[2] = glm::vec3(0,0,1);
@@ -726,16 +929,20 @@ void Render::start(void(*op1)(),void(*op2)(),void(*op3)()){
     a.maps[0] = "assets/3dmodels/Seta.png";
     pushModels(MeshGenData{
         "assets/3dmodels/Seta.obj"
-    },a,0);
+    },a,LAYER::SPECIAL_LAYER);
 
     a.maps[0] = "assets/3dmodels/cannon_01_diff_4k.jpg";
     pushModels(MeshGenData{
         "assets/3dmodels/cannon_01_4k.obj"
-    },a,COMMON_LAYER);
+    },a,LAYER::COMMON_LAYER);
     a.maps[0] = "assets/3dmodels/marble_bust_01_diff_4k.jpg";
     pushModels(MeshGenData{
         "assets/3dmodels/marble_bust_01_4k.obj"
-    },a,COMMON_LAYER);
+    },a,LAYER::COMMON_LAYER);
+    MaterialGenData c;
+    c.type = SOLID_COLOR;
+    vectorMaterialI =  allocMaterial(c);
+    assets.update();
     while(!glfwWindowShouldClose(glfwWin))
     {
         newframe();
@@ -758,6 +965,7 @@ void Render::start(void(*op1)(),void(*op2)(),void(*op3)()){
         glfwPollEvents();
         flags  = flags & ~(1&2);
     }
+    free(assets.directory);
 }
 
 
@@ -771,6 +979,10 @@ void Render::update() {
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
     }
 
+    if(assets.framesDelay <= assetsDelayCounter){
+        assets.update();
+        assetsDelayCounter = 0;
+    }
 
     for(int i = 0; i < LAYERS_COUNT; i++){
         if(minFramesToUp == 0 && flags & MODELS_CHANGE_FLAG) {
@@ -793,6 +1005,7 @@ void Render::update() {
         glBindFramebuffer(GL_READ_FRAMEBUFFER,0);
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER,0);
     }
+    assetsDelayCounter++;
 }
 
 void Render::updatePipeline(unsigned int layerIndex){
@@ -861,7 +1074,7 @@ void Render::updatePipeline(unsigned int layerIndex){
         memcpy(layerData->vertices + localVerticesNumber,
             actualMesh.vertices, sizeof(float) * actualMesh.verticesCount);
         memcpy(layerData->matrices + 16 *  i,
-            glm::value_ptr(actualMesh.matrix), sizeof(float) * 16);
+            glm::value_ptr(layerData->models[i].matrix), sizeof(float) * 16);
         memcpy(layerData->textureVertices + localTextureVerticesNumber,
             actualMesh.textureVertices, sizeof(float) * actualMesh.textureVerticesCount);
         memcpy(layerData->normalVertices + localNormalVerticesNumber,
@@ -884,13 +1097,13 @@ void Render::updatePipeline(unsigned int layerIndex){
         }
 
         for(unsigned int j = 0; j < actualMesh.verticesIndexCount; j++){
-            *(layerData->verticesIndex + localVerticesIndexNumber + j) += localVerticesNumber;
+            *(layerData->verticesIndex + localVerticesIndexNumber + j) += localVerticesNumber/3;
         }
         for(unsigned int j = 0; j < actualMesh.textureVerticesIndexCount; j++){
-            *(layerData->textureVerticesIndex + localVerticesIndexNumber + j) += localTextureVerticesNumber;
+            *(layerData->textureVerticesIndex + localVerticesIndexNumber + j) += localTextureVerticesNumber/2;
         }
         for(unsigned int j = 0; j < actualMesh.verticesIndexCount / 3; j++){
-            *(layerData->normalVerticesIndex + localVerticesIndexNumber/3 + j) += localNormalVerticesNumber;
+            *(layerData->normalVerticesIndex + localVerticesIndexNumber/3 + j) += localNormalVerticesNumber/3;
         }
 
 
@@ -1080,7 +1293,6 @@ void TextureHandler::rmTex(unsigned int index) {
     if(emptyTexturesCount > MAX_EMPTY_TEXTURES_COUNT ||
         (emptyTexturesCount > MIN_EMPTY_TEXTURES_COUNT_TO_RST &&
             emptyTexturesCount > texturesCount * MAX_RATIO_OF_EMPTY_TEXTURES)) {
-        printf("bahhh\n\n\n\n");
         return;
     }
     emptyTextures = (unsigned int*)realloc(emptyTextures, emptyTexturesCount);
