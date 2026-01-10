@@ -1,9 +1,9 @@
 #pragma once
+#include "log.hpp"
 
 struct Shader {
-  unsigned int Shaders[3];
-  Shader ();
-  Shader (const char *shadersPath[3]);
-  ~Shader();
-  void attach(unsigned int program);
+    unsigned int Shaders[3];
+    Shader ();
+    ~Shader();
+    void attach(unsigned int program);
 };

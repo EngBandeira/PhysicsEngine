@@ -1,0 +1,65 @@
+#pragma once
+#include "log.hpp"
+#include "utils.hpp"
+
+extern Log logger;
+extern Utils utils;
+
+enum AXIS { X, Y, Z };
+
+const float HALF = .5f;
+
+#define GLFW_INCLUDE_NONE
+#define STB_IMAGE_IMPLEMENTATION
+
+const char VERTEX_SHADERS_LOCALPATH[]   = "vShader.vert";
+const char FRAGMENT_SHADERS_LOCALPATH[] = "fShader.frag";
+const char GEOMETRY_SHADERS_LOCALPATH[] = "gShader.geom";
+const char RAW_TEX_EXTENSION[] =  "raw";
+
+const int TEXTURE_HANDLERS_COUNT = 7;
+const int LAYERS_COUNT           = 2;
+const int SSBO_PER_LAYER_COUNT   = 6;
+const int VBO_COUNT              = 2;
+const int LEVEL                  =  0;
+const double MOUSE_SENSI         = 0.05f;
+
+const double MAX_RATIO_OF_EMPTY_TEXTURES  = .5;
+const int MIN_EMPTY_TEXTURES_COUNT_TO_RST = 3;
+const int MAX_EMPTY_TEXTURES_COUNT        = 10;
+
+const int MATERIAL_CHANGE_FLAG = 1 << 0;
+const int MATRICES_CHANGE_FLAG = 1 << 1;
+const int MODELS_CHANGE_FLAG   = 1 << 2;
+
+// Render defines
+const int SCR_X = 1920;
+const int SCR_Y = 1080;
+
+const int MAX_FILE_EXTENSION_LENGHT = 6;
+const int RAW_TEX_EXTENSION_LENGHT  = 3;
+
+const int FRAMES_DELAY = 120;
+
+enum LAYER {
+    SPECIAL_LAYER,
+    COMMON_LAYER
+};
+
+enum SSBOS {
+    ModelMatricesSSBO ,
+    TextureCoordSSBO,
+    TextureIndexSSBO,
+    ModelsMaterialsSSBO,
+    NormalVecsSSBO,
+    NormalVecsIndexSSBO,
+    MaterialsSSBO
+};
+
+enum FILE_TYPES {
+    COMMON_FILE,
+    FOLDER_FILE,
+    MESH_FILE,
+    IMAGE_FILE,
+    CODE_FILE
+};

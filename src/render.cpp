@@ -1,7 +1,7 @@
-#include <complex>
+#include <X11/X.h>
+#include <glm/common.hpp>
+#include <glm/trigonometric.hpp>
 #define IMGUI_DEFINE_MATH_OPERATORS
-#include "vendor/imgui/imgui_internal.h"
-#include <iterator>
 #include <cstdio>
 #include <glm/geometric.hpp>
 #include <glm/exponential.hpp>
@@ -14,58 +14,44 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/matrix.hpp>
 #include <stdlib.h>
+#include "common.hpp"
 
-#include "utils.hpp"
-#include "vendor/glad/glad.h"//GLAD Always upper than GLFW
+#include "vendor/glad/glad.h" //GLAD Always upper than GLFW
 #include <GLFW/glfw3.h>
 
 #include "vendor/imgui/imgui.h"
 #include "vendor/imgui/imgui_impl_glfw.h"
 #include "vendor/imgui/imgui_impl_opengl3.h"
-#include "vendor/stb_image/stb_image.h"
+
 
 #include "render.hpp"
 #include "model.hpp"
 #include "shader.hpp"
 
-#define VERTEX_SHADERS_LOCALPATH "vShader.vert"
-#define FRAGMENT_SHADERS_LOCALPATH "fShader.frag"
-#define GEOMETRY_SHADERS_LOCALPATH "gShader.geom"
-#define LEVEL 0
-#define MOUSE_SENSI 0.05f
 
-#define MAX_RATIO_OF_EMPTY_TEXTURES .5
-#define MIN_EMPTY_TEXTURES_COUNT_TO_RST 3
-#define MAX_EMPTY_TEXTURES_COUNT 10
-
-#define MATERIAL_CHANGE_FLAG 1 << 0
-#define MATRICES_CHANGE_FLAG 1 << 1
-#define MODELS_CHANGE_FLAG 1 << 2
 
 unsigned int flags; // abcd efgh: h = Update renderData
 int fodase[16] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15};
 
-template<typename T, size_t N>
-bool matchPairs(T *buffer, int j, const T (&pairs)[N]) {
-    for(size_t i = 0; i < N; i++) {
-        if(buffer[i+j] != pairs[i]) return false;
-    }
-    return true;
-}
+// template<typename T, size_t N>
+// bool matchPairs(T *buffer, int j, const T (&pairs)[N]) {
+//     for(size_t i = 0; i < N; i++) {
+//         if(buffer[i+j] != pairs[i]) return false;
+//     }
+//     return true;
+// }
 
-void sendWarning(const char *msg) {
+// void setTexParameter(){
+//     glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
+//     glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+//     glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
+//     glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
+//     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_BASE_LEVEL, 0);
+//     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAX_LEVEL, LEVEL);
+// }
 
-}
 
-void send(const char *msg) {
-
-}
-
-void sendError(const char *msg) {
-    fprintf (stderr, "\n\nError: %s\n\n", msg);
-}
-
-void getShaderStatus(unsigned int shaderProgram,int status){
+void Render::getShaderStatus(unsigned int shaderProgram,int status){
     int linkStatus;
     glGetShaderiv(shaderProgram, status, &linkStatus);
     if (!linkStatus) {
@@ -74,12 +60,12 @@ void getShaderStatus(unsigned int shaderProgram,int status){
         char *c = (char*)malloc(infoLogLength + 1);
         glGetShaderInfoLog(shaderProgram, infoLogLength, nullptr, c);
         c[infoLogLength] = 0;
-        sendError(c);
+        logger.sendError(c);
         free(c);
     }
 }
 
-void getProgramStatus(unsigned int shaderProgram,int status){
+void Render::getProgramStatus(unsigned int shaderProgram,int status){
     int linkStatus;
     glGetProgramiv(shaderProgram, status, &linkStatus);
     if (!linkStatus) {
@@ -88,148 +74,25 @@ void getProgramStatus(unsigned int shaderProgram,int status){
         char *c = (char*)malloc(infoLogLength + 1);
         glGetProgramInfoLog(shaderProgram, infoLogLength, nullptr, c);
         c[infoLogLength] = 0;
-        sendError(c);
+        logger.sendError(c);
         free(c);
     }
 }
 
-void setTexParameter(){
-    glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_BASE_LEVEL, 0);
-    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAX_LEVEL, LEVEL);
-}
-
-void MeshRenderData::init(){
-
-    vertices = (float *)malloc(0);
-    matrices = (float *)malloc(0);
-    textureVertices = (float *)malloc(0);
-    normalVertices = (float *)malloc(0);
-
-    verticesIndex = (unsigned int *)malloc(0);
-    modelParent = (unsigned int *)malloc(0);
-    textureVerticesIndex = (unsigned int *)malloc(0);
-    normalVerticesIndex = (unsigned int *)malloc(0);
-    modelMaterial = (unsigned int *)malloc(0);
-}
-
-void MeshRenderData::freeData(){
-    free(vertices);
-    free(matrices);
-    free(textureVertices);
-    free(normalVertices);
-    free(verticesIndex);
-    free(modelParent);
-    free(textureVerticesIndex);
-    free(normalVerticesIndex);
-    free(modelMaterial);
-}
-
-RenderData::RenderData()
-{
-    for(int i = 0; i < LAYERS_COUNT; i++){
-        LayersData[i].init();
-    }
-
-    for(unsigned int i = 0; i < TEXTURE_HANDLERS_COUNT; i++){
-        textureHandlers[i].materialIndex = (unsigned int *)malloc(0);
-        textureHandlers[i].texDimensions = pow(2, i +6);
-        textureHandlers[i].emptyTextures = (unsigned int *)malloc(0);
-        textureHandlers[i].emptyTexturesCount = 0;
-    }
-
-    materials = (Material *)malloc(0);
-}
 
 
-void RenderData::freeData()
-{
-
-    for(unsigned int i =0; i < TEXTURE_HANDLERS_COUNT; i++) {
-        free(textureHandlers[i].materialIndex);
-        free(textureHandlers[i].emptyTextures);
-    }
-
-    for(int i = 0; i < LAYERS_COUNT; i++){
-        for(Model m: LayersData[i].models){
-            m.mesh.deleteMesh();
-        }
-        LayersData[i].freeData();
-    }
-
-    free(materials);
-
-}
-void RenderData::scaleModel(glm::vec3 scale, unsigned short index,unsigned int layerIndex) {
-    LayersData[layerIndex].models[index].scale(scale);
-
-    *getNMatrix(index, layerIndex) = LayersData[layerIndex].models[index].matrix;
-    flags = flags | MATRICES_CHANGE_FLAG;
-}
-
-void RenderData::scaleModel(float scale, unsigned short index,unsigned int layerIndex) {
-    scaleModel(glm::vec3(scale),index,layerIndex);
-}
-
-void RenderData::translateModel(glm::vec3 translation, unsigned short index,unsigned int layerIndex) {
-    LayersData[layerIndex].models[index].translate(translation);
-
-    *getNMatrix(index, layerIndex) = LayersData[layerIndex].models[index].matrix;
-    flags = flags | MATRICES_CHANGE_FLAG;
-}
-void RenderData::rotateModel(float angl, AXIS axis, unsigned short index,unsigned int layerIndex){
-    LayersData[layerIndex].models[index].rotate(angl, axis);
-
-    *getNMatrix(index, layerIndex) = LayersData[layerIndex].models[index].matrix;
-    flags = flags | MATRICES_CHANGE_FLAG;
-}
-void RenderData::positionateModel(glm::vec3 position, unsigned short index,unsigned int layerIndex) {
-    LayersData[layerIndex].models[index].positionate(position);
-
-    *getNMatrix(index, layerIndex) = LayersData[layerIndex].models[index].matrix;
-    flags = flags | MATRICES_CHANGE_FLAG;
-}
 
 
 // rotation[0][0] = r.x; rotation[1][0] = r.y; rotation[2][0] = r.z;
 // rotation[0][1] = u.x; rotation[1][1] = u.y; rotation[2][1] = u.z;
 // rotation[0][2] = -f.x; rotation[1][2] = -f.y; rotation[2][2] = -f.z;
 //
-glm::vec4 Camera::getUp(){
-    return translation * glm::vec4(rotation[0][1],rotation[1][1],rotation[2][1],rotation[3][1]);
-}
-glm::vec4 Camera::getFoward(){
-    return translation * glm::vec4(rotation[0][2],rotation[1][2],rotation[2][2],rotation[3][2]);
-}
-glm::vec4 Camera::getRight(){
-    return translation * glm::vec4(rotation[0][0],rotation[1][0],rotation[2][0],rotation[3][0]);
-}
-glm::vec4 Camera::getPosition(){
-    return translation * glm::vec4(0,0,0,1);
-}
-
-glm::vec4 RenderData::getPositionOfModel(unsigned short index,unsigned int layerIndex) {
-    return *getNMatrix(index, layerIndex) * glm::vec4(0,0,0,1);
-}
 
 
-Camera::Camera():translation(1), rotation(1), localTranslation(1)
-{
-    projMatrix = glm::perspective(glm::radians(45.0f),
-                                    (float)SCR_X / (float)SCR_Y, 0.1f, 100.0f);
-    viewMatrix = glm::lookAt(glm::vec3(0.0f, 0.0f, -5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-}
-
-glm::mat4 *RenderData::getNMatrix(unsigned short index,unsigned int layerIndex){
-    return (glm::mat4*)(LayersData[layerIndex].matrices + 16*index);
-}
 
 // 0123456789
 // x01x23x456
-unsigned short getOldIndexOfNew(unsigned short i, unsigned short n,unsigned short *index){
+unsigned short Render::getOldIndexOfNew(unsigned short i, unsigned short n,unsigned short *index){
     unsigned short rt = i;
     for (unsigned short j = 0; j < n; j++){
         if(index[j] <= rt){
@@ -240,11 +103,11 @@ unsigned short getOldIndexOfNew(unsigned short i, unsigned short n,unsigned shor
 }
 
 
-unsigned short getNewIndexOfOld(unsigned short i, unsigned short n,unsigned short *index){
+unsigned short Render::getNewIndexOfOld(unsigned short i, unsigned short n,unsigned short *index){
     unsigned short rt = i;
     for (unsigned short j = 0; j < n; j++){
         if(index[j] == i){
-            sendError("Acess of Delete Index");
+            logger.sendError("Acess of Delete Index");
             return 0;
         }
         if(index[j] < i)
@@ -256,86 +119,78 @@ unsigned short getNewIndexOfOld(unsigned short i, unsigned short n,unsigned shor
 unsigned int vectorMaterialI;
 
 unsigned int Render::setAVector(glm::vec3 positon,glm::vec3 direction){
-    unsigned int modelI = pushModels(MeshGenData {
+    unsigned int modelI = renderData.pushModels(MeshGenData {
         .path = "assets/3dmodels/Vector.obj"
-    },vectorMaterialI,LAYER::SPECIAL_LAYER);
+    }, vectorMaterialI,LAYER::SPECIAL_LAYER);
     updatePipeline(LAYER::SPECIAL_LAYER);
     glm::vec3 normali = glm::normalize(direction);
-    float theta = acos(normali.z);
-    float phi = atan2(normali.y, normali.x);
-    renderData.rotateModel(phi, AXIS::Z, modelI, LAYER::SPECIAL_LAYER);
-    renderData.rotateModel(theta, AXIS::Y, modelI, LAYER::SPECIAL_LAYER);
+    // float theta = acos(normali.z);
+    float theta = atan(abs(normali.z) / normali.x);
+    printf("angle: %f \n",glm::degrees(theta));
 
-    renderData.translateModel(positon, modelI, LAYER::SPECIAL_LAYER);
+    renderData.setAngleModel(glm::vec3(0,theta,0), modelI, LAYER::SPECIAL_LAYER);
+    // renderData.rotateModel(phi, AXIS::Z, modelI, LAYER::SPECIAL_LAYER);
+
+    // renderData.translateModel(positon, modelI, LAYER::SPECIAL_LAYER);
+    renderData.scaleModel(0.05, modelI, LAYER::SPECIAL_LAYER);
+    printf("direction: %f %f %f\n",direction.x,direction.y,direction.z);
     flags = flags | MODELS_CHANGE_FLAG;
     return modelI;
 }
 
-MaterialGenData::MaterialGenData(){
-    maps[0] = nullptr;
-    maps[1] = nullptr;
-    maps[2] = nullptr;
-    maps[3] = nullptr;
-}
+
 //returns the index of the point on the extension
 unsigned int getExtension(char *str,unsigned int size){
     unsigned int i = size - 2;
-    while(str[i] != '.' && i > 0)
-        i--;
+    while( str[i] != '.' && i > 0 ) i--;
     return i;
 }
-// abc.def
-// 0123456
 
 void Assets::update() {
-    if(files.size()) {
-        files.clear();
-    }
-    if(directory == nullptr)
-        return;
-    char *command = (char*)malloc(strlen(directory) + 19);
-    sprintf(command, "ls %s -p > .assets",directory);
-    pclose(popen(command,"r"));
+    if( files.size() ) files.clear();
+    if( directory == nullptr ) return;
+
+    char *command = (char*) malloc(strlen(directory) + 19);
+    sprintf(command, "ls %s -p > .assets", directory);
+    pclose(popen(command, "r"));
 
     unsigned int fileLenght;
-    char* buffer = readFile(".assets", &fileLenght);
+    char* buffer = utils.readFile(".assets", &fileLenght);
     unsigned int i = 0;
-    while(1){
+    while(1) {
+
         unsigned int k = i;
-        while(buffer[i] != '\n' && buffer[i] != 0){
-            i++;
-        }
-        if(buffer[i] == 0)
-            break;
-        if(i == k){
+        while( buffer[i] != '\n' && buffer[i] != 0 ) i++;
+
+        if( buffer[i] == 0 ) break;
+        if( i == k ){
             i++;
             continue;
         }
-        char *c = (char*)malloc(i - k + 1);
-        memcpy(c,buffer+k,i - k);
+        char *c = (char*) malloc(i - k + 1);
+        memcpy(c, (buffer + k), (i - k));
 
         c[i - k] = 0;
 
         unsigned int exteIndex = getExtension(c, i - k + 1);
         File file;
-        if(c[i - k - 1] == '/')
-            file.type = FILE_TYPES::FOLDER_FILE;
+        if( c[i - k - 1] == '/' ) file.type = FILE_TYPES::FOLDER_FILE;
         file.completeName = c;
-        if(exteIndex == 0) {
+        if( exteIndex == 0 ) {
             file.extension = nullptr;
             file.simpleName = c;
         }
-
         else {
             file.extension = (char*)malloc(i - k + 1 - exteIndex);
             memcpy(file.extension, c+exteIndex, i - k + 1 - exteIndex);
             file.extension[i - k - exteIndex] = 0;
 
-            file.simpleName = (char*)malloc(exteIndex+1);
+            file.simpleName = (char*)malloc(exteIndex + 1);
             memcpy(file.simpleName, c, exteIndex);
             file.simpleName[exteIndex] = 0;
         }
 
+        if( file.extension != nullptr && utils.matchPairs(file.extension, 1, {'o', 'b', 'j'}) ) file.type = MESH_FILE;
         files.push_back(file);
         i++;
     }
@@ -346,23 +201,21 @@ void Assets::update() {
     free(buffer);
 }
 
-Render::Render(GLFWwindow *win):  camera(),
-            shader((const char *[3]){
-                VERTEX_SHADERS_LOCALPATH,
-                FRAGMENT_SHADERS_LOCALPATH,
-                GEOMETRY_SHADERS_LOCALPATH}),glfwWin(win) {
+Render::Render(GLFWwindow *win) : glfwWin(win) {
 
+    renderData.flags = &flags;
     shaderProgram = glCreateProgram();
     shader.attach(shaderProgram);
 
-    if (transFeed) {
-        const GLchar *feedbackVaryings[] = {"transformFeedback"};
+    if( transFeed ) {
+        const GLchar *feedbackVaryings[] = { "transformFeedback" };
         glTransformFeedbackVaryings(shaderProgram, 1, feedbackVaryings,
                                     GL_INTERLEAVED_ATTRIBS);
 
-        feedbacknumber = 4 * renderData.LayersData[1].verticesIndexCount;
+        feedbacknumber = 4 * renderData.layers[1].verticesIndexCount;
         feedbacksize = feedbacknumber * sizeof(float);
     }
+
 
     glLinkProgram(shaderProgram);
     getProgramStatus(shaderProgram,GL_LINK_STATUS);
@@ -376,12 +229,11 @@ Render::~Render() {
         glDeleteQueries(1,&QUERY);
         glDeleteBuffers(1, &TBO);
     }
-    for(int i = 0; i < LAYERS_COUNT; i++){
-
-        glDeleteBuffers(1, &renderData.LayersData[i].ebo);
-        glDeleteBuffers(VBO_COUNT,renderData.LayersData[i].vbos);
-        glDeleteVertexArrays(1,&renderData.LayersData[i].vao);
-        glDeleteBuffers(SSBO_PER_LAYER_COUNT,renderData.LayersData[i].ssbos);
+    for( int i = 0; i < LAYERS_COUNT; i++ ) {
+        glDeleteBuffers(1, &renderData.layers[i].ebo);
+        glDeleteBuffers(VBO_COUNT,renderData.layers[i].vbos);
+        glDeleteVertexArrays(1,&renderData.layers[i].vao);
+        glDeleteBuffers(SSBO_PER_LAYER_COUNT,renderData.layers[i].ssbos);
     }
     glDeleteBuffers(1,&renderData.materialsSSBO);
 
@@ -392,80 +244,8 @@ Render::~Render() {
     glDeleteTextures(1,&texToShowFrom);
     glDeleteProgram(shaderProgram);
 }
+
 MaterialGenData a;
-void Render::input()
-{
-    if(selectedModelIndex <renderData.LayersData[LAYER::COMMON_LAYER].models.size()){
-        renderData.positionateModel(renderData.LayersData[LAYER::COMMON_LAYER].models[selectedModelIndex].getPosition(), 0, LAYER::SPECIAL_LAYER);
-    }
-    ImGuiIO& io = ImGui::GetIO();
-    if (ImGui::IsWindowFocused() && ImGui::GetMousePos().y >=ImGui::GetCursorScreenPos().y) {
-        if(ImGui::IsKeyPressed(ImGuiKey_UpArrow)) {
-            glm::vec3 camP = camera.getPosition();
-            glm::vec3 normal = camera.getFoward();
-            ImVec2 per = (io.MousePos/ ImGui::GetWindowSize()- ImVec2(0.5f,0.5f));
-            glm::vec3 pica = camera.getRight() * -1.f * per.x + camera.getUp() * -1.f * per.y;
-            glm::vec3 ajtd = pica + normal;
-            // renderData.positionateModel(camP + ajtd * 3.0f, 0, LAYER::COMMON);
-            setAVector(glm::vec3(0,0,0), glm::vec3(1,0,0));
-        }
-        if(io.MouseDown[1]) {
-            ImVec2 mousePos = io.MousePos;
-            ImVec2 windowCenter = ImGui::GetWindowSize();
-            windowCenter.x *= .5;
-            windowCenter.y *= .5;
-            windowCenter = windowCenter +ImGui::GetWindowPos();
-
-            ImGui::SetMouseCursor(ImGuiMouseCursor_None);
-
-            ImVec2  mouseDelta = ImVec2(0,0);
-            if(io.MouseDelta.x && io.MouseDelta.y)
-                mouseDelta = ImVec2(mousePos.x - windowCenter.x,mousePos.y - windowCenter.y);
-
-
-            glfwSetCursorPos(glfwWin,windowCenter.x,windowCenter.y);
-            ImGui::Dummy(ImVec2(0,0));
-
-            camera.angle.x += MOUSE_SENSI*mouseDelta.x;
-            camera.angle.y += .5f*MOUSE_SENSI*mouseDelta.y;
-            camera.rotation = glm::rotate(glm::mat4(1),glm::radians(camera.angle.x), glm::vec3(0, 1, 0));
-            camera.rotation = glm::rotate(camera.rotation,glm::radians(camera.angle.y), glm::vec3(camera.getRight()));
-            float b = .3;
-
-            renderData.scaleModel(glm::max(0.015f * glm::length(camera.getPosition() - renderData.getPositionOfModel(0, 0)),0.00001f), 0, 0);
-
-            if (ImGui::IsKeyPressed(ImGuiKey_UpArrow)) {
-                renderData.translateModel(glm::vec3(.1,0,0), 0, LAYER::COMMON_LAYER);
-            }
-            if (ImGui::IsKeyPressed(ImGuiKey_A)) {
-                camera.localTranslation = glm::translate(camera.localTranslation, b*glm::vec3(camera.getRight()));
-            }
-            if (ImGui::IsKeyPressed(ImGuiKey_D)) {
-                camera.localTranslation = glm::translate(camera.localTranslation, b*glm::vec3(-camera.getRight()));
-            }
-            if (ImGui::IsKeyPressed(ImGuiKey_W)) {
-                camera.localTranslation = glm::translate(camera.localTranslation, b*glm::vec3(camera.getFoward()));
-            }
-            if (ImGui::IsKeyPressed(ImGuiKey_S)) {
-                camera.localTranslation = glm::translate(camera.localTranslation, b*glm::vec3(-camera.getFoward()));
-            }
-
-            camera.translation = camera.localTranslation;
-            camera.viewMatrix = camera.rotation * camera.translation;
-        }
-
-        if(io.MouseReleased[1]) {
-            ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
-        }
-    }
-
-    if (ImGui::IsKeyPressed(ImGuiKey_Escape))
-    {
-        glfwSetWindowShouldClose(glfwWin, true);
-    }
-}
-
-
 
 void Render::once()
 {
@@ -474,7 +254,7 @@ void Render::once()
         glGenBuffers(1, &TBO);
     }
     for(int i = 0; i < LAYERS_COUNT; i++){
-        MeshRenderData *data = renderData.LayersData +i;
+        MeshRenderData *data = renderData.layers +i;
         glGenVertexArrays(1,&data->vao);
         glBindVertexArray(data->vao);
 
@@ -495,10 +275,10 @@ void Render::once()
         glGenBuffers(1, &data->ebo);
 
 
-        glGenBuffers(SSBO_PER_LAYER_COUNT, renderData.LayersData[i].ssbos);
+        glGenBuffers(SSBO_PER_LAYER_COUNT, renderData.layers[i].ssbos);
         for(unsigned int j = 0; j < SSBO_PER_LAYER_COUNT; j++){
-            glBindBuffer(GL_SHADER_STORAGE_BUFFER, renderData.LayersData[i].ssbos[j]);
-            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, j, renderData.LayersData[i].ssbos[j]);
+            glBindBuffer(GL_SHADER_STORAGE_BUFFER, renderData.layers[i].ssbos[j]);
+            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, j, renderData.layers[i].ssbos[j]);
         }
     }
 
@@ -576,8 +356,7 @@ void Render::once()
 
     // allocMaterial(MaterialGenData{});
 
-    ImGuiIO& io = ImGui::GetIO();
-    io.FontGlobalScale = 2;
+
 }
 
 
@@ -605,7 +384,7 @@ void Render::newframe()
 
 void Render::renderDrawing(unsigned int layerIndex)
 {
-    MeshRenderData *layerData = renderData.LayersData + layerIndex;
+    MeshRenderData *layerData = renderData.layers + layerIndex;
 
     for(unsigned short i = 0; i < TEXTURE_HANDLERS_COUNT; i++) {
         glActiveTexture(GL_TEXTURE0+i);
@@ -675,236 +454,9 @@ void Render::renderDrawing(unsigned int layerIndex)
     glBindVertexArray(0);
 }
 
-ImGuiWindowFlags dockspace_flags =
-    ImGuiWindowFlags_NoDocking |
-    ImGuiWindowFlags_NoTitleBar |
-    ImGuiWindowFlags_NoCollapse |
-    ImGuiWindowFlags_NoResize |
-    ImGuiWindowFlags_NoMove |
-    ImGuiWindowFlags_NoBringToFrontOnFocus |
-    ImGuiWindowFlags_NoNavFocus;
-
-void Render::imguiSetting() {
-        ImGuiViewport *view = ImGui::GetMainViewport();
-
-        // Dimensões totais da janela principal
-        int totalLeng = view->Size.x;
-        int totalHeight = view->Size.y;
-
-        int k = 30;  // Altura da barra de menus
-
-        ImGuiID dockspace_id = ImGuiID(), dockspace_id2;
-        dockspace_id2 = dockspace_id;
-        ImGui::NewFrame();
-
-        if(ImGui::BeginMainMenuBar()) {
-            if(ImGui::BeginMenu("File")) {
-                ImGui::MenuItem("Pinto");
-                ImGui::EndMenu();
-            }
-            if(ImGui::BeginMenu("Preferences")) {
-                ImGui::MenuItem("Pinto");
-                ImGui::EndMenu();
-            }
-            if(ImGui::BeginMenu("Models")) {
-                if(ImGui::BeginMenu("Standarts")) {
-                    ImGui::MenuItem("Cube");
-                    ImGui::EndMenu();
-                }
-                ImGui::EndMenu();
-            }
-            ImGui::EndMainMenuBar();
-        }
-
-        int x = 0, actualLenght;
-
-        ImGui::SetNextWindowPos(ImVec2(x, k));
-
-        // Largura: 300px em 1920x1080
-        actualLenght = (int)(300.0/1920.0 * totalLeng);
-
-        ImGui::SetNextWindowSize(ImVec2(actualLenght, totalHeight));
-        x += actualLenght;
-
-        // Cria janela com docking para Debug e World
-        if(ImGui::Begin("Debug & World", nullptr, ImGuiWindowFlags_NoTitleBar)) {
-            dockspace_id2 = ImGui::GetID("MyDockSpacePintassimo");
-            ImGui::DockSpace(dockspace_id2, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_None);
-        }
-        ImGui::End();
-
-        ImGui::SetNextWindowDockID(dockspace_id2, ImGuiCond_Once);
-        if(ImGui::Begin("Debug", nullptr, ImGuiWindowFlags_None)) {
-            // Conteúdo da janela Debug
-        }
-        ImGui::End();
-
-        ImGui::SetNextWindowDockID(dockspace_id2, ImGuiCond_Once);
-        if(ImGui::Begin("World", nullptr, ImGuiWindowFlags_None)) {
-            ImGui::Text("Assets path: %s",assets.directory);
-            ImGui::Text("Assets numner: %d",assets.files.size());
-            ImGui::Text("LAYER::COMMON");
-            if(ImGui::Button("AddC")) {
-                if(selectedModelIndex < renderData.LayersData[LAYER::COMMON_LAYER].models.size()) {
-                    const char *meshPath = renderData.LayersData[LAYER::COMMON_LAYER].models[selectedModelIndex].mesh.meshPath;
-                }
-            }
-            ImGui::SameLine();
-            if(ImGui::Button("RemoveC")) {
-                if(renderData.LayersData[LAYER::COMMON_LAYER].models.size() > selectedModelIndex) {
-                    popModels(selectedModelIndex, LAYER::COMMON_LAYER);
-                    if(selectedModelIndex > 0) selectedModelIndex--;
-                }
-            }
-            if(ImGui::BeginTable("LAYER::COMMON", 1)) {
-                char label[100];
-                for(unsigned int i = 0; i < renderData.LayersData[LAYER::COMMON_LAYER].models.size(); i++) {
-                    ImGui::TableNextRow();
-                    ImGui::TableSetColumnIndex(0);
-                    sprintf(label, "Model %d", i);
-                    if(i == selectedModelIndex) {
-                        ImGui::TableSetBgColor(
-                            ImGuiTableBgTarget_RowBg0,
-                            IM_COL32(38, 38, 38, 255)
-                        );
-                    }
-                    if(ImGui::Selectable(label)) {
-                        selectedModelIndex = i;
-                    }
-                }
-                ImGui::EndTable();
-            }
-            ImGui::Text("LAYER::SPECIAL");
-            if(ImGui::Button("AddS")) {
-                if(selectedModelIndex < renderData.LayersData[LAYER::SPECIAL_LAYER].models.size()) {
-                    const char *meshPath = renderData.LayersData[LAYER::SPECIAL_LAYER].models[selectedModelIndex].mesh.meshPath;
-                }
-            }
-            ImGui::SameLine();
-            if(ImGui::Button("RemoveS")) {
-                if(renderData.LayersData[LAYER::SPECIAL_LAYER].models.size() > selectedModelIndex) {
-                    popModels(selectedModelIndex, LAYER::SPECIAL_LAYER);
-                    if(selectedModelIndex > 0) selectedModelIndex--;
-                }
-            }
-            if(ImGui::BeginTable("LAYER::SPECIAL", 1)) {
-                char label[100];
-                for(unsigned int i = 0; i < renderData.LayersData[LAYER::SPECIAL_LAYER].models.size(); i++) {
-                    ImGui::TableNextRow();
-                    ImGui::TableSetColumnIndex(0);
-                    sprintf(label, "Model %d", i);
-                    if(i == selectedModelIndex) {
-                        ImGui::TableSetBgColor(
-                            ImGuiTableBgTarget_RowBg0,
-                            IM_COL32(38, 38, 38, 255)
-                        );
-                    }
-                    if(ImGui::Selectable(label)) {
-                        selectedModelIndex = i;
-                    }
-                }
-                ImGui::EndTable();
-            }
-        }
-        ImGui::End();
-
-        ImGui::SetNextWindowPos(ImVec2(x, k));
-
-        actualLenght = (int)(1220.0/1920.0 * totalLeng);
-
-        int b = (int)(670.0/1920.0 * totalLeng);
-
-        ImGui::SetNextWindowSize(ImVec2(actualLenght, b));
-
-        if(ImGui::Begin("Central Space", nullptr, dockspace_flags)) {
-            dockspace_id = ImGui::GetID("MyDockSpace");
-            ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_None);
-        }
-        ImGui::End();
-
-        ImGui::SetNextWindowDockID(dockspace_id, ImGuiCond_Once);
-        if(ImGui::Begin("Game", nullptr, ImGuiWindowFlags_None)) {
-            input();
-            ImGui::GetWindowDrawList()->AddImage((void *)texToShowFrom,
-                                                ImGui::GetWindowPos(),
-                                                ImGui::GetWindowSize() + ImGui::GetWindowPos(),
-                                                ImVec2(0, 1),
-                                                ImVec2(1, 0));
-        }
-        ImGui::End();
-
-        ImGui::SetNextWindowDockID(dockspace_id, ImGuiCond_Once);
-        if(ImGui::Begin("Final", nullptr, ImGuiWindowFlags_None)) {
-        }
-        ImGui::End();
-
-        ImGui::SetNextWindowPos(ImVec2(x, b));
-        ImGui::SetNextWindowSize(ImVec2(actualLenght, totalHeight - b));
-        x += actualLenght;
-
-        if(ImGui::Begin("Assets", nullptr, ImGuiWindowFlags_None)) {
-            if(ImGui::BeginTable("Files",6)){
-                for(int i = 0; i < assets.files.size(); i ++){
-                    if(!(i % 6))
-                        ImGui::TableNextRow();
-                    ImGui::TableSetColumnIndex(i % 6);
-
-                    // ImGui::ColorButton(const char *desc_id, const ImVec4 &col)
-                    // ImGuiStyle style = ImGui::GetStyle();
-                    if(assets.files[i].type == FILE_TYPES::FOLDER_FILE) {
-                        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 0.8f, 1.0f)); // normal
-                    }
-                    else if(assets.files[i].type == FILE_TYPES::COMMON_FILE) {
-                        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.7f, 0.1f, 0.8f, 1.0f)); // normal
-                    }
-                    if(ImGui::Button(assets.files[i].completeName ,ImVec2(120,30))){
-                        switch (assets.files[i].type) {
-                            case FOLDER_FILE:{
-                                unsigned int lenght = strlen(assets.directory) + strlen(assets.files[i].completeName) + 1;
-                                char *p = (char*)malloc(lenght);
-                                memcpy(p, assets.directory, strlen(assets.directory));
-                                memcpy(p + strlen(assets.directory), assets.files[i].completeName, strlen(assets.files[i].completeName));
-                                p[lenght - 1] = 0;
-                                free(assets.directory);
-                                assets.directory = p;
-                                assets.update();
-                                break;
-                            };
-                            case COMMON_FILE:{
-
-                                break;
-                            };
-                        }
-                    }
-                    ImGui::PopStyleColor();
-                }
-                ImGui::EndTable();
-            }
-        }
-        ImGui::End();
-
-        ImGui::SetNextWindowPos(ImVec2(x, k));
-        ImGui::SetNextWindowPos(ImVec2(x, k));
-
-        actualLenght = (int)(400.0/1920.0 * totalLeng);
-
-        ImGui::SetNextWindowPos(ImVec2(x, k));
-        ImGui::SetNextWindowSize(ImVec2(actualLenght, totalHeight));
-
-        if(ImGui::Begin("Properties", nullptr, ImGuiWindowFlags_None)) {
-        }
-        ImGui::End();
-
-        // ============================================================
-        bool a = 0;
-        ImGui::SetNextWindowDockID(dockspace_id, ImGuiCond_Once);
-        ImGui::ShowDemoWindow(&a);
-    }
-
 void Render::start(void(*op1)(),void(*op2)(),void(*op3)()){
-    stbi_set_flip_vertically_on_load (1);
 
-
+    logger.terminal.lines.push_back("viadinho de merda");
 
     char b[] = "/home/bandeira/Documents/GIT/PhysicsEngine/";
     assets.directory = (char*)malloc(sizeof(b));
@@ -925,23 +477,25 @@ void Render::start(void(*op1)(),void(*op2)(),void(*op3)()){
     camera.translation[3][2] = 5;
     camera.rotation = glm::rotate(camera.rotation,3.14f, glm::vec3(0, 1, 0));
 
+
+
     a.type = TEXTURE;
     a.maps[0] = "assets/3dmodels/Seta.png";
-    pushModels(MeshGenData{
+    renderData.pushModels(MeshGenData{
         "assets/3dmodels/Seta.obj"
     },a,LAYER::SPECIAL_LAYER);
 
     a.maps[0] = "assets/3dmodels/cannon_01_diff_4k.jpg";
-    pushModels(MeshGenData{
+    renderData.pushModels(MeshGenData{
         "assets/3dmodels/cannon_01_4k.obj"
     },a,LAYER::COMMON_LAYER);
     a.maps[0] = "assets/3dmodels/marble_bust_01_diff_4k.jpg";
-    pushModels(MeshGenData{
+    renderData.pushModels(MeshGenData{
         "assets/3dmodels/marble_bust_01_4k.obj"
     },a,LAYER::COMMON_LAYER);
     MaterialGenData c;
     c.type = SOLID_COLOR;
-    vectorMaterialI =  allocMaterial(c);
+    vectorMaterialI =  renderData.allocMaterial(c);
     assets.update();
     while(!glfwWindowShouldClose(glfwWin))
     {
@@ -953,7 +507,7 @@ void Render::start(void(*op1)(),void(*op2)(),void(*op3)()){
 
         op2();
 
-        imguiSetting();
+        ui();
 
         op3();
 
@@ -979,20 +533,20 @@ void Render::update() {
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
     }
 
-    if(assets.framesDelay <= assetsDelayCounter){
+    if(assets.framesDelay <= assets.delayCounter){
         assets.update();
-        assetsDelayCounter = 0;
+        assets.delayCounter = 0;
     }
 
     for(int i = 0; i < LAYERS_COUNT; i++){
-        if(minFramesToUp == 0 && flags & MODELS_CHANGE_FLAG) {
+        if(renderData.delayCounter == 0 && flags & MODELS_CHANGE_FLAG) {
             updatePipeline(i);
         }
         renderDrawing(i);
     }
 
-    if(minFramesToUp > 0)
-            minFramesToUp--;
+    if(renderData.delayCounter > 0)
+            renderData.delayCounter--;
     flags = flags & ~(MODELS_CHANGE_FLAG);
     flags = flags & ~(MATRICES_CHANGE_FLAG);
 
@@ -1005,12 +559,12 @@ void Render::update() {
         glBindFramebuffer(GL_READ_FRAMEBUFFER,0);
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER,0);
     }
-    assetsDelayCounter++;
+    assets.delayCounter++;
 }
 
 void Render::updatePipeline(unsigned int layerIndex){
-    MeshRenderData *layerData = renderData.LayersData + layerIndex;
-    if(minFramesToUp == -1)
+    MeshRenderData *layerData = renderData.layers + layerIndex;
+    if(renderData.delayCounter == -1)
         return;
 
 
@@ -1025,8 +579,9 @@ void Render::updatePipeline(unsigned int layerIndex){
     layerData->textureVerticesCount = 0;
     layerData->textureVerticesIndexCount = 0;
     layerData->normalVerticesCount = 0;
-    layerData->verticesIndexOffset = 0;if(minFramesToUp > 0){
-            minFramesToUp--;
+    layerData->verticesIndexOffset = 0;
+    if(renderData.delayCounter > 0){
+            renderData.delayCounter--;
             return;
         }
     layerData->textureIndexOffset = 0;
@@ -1161,203 +716,4 @@ void Render::updatePipeline(unsigned int layerIndex){
         glBindVertexArray(0);
     }
 
-}
-
-// WW:widht
-// HH:height
-// BB: bpp
-//0xFFRAWIMGWWHHBB
-//0123
-TextureLocation RenderData::addTexToHandler(char *localPath,bool toProcess) {
-    char *path = localPath;
-    if(toProcess) {
-        int i = 0,k;
-        while(path[i] != 0) {
-            if(path[i] == '.')
-                k = i;
-            i++;
-        }
-        char *newPath = (char*)malloc(k+RAW_TEX_EXTENSION_LENGHT+2);//path + '.' + RAW_TEX_EXTENSION + '\0'
-        memcpy(newPath, path, k+1);
-        for(int j = 0; j < RAW_TEX_EXTENSION_LENGHT; j++) {
-            newPath[k+1+j] = RAW_TEX_EXTENSION[j];
-        }
-        newPath[k+1+RAW_TEX_EXTENSION_LENGHT] = 0;
-        if(access(newPath,F_OK)) {
-            int width, height,bpp;
-            stbi_set_flip_vertically_on_load (1);
-            //localBuffeSize = 4 * width * width
-            unsigned char *localBuffer = stbi_load(path, &width,  &height, &bpp, 4);
-            if(localPath == nullptr){
-                sendError("image do not exist");
-                exit(EXIT_FAILURE);
-            }
-            if(width != height) {
-                sendError("Width != Height");
-                exit(EXIT_FAILURE);
-            }
-            if(width > 4096) {
-                sendError("Width,Height > 4096");
-                exit(EXIT_FAILURE);
-            }
-
-            path = newPath;
-            FILE *file = fopen(path,"wb");
-            char c[14];//13 is the lenght of 0xFFRAWIMGWWHHBB
-            sprintf(c, "\xffRAWIMG");
-            fwrite(c, sizeof(char), 7, file);
-            char f[6];
-            f[0] = (unsigned char)width;
-            f[1] = (unsigned char)(width >> 8);
-            f[2] = (unsigned char)height;
-            f[3] = (unsigned char)(height >> 8);
-            f[4] = (unsigned char)bpp;
-            f[5] = (unsigned char)(bpp >> 8);
-            fwrite(f, sizeof(char), 6, file);
-
-            fwrite(localBuffer, 1, 4 * width * width, file);
-            fclose(file);
-        }
-        else {
-            path = newPath;
-            // free(newPath);
-        }
-    }
-
-
-    // i - k - 1;
-    // stbi_set_flip_vertically_on_load (1);
-    unsigned int lenght;
-    unsigned char* localBuffer = (unsigned char*)readFile(path, &lenght,"rb");
-    if(!matchPairs(localBuffer, 0, (unsigned char[]){(unsigned char)'\xff','R','A','W','I','M','G'})) {
-        sendError("addTexToHandler, file of wrong type");
-        return TextureLocation();
-    }
-
-    unsigned short width = *((unsigned short*)(localBuffer + 7));
-    // unsigned short height = *((unsigned short*)(localBuffer + 9));
-    // unsigned short bpp = *((unsigned short*)(localBuffer + 11));
-
-
-    unsigned char handlerIndex = (unsigned char)floor(log2(width)-6);
-    unsigned int index = textureHandlers[handlerIndex].addTex((unsigned char*)localBuffer+13);
-    free(localBuffer);
-    if(toProcess){
-        free(path);
-    }
-    return TextureLocation {
-        handler: handlerIndex,
-        index: index
-    };
-}
-
-unsigned int TextureHandler::addTex(unsigned char *localBuffer){
-    if(emptyTexturesCount) {
-        unsigned int i = emptyTextures[0];
-        glBindTexture(GL_TEXTURE_2D_ARRAY,texture);
-        glTexSubImage3D(GL_TEXTURE_2D_ARRAY, LEVEL, 0, 0,
-                            i-1, texDimensions, texDimensions, 1, GL_RGBA, GL_UNSIGNED_BYTE, localBuffer);
-
-        emptyTexturesCount--;
-        emptyTextures = (unsigned int*)realloc(emptyTextures, emptyTexturesCount * sizeof(int));
-        return i;
-    }
-
-    glBindTexture(GL_TEXTURE_2D_ARRAY, *texUtilitary);
-    glTexImage3D(GL_TEXTURE_2D_ARRAY,LEVEL,GL_RGBA8 ,texDimensions,texDimensions,texturesCount+1,0,GL_RGBA,GL_UNSIGNED_BYTE,nullptr);
-
-    setTexParameter();
-
-    glCopyImageSubData(texture,GL_TEXTURE_2D_ARRAY,LEVEL,0,0,0,*texUtilitary,GL_TEXTURE_2D_ARRAY,LEVEL,
-                    0,0,0,texDimensions,texDimensions,texturesCount);
-
-    glTexSubImage3D(GL_TEXTURE_2D_ARRAY, LEVEL, 0, 0,
-                        texturesCount, texDimensions, texDimensions, 1, GL_RGBA, GL_UNSIGNED_BYTE, localBuffer);
-
-    glBindTexture(GL_TEXTURE_2D_ARRAY,texture);
-
-    glTexImage3D(GL_TEXTURE_2D_ARRAY,LEVEL,GL_RGBA8 ,0,0,0,0,GL_RGBA,GL_UNSIGNED_BYTE,nullptr);
-    glBindTexture(GL_TEXTURE_2D_ARRAY,0);
-
-    texturesCount++;
-
-    unsigned int cache = texture;
-    texture = *texUtilitary;
-    *texUtilitary = cache;
-
-    return texturesCount-1;
-}
-
-void TextureHandler::rmTex(unsigned int index) {
-    emptyTexturesCount++;
-    if(emptyTexturesCount > MAX_EMPTY_TEXTURES_COUNT ||
-        (emptyTexturesCount > MIN_EMPTY_TEXTURES_COUNT_TO_RST &&
-            emptyTexturesCount > texturesCount * MAX_RATIO_OF_EMPTY_TEXTURES)) {
-        return;
-    }
-    emptyTextures = (unsigned int*)realloc(emptyTextures, emptyTexturesCount);
-    emptyTextures[emptyTexturesCount-1] = index;
-}
-
-unsigned int Render::pushModels(MeshGenData mesh,unsigned int materialIndex, unsigned int layerIndex) {
-    flags = flags | MODELS_CHANGE_FLAG;
-    minFramesToUp = 0;
-    renderData.LayersData[layerIndex].models.push_back(Model(Mesh(mesh),materialIndex));
-    return renderData.LayersData[layerIndex].models.size() -1;
-}
-
-unsigned int Render::pushModels(MeshGenData mesh,MaterialGenData material, unsigned int layerIndex) {
-    return pushModels(mesh,allocMaterial(material),layerIndex);
-}
-
-unsigned int Render::pushModels(MeshGenData mesh, unsigned int layerIndex) {
-    return pushModels(mesh,0,layerIndex);
-}
-
-void Render::popModels(unsigned int index,unsigned int layerIndex) {
-    if(index >= renderData.LayersData[layerIndex].models.size()){
-        sendError("Render::popModels :index > models.size()\n");
-        exit(EXIT_FAILURE);
-    }
-    flags = flags | MODELS_CHANGE_FLAG;
-    renderData.LayersData[layerIndex].models.erase(renderData.LayersData[layerIndex].models.begin() + index);
-}
-
-
-unsigned int Render::allocMaterial(MaterialGenData data){
-    renderData.materialsCount++;
-    renderData.materials = (Material*)realloc(renderData.materials, sizeof(Material) * renderData.materialsCount);
-    Material *mater = renderData.materials + renderData.materialsCount-1;
-
-    mater->Ni = data.Ni;
-    mater->bm = data.bm;
-    mater->d = data.d;
-    mater->type  = data.type;
-    for(int i = 0; i < 3; i++){
-        mater->K[3 * i] = data.K[i].x;
-        mater->K[3 * i + 1] = data.K[i].y;
-        mater->K[3 * i + 2] = data.K[i].z;
-
-        if(data.type == TEXTURE && data.maps[i] != nullptr)
-            mater->maps[i] = renderData.addTexToHandler(data.maps[i]);
-    }
-    if(data.maps[3] != nullptr)
-        mater->maps[3] = renderData.addTexToHandler(data.maps[3]);
-
-    flags = flags | MATERIAL_CHANGE_FLAG;
-    return renderData.materialsCount - 1;
-}
-
-void Render::freeMaterial(unsigned int index){
-    Material *newMat = (Material*)malloc(sizeof(Material) * (renderData.materialsCount - 1));
-    if(index > 0){
-        memcpy(newMat, renderData.materials,index);
-    }
-    if(index > renderData.materialsCount - 1){
-        memcpy(newMat+index+1, renderData.materials,renderData.materialsCount - 1 - index);
-    }
-    free(renderData.materials);
-    renderData.materials = newMat;
-    renderData.materialsCount--;
-    flags = flags | MATERIAL_CHANGE_FLAG;
 }

@@ -1,3 +1,4 @@
+#include "common.hpp"
 
 #include <cstdlib>
 #include <glm/ext/matrix_transform.hpp>
@@ -5,7 +6,6 @@
 #include <bits/stdc++.h>
 #include <stdio.h>
 
-#define GLFW_INCLUDE_NONE
 #include "vendor/glad/glad.h"
 #include <GLFW/glfw3.h>
 
@@ -17,15 +17,8 @@
 #include "vendor/imgui/imgui_impl_glfw.h"
 #include "vendor/imgui/imgui_impl_opengl3.h"
 
-#define STB_IMAGE_IMPLEMENTATION
-#include "vendor/stb_image/stb_image.h"
-
 #include "render.hpp"
 
-
-#define VERTEX_SHADERS_LOCALPATH "vShader.vert"
-#define FRAGMENT_SHADERS_LOCALPATH "fShader.frag"
-#define GEOMETRY_SHADERS_LOCALPATH "gShader.geom"
 
 // 4.6 (Core Profile) Mesa 25.1.3-arch1.3
 void framebuffer_size_callback(GLFWwindow *window, int width, int height);
@@ -49,7 +42,7 @@ int main() {
         glfwCreateWindow(SCR_X, SCR_Y, "PhysicsEngine", NULL, NULL);
 
     if (bigWindow == NULL) {
-        sendError("failed to crate a Glfw Window");
+        logger.sendError("failed to crate a Glfw Window", 1);
         glfwTerminate();
         return -1;
     }
@@ -60,8 +53,7 @@ int main() {
                                     glViewport(0, 0, width, height);
                                     });
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
-        sendError("cannot init glad");
-        return -1;
+        logger.sendError("cannot init glad", 1);
     }
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_DEBUG_OUTPUT);
@@ -102,6 +94,7 @@ int main() {
     glfwTerminate();
     return 0;
 }
+
 void error_callback(GLenum source, GLenum type, unsigned int id,
                     GLenum severity, GLsizei length, const GLchar *message,
                     const void *userParam) {
@@ -113,8 +106,6 @@ void error_callback(GLenum source, GLenum type, unsigned int id,
                 severity, message);
     }
 }
-
-
 
 void framebuffer_size_callback(GLFWwindow *window, int width, int height) {
   glViewport(0, 0, width, height);
