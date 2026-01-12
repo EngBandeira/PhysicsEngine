@@ -1,4 +1,6 @@
 #pragma once
+#include "render/ui.hpp"
+
 #include "common.hpp"
 
 #include <GLFW/glfw3.h>
@@ -11,7 +13,6 @@
 
 #include "render/render_data.hpp"
 #include "render/camera.hpp"
-#include "render/ui.hpp"
 
 
 
@@ -34,6 +35,8 @@ struct Assets {
 
 class Render {
     public:
+    bool normalATIVO = 0;
+    float normalV = 1;
     char flags = 0;
     unsigned int FBO_FROM, FBO_TO, RBO, TBO, QUERY,
                  texToRenderOver,texToShowFrom;
@@ -61,7 +64,7 @@ class Render {
     void getProgramStatus(unsigned int shaderProgram,int status);
     void getShaderStatus(unsigned int shaderProgram,int status);
 
-    unsigned int setAVector(glm::vec3 positon,glm::vec3 direction);
+    unsigned int setAVector(glm::vec3 position,glm::vec3 direction);
 
     void updatePipeline(unsigned int layerIndex);
     void once();

@@ -1,7 +1,9 @@
+#include "render.hpp"
+
 #include <X11/X.h>
 #include <glm/common.hpp>
+#include <glm/ext/scalar_constants.hpp>
 #include <glm/trigonometric.hpp>
-#define IMGUI_DEFINE_MATH_OPERATORS
 #include <cstdio>
 #include <glm/geometric.hpp>
 #include <glm/exponential.hpp>
@@ -23,8 +25,6 @@
 #include "vendor/imgui/imgui_impl_glfw.h"
 #include "vendor/imgui/imgui_impl_opengl3.h"
 
-
-#include "render.hpp"
 #include "model.hpp"
 #include "shader.hpp"
 
@@ -41,14 +41,7 @@ int fodase[16] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15};
 //     return true;
 // }
 
-// void setTexParameter(){
-//     glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-//     glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
-//     glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
-//     glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
-//     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_BASE_LEVEL, 0);
-//     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAX_LEVEL, LEVEL);
-// }
+
 
 
 void Render::getShaderStatus(unsigned int shaderProgram,int status){
@@ -118,22 +111,27 @@ unsigned short Render::getNewIndexOfOld(unsigned short i, unsigned short n,unsig
 
 unsigned int vectorMaterialI;
 
-unsigned int Render::setAVector(glm::vec3 positon,glm::vec3 direction){
+unsigned int Render::setAVector(glm::vec3 position,glm::vec3 direction){
     unsigned int modelI = renderData.pushModels(MeshGenData {
-        .path = "assets/3dmodels/Vector.obj"
+        .path = (char*)"assets/3dmodels/Vector.obj"
     }, vectorMaterialI,LAYER::SPECIAL_LAYER);
     updatePipeline(LAYER::SPECIAL_LAYER);
     glm::vec3 normali = glm::normalize(direction);
     // float theta = acos(normali.z);
-    float theta = atan(abs(normali.z) / normali.x);
-    printf("angle: %f \n",glm::degrees(theta));
+    // float dote = glm::dot(normali,glm::vec3(1,0,0));
+    // float theta = acos(dote);
+    float theta = -atan(normali.z / normali.x);
+    if(normali.x < 0){
+        theta += glm::pi<float>();
+    }
+    float phi = asin(normali.y);
+    // printf("angle: %f \n",glm::degrees(theta));
 
-    renderData.setAngleModel(glm::vec3(0,theta,0), modelI, LAYER::SPECIAL_LAYER);
-    // renderData.rotateModel(phi, AXIS::Z, modelI, LAYER::SPECIAL_LAYER);
+    renderData.setAngleModel(glm::vec3(0,glm::degrees(theta),glm::degrees(phi)), modelI, LAYER::SPECIAL_LAYER);
+    // renderData.rotateModel(glm::vec3(0,0,), modelI, LAYER::SPECIAL_LAYER);
 
-    // renderData.translateModel(positon, modelI, LAYER::SPECIAL_LAYER);
+    renderData.translateModel(position, modelI, LAYER::SPECIAL_LAYER);
     renderData.scaleModel(0.05, modelI, LAYER::SPECIAL_LAYER);
-    printf("direction: %f %f %f\n",direction.x,direction.y,direction.z);
     flags = flags | MODELS_CHANGE_FLAG;
     return modelI;
 }
@@ -195,7 +193,7 @@ void Assets::update() {
         i++;
     }
     File fParent;
-    fParent.completeName = "../";
+    fParent.completeName = (char*)"../";
     fParent.type = FILE_TYPES::FOLDER_FILE;
     files.push_back(fParent);
     free(buffer);
@@ -236,6 +234,7 @@ Render::~Render() {
         glDeleteBuffers(SSBO_PER_LAYER_COUNT,renderData.layers[i].ssbos);
     }
     glDeleteBuffers(1,&renderData.materialsSSBO);
+    glDeleteBuffers(1,&renderData.lampsSSBO);
 
     glDeleteFramebuffers(1, &FBO_FROM);
     glDeleteFramebuffers(1, &FBO_TO);
@@ -285,6 +284,10 @@ void Render::once()
     glGenBuffers(1, &renderData.materialsSSBO);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, renderData.materialsSSBO);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, SSBOS::MaterialsSSBO, renderData.materialsSSBO);
+
+    glGenBuffers(1, &renderData.lampsSSBO);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, renderData.lampsSSBO);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, SSBOS::LampsSSBO, renderData.lampsSSBO);
 
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
@@ -376,8 +379,10 @@ void Render::newframe()
 
     glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "view"), 1, GL_FALSE,
                      glm::value_ptr(camera.viewMatrix));
-    // glm::vec4 po = glm::inverse(camera.viewMatrix)*glm::vec4(0,0,0,1); //w = 1bcs is a point
-    // glUniform4f(glGetUniformLocation(shaderProgram,"cameraPosition"),po.x,po.y,po.z,po.w);
+    glm::vec4 po = glm::inverse(camera.viewMatrix)*glm::vec4(0,0,0,1); //w = 1bcs is a point
+    glUniform4f(glGetUniformLocation(shaderProgram,"camPosition"),po.x,po.y,po.z,po.w);
+    glUniform1i(glGetUniformLocation(shaderProgram,"normalATIVO"),normalATIVO);
+    glUniform1f(glGetUniformLocation(shaderProgram,"normalV"),normalV);
 
 }
 
@@ -397,6 +402,16 @@ void Render::renderDrawing(unsigned int layerIndex)
         glBufferData(GL_SHADER_STORAGE_BUFFER,
                         16 * sizeof(float) * layerData->meshesCount,
                         layerData->matrices,GL_DYNAMIC_DRAW);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+    }
+
+    if(flags & LAMPS_CHANGE_FLAG) {
+        glUniform1i(glGetUniformLocation(shaderProgram,"lampsCount"),renderData.lampsCount);
+        flags = flags & ~(LAMPS_CHANGE_FLAG);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, renderData.lampsSSBO);
+        glBufferData(GL_SHADER_STORAGE_BUFFER,
+                        sizeof(Lamp) * renderData.lampsCount,
+                        renderData.lamps,GL_DYNAMIC_DRAW);
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
     }
 
@@ -456,7 +471,7 @@ void Render::renderDrawing(unsigned int layerIndex)
 
 void Render::start(void(*op1)(),void(*op2)(),void(*op3)()){
 
-    logger.terminal.lines.push_back("viadinho de merda");
+    logger.terminal.lines.push_back((char*)"viadinho de merda");
 
     char b[] = "/home/bandeira/Documents/GIT/PhysicsEngine/";
     assets.directory = (char*)malloc(sizeof(b));
@@ -468,7 +483,7 @@ void Render::start(void(*op1)(),void(*op2)(),void(*op3)()){
     a.Ni = 0;
     a.bm = 0;
     a.d = 0;
-    a.maps[0]  = "assets/3dmodels/lemon_diff_4k.jpg";
+    a.maps[MATERIAL_MAPS::KD]  = (char*)"assets/3dmodels/lemon_diff_4k.jpg";
     a.type = SOLID_COLOR;
     once();
 
@@ -478,22 +493,42 @@ void Render::start(void(*op1)(),void(*op2)(),void(*op3)()){
     camera.rotation = glm::rotate(camera.rotation,3.14f, glm::vec3(0, 1, 0));
 
 
-
+    renderData.allocLamp(LampsGenData{
+        .position = glm::vec4(0,2,0,1),
+    });
     a.type = TEXTURE;
-    a.maps[0] = "assets/3dmodels/Seta.png";
+    a.maps[MATERIAL_MAPS::KD] = (char*)"assets/3dmodels/Seta.png";
     renderData.pushModels(MeshGenData{
-        "assets/3dmodels/Seta.obj"
+        (char*)"assets/3dmodels/Seta.obj"
     },a,LAYER::SPECIAL_LAYER);
 
-    a.maps[0] = "assets/3dmodels/cannon_01_diff_4k.jpg";
+    // a.maps[MATERIAL_MAPS::KD] = "assets/3dmodels/cannon_01_diff_4k.jpg";
+    // a.maps[MATERIAL_MAPS::NORMAL] = "assets/3dmodels/cannon_01_nor_gl_4k.jpg";
+    // renderData.pushModels(MeshGenData{
+    //     "assets/3dmodels/cannon_01_4k.obj"
+    // },a,LAYER::COMMON_LAYER);
+
+    a.maps[MATERIAL_MAPS::KD] = (char*)"assets/3dmodels/gray_rocks_diff_4k.jpg";
+    a.maps[MATERIAL_MAPS::NORMAL] = (char*)"assets/3dmodels/gray_rocks_nor_gl_4k.jpg";
     renderData.pushModels(MeshGenData{
-        "assets/3dmodels/cannon_01_4k.obj"
+        (char*)"assets/3dmodels/Plane.obj"
     },a,LAYER::COMMON_LAYER);
-    a.maps[0] = "assets/3dmodels/marble_bust_01_diff_4k.jpg";
+
+
+    a.K[0] = glm::vec3(1,1,1);
+    a.K[1] = glm::vec3(0.8,0.8,0.8);
+    a.K[2] = glm::vec3(0.5,0.5,0.5);
+
+    a.maps[MATERIAL_MAPS::KD] = "assets/3dmodels/marble_bust_01_diff_4k.jpg";
+    a.maps[MATERIAL_MAPS::NORMAL] = "assets/3dmodels/marble_bust_01_nor_gl_4k.jpg";
     renderData.pushModels(MeshGenData{
         "assets/3dmodels/marble_bust_01_4k.obj"
     },a,LAYER::COMMON_LAYER);
+
+
+
     MaterialGenData c;
+
     c.type = SOLID_COLOR;
     vectorMaterialI =  renderData.allocMaterial(c);
     assets.update();
@@ -532,6 +567,7 @@ void Render::update() {
                         renderData.materials,GL_DYNAMIC_DRAW);
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
     }
+
 
     if(assets.framesDelay <= assets.delayCounter){
         assets.update();
@@ -624,6 +660,7 @@ void Render::updatePipeline(unsigned int layerIndex){
     unsigned int localTextureVerticesNumber = 0;
     unsigned int localTextureVerticesIndexNumber = 0;
     unsigned int localNormalVerticesNumber = 0;
+
     for(unsigned int i = 0; i < nModels; i++){
         Mesh actualMesh = layerData->models[i].mesh;
         memcpy(layerData->vertices + localVerticesNumber,

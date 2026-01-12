@@ -2,7 +2,8 @@
 #include "glm/glm.hpp"
 
 struct TextureLocation {
-    unsigned int handler, index;
+    int handler;
+    unsigned int index;
 };
 
 enum materialType {

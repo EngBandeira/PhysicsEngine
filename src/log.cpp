@@ -28,18 +28,18 @@ void Terminal::update() {
     update(lines.size()-1);
 }
 
-void Log::sendWarning(char *msg) {
-    printf("WARNING: %s\n",msg);
+void Log::sendWarning(const char *msg) {
+    printf((char*)"WARNING: %s\n",msg);
     unsigned int lenght = strlen(msg) + 10;
 
     char *p = (char*) malloc(lenght + 1);
-    sprintf(p, "WARNING: %s", msg);
+    sprintf(p, (char*)"WARNING: %s", msg);
 
     p[lenght] = 0;
     terminal.lines.push_back(p);
 }
 
-void Log::send(char *msg) {
+void Log::send(const char *msg) {
     printf("%s\n",msg);
     unsigned int lenght = strlen(msg);
     char *p = (char*) malloc(lenght + 1);
@@ -49,7 +49,7 @@ void Log::send(char *msg) {
     terminal.lines.push_back(p);
 }
 
-void Log::sendError(char *msg, bool kill) {
+void Log::sendError(const char *msg, bool kill) {
     fprintf(stderr, "\n\nError: %s\n\n", msg);
 
     if( kill ) exit(EXIT_FAILURE);

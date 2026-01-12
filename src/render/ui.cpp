@@ -1,14 +1,15 @@
-#define IMGUI_DEFINE_MATH_OPERATORS
 // #include "vendor/imgui/imgui_internal.h"
-#include "glm/glm.hpp"
+// #include "glm/glm.hpp"
+#include "render/ui.hpp"
+#include <cstdio>
 #include <glm/gtc/matrix_transform.hpp>
 #include "render.hpp"
-
+#include "vendor/imgui/imgui.h"
 
 bool fileWinOpen = 0,terminalOpen = 0;
 unsigned int fileIndexOpen;
 char *filePath;
-
+ImVec2 delta;
 void Render::ui() {
     ImGuiIO& io = ImGui::GetIO();
     ImGuiViewport *view = ImGui::GetMainViewport();
@@ -139,6 +140,33 @@ void Render::ui() {
 
             ImGui::EndTable();
         }
+
+        ImGui::Text("LAYER::LAMPS");
+
+        if( ImGui::BeginTable("LAYER::LAMPS", 1) ) {
+            char label[100];
+            for( unsigned int i = 0; i < renderData.lampsCount; i++ ) {
+
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                sprintf(label, "Model %d", i);
+
+                if(i == selectedModelIndex && selectedModelLayer == LAYER::SPECIAL_LAYER) {
+                    ImGui::TableSetBgColor(
+                        ImGuiTableBgTarget_RowBg0,
+                        IM_COL32(138, 38, 38, 255)
+                    );
+                }
+
+                if(ImGui::Selectable(label)) {
+                    selectedModelIndex = i;
+                    selectedModelLayer = LAYER::LAMPS;
+                }
+
+            }
+
+            ImGui::EndTable();
+        }
     }
     ImGui::End();
 
@@ -158,10 +186,11 @@ void Render::ui() {
 
     ImGui::End();
 
+
     ImGui::SetNextWindowDockID(dockspace_id, ImGuiCond_Once);
     if( ImGui::Begin("Game", nullptr, ImGuiWindowFlags_None) ) {
         input();
-        ImGui::GetWindowDrawList()->AddImage((void *)texToShowFrom,
+        ImGui::GetWindowDrawList()->AddImage((ImTextureRef)texToShowFrom,
                                             ImGui::GetWindowPos(),
                                             ImGui::GetWindowSize() + ImGui::GetWindowPos(),
                                             ImVec2(0, 1),
@@ -180,7 +209,7 @@ void Render::ui() {
 
     if( ImGui::Begin("Assets", nullptr, ImGuiWindowFlags_None) ) {
         if( ImGui::BeginTable("Files",6) ) {
-            for( int i = 0; i < assets.files.size(); i ++ ){
+            for(unsigned int i = 0; i < assets.files.size(); i ++ ){
                 if(! (i % 6) ) ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex(i % 6);
 
@@ -257,38 +286,39 @@ void Render::ui() {
         if( renderData.layers[selectedModelLayer].models.size() > selectedModelIndex ) {
 
             Model &m = renderData.layers[selectedModelLayer].models[selectedModelIndex];
-            glm::vec3 pos = m.getPosition();
-            glm::vec3 rot = m.getAngle();
-            glm::vec3 sca = m.getScale();
+            glm::vec3 transf[3] = {m.getPosition(),m.getAngle(),m.getScale()};
+
             ImGui::Text("Transform:");
             ImGui::Text("   Position:( ");
             ImGui::SameLine();
 
-            if( ImGui::InputFloat3("newPos ", &pos.x) ) {
-                renderData.positionateModel(pos, selectedModelIndex, selectedModelLayer);
+            if( ImGui::InputFloat3("newPos ", &transf[0].x) ) {
+                renderData.positionateModel(transf[0], selectedModelIndex, selectedModelLayer);
             }
 
             ImGui::Text("   Rotation:( ");
             ImGui::SameLine();
 
-            if( ImGui::InputFloat3("newRot ", &rot.x) ) {
-                renderData.setAngleModel(rot, selectedModelIndex, selectedModelLayer);
+            if( ImGui::InputFloat3("newRot ", &transf[1].x) ) {
+                renderData.setAngleModel(transf[1], selectedModelIndex, selectedModelLayer);
             }
+
             ImGui::Text("   Scale:( ");
             ImGui::SameLine();
 
-            if( ImGui::InputFloat3("newSca ", &sca.x) ) {
-                renderData.scaleModel(sca, selectedModelIndex, selectedModelLayer);
+            if( ImGui::InputFloat3("newSca ", &transf[2].x) ) {
+                renderData.scaleModel(transf[2], selectedModelIndex, selectedModelLayer);
             }
 
-            pos = camera.getPosition();
+            glm::vec3 pi = camera.getPosition();
             ImGui::Text("Camera:");
-            ImGui::Text("   Position:(%f, %f , %f)",pos.x,pos.y,pos.z);
+            ImGui::Text("   Position:(%f, %f , %f)",pi.x,pi.y,pi.z);
             glm::vec n = camera.getFoward();
             ImGui::Text("   Normal:(%f, %f , %f)",n.x,n.y,n.z);
-
+            ImGui::Text("   Delta %f %f",delta.x,delta.y);
         }
-
+        ImGui::Checkbox("normalA", &normalATIVO);
+        ImGui::SliderFloat("normalV", &normalV,.1, 2);
     }
     ImGui::End();
 
@@ -296,10 +326,6 @@ void Render::ui() {
 
         ImGui::SetNextWindowSize(ImVec2(600, 600));
         if( ImGui::Begin("Terminal"),terminalOpen) {
-
-            if( ImGui::Button("const char *label") ) {
-                logger.terminal.lines.push_back("  pinto");
-            }
 
             ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(.40,.20,.70,1));
             if( ImGui::BeginChild("scroll", ImVec2(-40, -40)) )
@@ -351,24 +377,20 @@ void Render::input() {
     ImGuiIO& io = ImGui::GetIO();
     if( ImGui::IsWindowFocused() && ImGui::GetMousePos().y >= ImGui::GetCursorScreenPos().y ) {
 
-        if( ImGui::IsKeyPressed(ImGuiKey_Backspace) ) {
-            glm::vec3 camP = camera.getPosition();
-            glm::vec3 normal = camera.getFoward();
+        // if( io.MouseDown[0] ) {
+        //     glm::vec3 camP = camera.getPosition();
+        //     glm::vec3 normal = camera.getFoward();
+        //     ImVec2 per = ((io.MousePos - ImGui::GetWindowPos() - ImVec2(0,27) )/ ImGui::GetWindowSize()) - ImVec2(0.5,0.5);
+        //     glm::vec3 pica = camera.getRight()  * per.x + camera.getUp() * -1.f * per.y;
+        //     glm::vec3 ajtd = pica + normal;
+        //     // renderData.positionateModel(camP + ajtd * 3.0f, 0, LAYER::COMMON);
 
-            ImVec2 per = (io.MousePos/ ImGui::GetWindowSize()- ImVec2(0.5f,0.5f));
-            glm::vec3 pica = camera.getRight() * -1.f * per.x + camera.getUp() * -1.f * per.y;
-            glm::vec3 ajtd = pica + normal;
-            // renderData.positionateModel(camP + ajtd * 3.0f, 0, LAYER::COMMON);
-
-            setAVector(camP, normal);
-        }
+        //     setAVector(camP, ajtd);
+        // }
 
         if( io.MouseDown[1] ) {
             ImVec2 mousePos = io.MousePos;
-            ImVec2 windowCenter = ImGui::GetWindowSize();
-            windowCenter.x *= HALF;
-            windowCenter.y *= HALF;
-            windowCenter = windowCenter + ImGui::GetWindowPos();
+            ImVec2 windowCenter = ImGui::GetWindowSize() * .5f + ImGui::GetWindowPos();
 
             ImGui::SetMouseCursor(ImGuiMouseCursor_None);
 
@@ -377,9 +399,9 @@ void Render::input() {
 
             glfwSetCursorPos(glfwWin,windowCenter.x,windowCenter.y);
             ImGui::Dummy(ImVec2(0, 0));
-
+            delta = mouseDelta;
             camera.angle.x += MOUSE_SENSI * mouseDelta.x;
-            camera.angle.y += HALF * MOUSE_SENSI * mouseDelta.y;
+            camera.angle.y += .5f * MOUSE_SENSI * mouseDelta.y;
             camera.rotation = glm::rotate(glm::mat4(1), glm::radians(camera.angle.x), glm::vec3(0, 1, 0));
             camera.rotation = glm::rotate(camera.rotation, glm::radians(camera.angle.y), glm::vec3(camera.getRight()));
             float b = .05;

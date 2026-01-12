@@ -1,6 +1,10 @@
+#include "common.hpp"
+#include "lamp.hpp"
+#include "material.hpp"
 #include "model.hpp"
 #include "log.hpp"
 #include "render/render_data.hpp"
+#include <cstdlib>
 #include <cstring>
 #include <stdlib.h>
 #include <unistd.h>
@@ -14,8 +18,8 @@
 
 
 void setTexParameter(){
-    glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_BASE_LEVEL, 0);
@@ -59,6 +63,7 @@ RenderData::RenderData() {
         textureHandlers[i].emptyTexturesCount = 0;
     }
     materials = (Material *) malloc(0);
+    lamps = (Lamp*) malloc(0);
 }
 
 void RenderData::freeData() {
@@ -73,7 +78,7 @@ void RenderData::freeData() {
     }
 
     free(materials);
-
+    free(lamps);
 }
 
 glm::mat4 *RenderData::getNMatrix(unsigned short index, unsigned int layerIndex){
@@ -160,11 +165,11 @@ unsigned int RenderData::allocMaterial(MaterialGenData data) {
         mater->K[3 * i]     = data.K[i].x;
         mater->K[3 * i + 1] = data.K[i].y;
         mater->K[3 * i + 2] = data.K[i].z;
-
-        if( data.type == TEXTURE && data.maps[i] != nullptr ) mater->maps[i] = addTexToHandler(data.maps[i]);
     }
-
-    if( data.maps[3] != nullptr ) mater->maps[3] = addTexToHandler(data.maps[3]);
+    for( int i = 0; i < 4; i++ ) {
+        if( data.type == TEXTURE && data.maps[i] != nullptr ) mater->maps[i] = addTexToHandler(data.maps[i]);
+        else mater->maps[i] = TextureLocation {.handler = -1};
+    }
 
     *flags = *flags | MATERIAL_CHANGE_FLAG;
     return materialsCount - 1;
@@ -173,8 +178,16 @@ unsigned int RenderData::allocMaterial(MaterialGenData data) {
 void RenderData::freeMaterial(unsigned int index) {
     Material *newMat = (Material*) malloc(sizeof(Material) * (materialsCount - 1));
 
-    if( index > 0 ) memcpy(newMat, materials, index);
-    if( index > materialsCount - 1 ) memcpy(newMat + index + 1, materials, materialsCount - 1 - index);
+    if(index < 0){
+        logger.sendError("freeMaterial: index < 0", 0);
+        return;
+    }
+    if(index >= materialsCount){
+        logger.sendError("freeMaterial: index >= materialsCount", 0);
+        return;
+    }
+    memcpy(newMat, materials, index);
+    memcpy(newMat + index + 1, materials + index + 1, materialsCount - 1 - index);
 
     free(materials);
 
@@ -183,6 +196,41 @@ void RenderData::freeMaterial(unsigned int index) {
 
     *flags = *flags | MATERIAL_CHANGE_FLAG;
 }
+
+unsigned int RenderData::allocLamp(LampsGenData data) {
+    lampsCount++;
+    lamps = (Lamp*) realloc(lamps, sizeof(Lamp) * lampsCount);
+    Lamp *lamp = lamps + lampsCount - 1;
+
+    lamp->position = data.position;
+
+
+    *flags = *flags | LAMPS_CHANGE_FLAG;
+    return lampsCount - 1;
+};
+
+void RenderData::freeLamp(unsigned int index) {
+    Lamp *newLamps = (Lamp*) malloc(sizeof(Lamp) * (lampsCount - 1));
+
+    if(index < 0){
+        logger.sendError("freeLamp: index < 0", 0);
+        return;
+    }
+    if(index >= lampsCount){
+        logger.sendError("freeLamp: index >= lampsCount", 0);
+        return;
+    }
+    memcpy(newLamps, lamps, index);
+    memcpy(newLamps + index + 1, lamps + index + 1, lampsCount - 1 - index);
+
+    free(lamps);
+
+    lamps = newLamps;
+    lampsCount--;
+
+    *flags = *flags | LAMPS_CHANGE_FLAG;
+}
+
 
 
 // WW:widht
@@ -256,15 +304,15 @@ TextureLocation RenderData::addTexToHandler(char *localPath, bool toProcess) {
     // unsigned short bpp = *((unsigned short*)(localBuffer + 11));
 
 
-    unsigned char handlerIndex = (unsigned char)floor(log2(width)-6);
+    int handlerIndex = (unsigned char)floor(log2(width)-6);
     unsigned int index = textureHandlers[handlerIndex].addTex((unsigned char*)localBuffer+13);
     free(localBuffer);
 
     if( toProcess ) free(path);
 
     return TextureLocation {
-        handler: handlerIndex,
-        index: index
+        .handler = handlerIndex,
+        .index = index
     };
 }
 
@@ -280,10 +328,12 @@ unsigned int TextureHandler::addTex(unsigned char *localBuffer){
         return i;
     }
 
+
     glBindTexture(GL_TEXTURE_2D_ARRAY, *texUtilitary);
     glTexImage3D(GL_TEXTURE_2D_ARRAY,LEVEL,GL_RGBA8 ,texDimensions,texDimensions,texturesCount+1,0,GL_RGBA,GL_UNSIGNED_BYTE,nullptr);
 
     setTexParameter();
+
 
     glCopyImageSubData(texture,GL_TEXTURE_2D_ARRAY,LEVEL,0,0,0,*texUtilitary, GL_TEXTURE_2D_ARRAY, LEVEL,
                     0,0,0,texDimensions,texDimensions,texturesCount);

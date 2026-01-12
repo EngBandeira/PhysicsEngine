@@ -7,8 +7,6 @@ extern Utils utils;
 
 enum AXIS { X, Y, Z };
 
-const float HALF = .5f;
-
 #define GLFW_INCLUDE_NONE
 #define STB_IMAGE_IMPLEMENTATION
 
@@ -31,6 +29,7 @@ const int MAX_EMPTY_TEXTURES_COUNT        = 10;
 const int MATERIAL_CHANGE_FLAG = 1 << 0;
 const int MATRICES_CHANGE_FLAG = 1 << 1;
 const int MODELS_CHANGE_FLAG   = 1 << 2;
+const int LAMPS_CHANGE_FLAG   = 1 << 3;
 
 // Render defines
 const int SCR_X = 1920;
@@ -43,7 +42,15 @@ const int FRAMES_DELAY = 120;
 
 enum LAYER {
     SPECIAL_LAYER,
-    COMMON_LAYER
+    COMMON_LAYER,
+    LAMPS,
+};
+
+enum MATERIAL_MAPS {
+    KA,
+    KD,
+    KS,
+    NORMAL
 };
 
 enum SSBOS {
@@ -53,7 +60,8 @@ enum SSBOS {
     ModelsMaterialsSSBO,
     NormalVecsSSBO,
     NormalVecsIndexSSBO,
-    MaterialsSSBO
+    MaterialsSSBO,
+    LampsSSBO
 };
 
 enum FILE_TYPES {

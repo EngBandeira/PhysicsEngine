@@ -4,11 +4,19 @@ layout(triangles) in;
 layout(triangle_strip, max_vertices = 3) out;
 
 struct TextureLocation {
-    uint handler, index;
+    int handler;
+    uint index;
 };
+
 
 const uint MATERIAL_SOLID_COLOR = 0u;
 const uint MATERIAL_TEXTURE = 1u;
+
+const uint MATERIAL_MAPS_KA = 0u;
+const uint MATERIAL_MAPS_KD = 1u;
+const uint MATERIAL_MAPS_KS = 2u;
+const uint MATERIAL_MAPS_NORMAL = 3u;
+
 
 struct Material {
     float K[9];
@@ -52,15 +60,15 @@ uniform mat4 projection;
 uniform mat4 view;
 
 void main() {
-    //
-    vec4 niopaVec = vec4(normalVecsBuffer[3 * normalVecsIndexBuffer[gl_PrimitiveIDIn]],
-            normalVecsBuffer[3 * normalVecsIndexBuffer[gl_PrimitiveIDIn] + 1],
-            normalVecsBuffer[3 * normalVecsIndexBuffer[gl_PrimitiveIDIn] + 2], 0);
+
+    // vec4 niopaVec = vec4(normalVecsBuffer[3 * normalVecsIndexBuffer[gl_PrimitiveIDIn]],
+    //         normalVecsBuffer[3 * normalVecsIndexBuffer[gl_PrimitiveIDIn] + 1],
+    //         normalVecsBuffer[3 * normalVecsIndexBuffer[gl_PrimitiveIDIn] + 2], 0);
 
     vec4 posito[3] = {
-            (inverse(projection) * gl_in[0].gl_Position),
-            (inverse(projection) * gl_in[1].gl_Position),
-            (inverse(projection) * gl_in[2].gl_Position)
+            (inverse(view) * inverse(projection) * gl_in[0].gl_Position),
+            (inverse(view) * inverse(projection) * gl_in[1].gl_Position),
+            (inverse(view) * inverse(projection) * gl_in[2].gl_Position)
         };
     vec4 a = posito[0] - posito[1];
     vec4 b = posito[2] - posito[1];

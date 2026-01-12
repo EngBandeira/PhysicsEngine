@@ -5,6 +5,7 @@
 #include "material.hpp"
 #include "model.hpp"
 #include "log.hpp"
+#include "lamp.hpp"
 
 void setTexParameter();
 
@@ -68,10 +69,13 @@ public:
 
     TextureHandler textureHandlers[TEXTURE_HANDLERS_COUNT];
     Material *materials;
+    Lamp *lamps;
 
     unsigned int texUtilitary,
                  materialsSSBO,
-                 materialsCount = 0;
+                 lampsSSBO,
+                 materialsCount = 0,
+                 lampsCount = 0;
 
     MeshRenderData layers[LAYERS_COUNT];
 
@@ -81,6 +85,9 @@ public:
 
     unsigned int allocMaterial(MaterialGenData data);
     void freeMaterial(unsigned int index);
+
+    unsigned int allocLamp(LampsGenData data);
+    void freeLamp(unsigned int index);
 
     unsigned int pushModels(MeshGenData mesh,unsigned int materialIndex, unsigned int layerIndex);
     unsigned int pushModels(MeshGenData mesh,MaterialGenData material, unsigned int layerIndex);

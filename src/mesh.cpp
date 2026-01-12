@@ -203,7 +203,7 @@ void Mesh::deleteMesh() {
     free(textureVerticesIndex);
     free(normalVerticesIndex);
     free(mtl);
-    for( int i = 0; i < oCount; i++ )free(o[i]);
+    for(unsigned int i = 0; i < oCount; i++ ) free(o[i]);
     free(o);
     // free(meshPath);
 }

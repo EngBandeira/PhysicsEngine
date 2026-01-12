@@ -13,9 +13,9 @@ struct Terminal {
 class Log {
 public:
     Terminal terminal;
-    void sendWarning(char *msg);
-    void send(char *msg);
-    void sendError(char *msg, bool kill = 1);
+    void sendWarning(const char *msg);
+    void send(const char *msg);
+    void sendError(const char *msg, bool kill = 1);
 
     Log() = default;
 };

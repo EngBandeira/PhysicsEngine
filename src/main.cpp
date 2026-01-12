@@ -1,3 +1,5 @@
+#include "render/ui.hpp"
+
 #include "common.hpp"
 
 #include <cstdlib>
