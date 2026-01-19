@@ -25,7 +25,7 @@ struct File {
 
 struct Assets {
     std::vector<File> files;
-    unsigned int framesDelay = FRAMES_DELAY;
+    unsigned int framesDelay = ASSETS_DELAY;
     char *directory = nullptr;
     void update();
     unsigned int delayCounter = 0;
@@ -53,7 +53,7 @@ class Render {
 
     Assets assets;
     RenderData renderData;
-    LAYER selectedModelLayer=LAYER::COMMON_LAYER;
+    LAYER selectedModelLayer = LAYER::COMMON_LAYER;
     unsigned int selectedModelIndex=0;
     unsigned int shaderProgram;
     Shader shader;
@@ -72,6 +72,6 @@ class Render {
     void ui();
     void update();
     void newframe();
-    void renderDrawing(unsigned int layerIndex);
+    void draw(unsigned int layerIndex);
 
 };

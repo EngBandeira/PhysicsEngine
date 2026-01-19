@@ -7,7 +7,7 @@
 #include "log.hpp"
 #include "lamp.hpp"
 
-void setTexParameter();
+void setTexParameter(unsigned int tex_type);
 
 struct TextureHandler {
     unsigned int texture,
@@ -43,7 +43,9 @@ struct MeshRenderData {
                  *modelParent,
                  *textureVerticesIndex,
                  *normalVerticesIndex,
-                 *modelMaterial;
+                 *modelMaterial,
+                 *layerIndex,
+                 *modelFlags;
 
     float *vertices,
           *matrices,

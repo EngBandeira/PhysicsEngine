@@ -9,7 +9,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "vendor/glad/glad.h"//GLAD Always upper than GLFW
+#include "vendor/glad/glad.h" //GLAD Always upper than GLFW
 #include <GLFW/glfw3.h>
 
 #include "vendor/stb_image/stb_image.h"
@@ -17,13 +17,13 @@
 #include "utils.hpp"
 
 
-void setTexParameter(){
-    glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_BASE_LEVEL, 0);
-    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAX_LEVEL, LEVEL);
+void setTexParameter(unsigned int tex_type){
+    glTexParameteri(tex_type,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
+    glTexParameteri(tex_type,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
+    glTexParameteri(tex_type,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
+    glTexParameteri(tex_type,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
+    glTexParameteri(tex_type, GL_TEXTURE_BASE_LEVEL, 0);
+    glTexParameteri(tex_type, GL_TEXTURE_MAX_LEVEL, LEVEL);
 }
 
 void MeshRenderData::init() {
@@ -37,6 +37,8 @@ void MeshRenderData::init() {
     textureVerticesIndex = (unsigned int *) malloc(0);
     normalVerticesIndex = (unsigned int *) malloc(0);
     modelMaterial = (unsigned int *) malloc(0);
+    layerIndex = (unsigned int *) malloc(0);
+    modelFlags = (unsigned int *) malloc(0);
 }
 
 void MeshRenderData::freeData() {
@@ -49,6 +51,8 @@ void MeshRenderData::freeData() {
     free(textureVerticesIndex);
     free(normalVerticesIndex);
     free(modelMaterial);
+    free(layerIndex);
+    free(modelFlags);
 }
 
 RenderData::RenderData() {
@@ -166,6 +170,7 @@ unsigned int RenderData::allocMaterial(MaterialGenData data) {
         mater->K[3 * i + 1] = data.K[i].y;
         mater->K[3 * i + 2] = data.K[i].z;
     }
+
     for( int i = 0; i < 4; i++ ) {
         if( data.type == TEXTURE && data.maps[i] != nullptr ) mater->maps[i] = addTexToHandler(data.maps[i]);
         else mater->maps[i] = TextureLocation {.handler = -1};
@@ -178,14 +183,16 @@ unsigned int RenderData::allocMaterial(MaterialGenData data) {
 void RenderData::freeMaterial(unsigned int index) {
     Material *newMat = (Material*) malloc(sizeof(Material) * (materialsCount - 1));
 
-    if(index < 0){
+    if( index < 0 ) {
         logger.sendError("freeMaterial: index < 0", 0);
         return;
     }
-    if(index >= materialsCount){
+
+    if( index >= materialsCount ) {
         logger.sendError("freeMaterial: index >= materialsCount", 0);
         return;
     }
+
     memcpy(newMat, materials, index);
     memcpy(newMat + index + 1, materials + index + 1, materialsCount - 1 - index);
 
@@ -212,14 +219,16 @@ unsigned int RenderData::allocLamp(LampsGenData data) {
 void RenderData::freeLamp(unsigned int index) {
     Lamp *newLamps = (Lamp*) malloc(sizeof(Lamp) * (lampsCount - 1));
 
-    if(index < 0){
+    if( index < 0 ){
         logger.sendError("freeLamp: index < 0", 0);
         return;
     }
-    if(index >= lampsCount){
+
+    if( index >= lampsCount ){
         logger.sendError("freeLamp: index >= lampsCount", 0);
         return;
     }
+
     memcpy(newLamps, lamps, index);
     memcpy(newLamps + index + 1, lamps + index + 1, lampsCount - 1 - index);
 
@@ -332,7 +341,7 @@ unsigned int TextureHandler::addTex(unsigned char *localBuffer){
     glBindTexture(GL_TEXTURE_2D_ARRAY, *texUtilitary);
     glTexImage3D(GL_TEXTURE_2D_ARRAY,LEVEL,GL_RGBA8 ,texDimensions,texDimensions,texturesCount+1,0,GL_RGBA,GL_UNSIGNED_BYTE,nullptr);
 
-    setTexParameter();
+    setTexParameter(GL_TEXTURE_2D_ARRAY);
 
 
     glCopyImageSubData(texture,GL_TEXTURE_2D_ARRAY,LEVEL,0,0,0,*texUtilitary, GL_TEXTURE_2D_ARRAY, LEVEL,
@@ -362,6 +371,6 @@ void TextureHandler::rmTex(unsigned int index) {
         || (emptyTexturesCount > MIN_EMPTY_TEXTURES_COUNT_TO_RST && emptyTexturesCount > texturesCount * MAX_RATIO_OF_EMPTY_TEXTURES)
     ) return;
 
-    emptyTextures = (unsigned int*)realloc(emptyTextures, emptyTexturesCount);
+    emptyTextures = (unsigned int*) realloc(emptyTextures, emptyTexturesCount);
     emptyTextures[emptyTexturesCount-1] = index;
 }

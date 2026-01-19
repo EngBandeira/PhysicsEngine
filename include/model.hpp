@@ -3,7 +3,6 @@
 
 #include "mesh.hpp"
 
-
 struct ModelGenData {
     MeshGenData mesh;
     unsigned int materialIndex;

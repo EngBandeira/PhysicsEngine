@@ -16,7 +16,7 @@ T *exportvec(unsigned int *count, std::vector<T> vec) {
 }
 
 
-Mesh::Mesh(MeshGenData genData): meshPath(genData.path){
+Mesh::Mesh(MeshGenData genData): flags(genData.flags),meshPath(genData.path){
 
     o = (char**)malloc(0);
     std::vector<float> vertices_,textureVertices_,normalVertices_;

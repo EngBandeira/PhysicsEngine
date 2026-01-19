@@ -17,7 +17,7 @@ const char RAW_TEX_EXTENSION[] =  "raw";
 
 const int TEXTURE_HANDLERS_COUNT = 7;
 const int LAYERS_COUNT           = 2;
-const int SSBO_PER_LAYER_COUNT   = 6;
+const int SSBO_PER_LAYER_COUNT   = 8;
 const int VBO_COUNT              = 2;
 const int LEVEL                  =  0;
 const double MOUSE_SENSI         = 0.05f;
@@ -38,7 +38,7 @@ const int SCR_Y = 1080;
 const int MAX_FILE_EXTENSION_LENGHT = 6;
 const int RAW_TEX_EXTENSION_LENGHT  = 3;
 
-const int FRAMES_DELAY = 120;
+const int ASSETS_DELAY = 120;
 
 enum LAYER {
     SPECIAL_LAYER,
@@ -53,6 +53,11 @@ enum MATERIAL_MAPS {
     NORMAL
 };
 
+enum VertexCase {
+  COMMON_CASE,
+  LAMP_CASE
+};
+
 enum SSBOS {
     ModelMatricesSSBO ,
     TextureCoordSSBO,
@@ -60,8 +65,10 @@ enum SSBOS {
     ModelsMaterialsSSBO,
     NormalVecsSSBO,
     NormalVecsIndexSSBO,
+    ModelLayersSSBO,
+    ModelFlagsSSBO,
     MaterialsSSBO,
-    LampsSSBO
+    LampsSSBO,
 };
 
 enum FILE_TYPES {

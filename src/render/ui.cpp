@@ -3,7 +3,9 @@
 #include "render/ui.hpp"
 #include <cstdio>
 #include <glm/gtc/matrix_transform.hpp>
+#include "common.hpp"
 #include "render.hpp"
+#include "utils.hpp"
 #include "vendor/imgui/imgui.h"
 
 bool fileWinOpen = 0,terminalOpen = 0;
@@ -288,6 +290,11 @@ void Render::ui() {
             Model &m = renderData.layers[selectedModelLayer].models[selectedModelIndex];
             glm::vec3 transf[3] = {m.getPosition(),m.getAngle(),m.getScale()};
 
+            if(ImGui::Button("virar para camera")){
+                camera.updateRotation(utils.aimMatrix(-camera.getPosition()));
+                setAVector(camera.getPosition(), -camera.getPosition());
+            }
+
             ImGui::Text("Transform:");
             ImGui::Text("   Position:( ");
             ImGui::SameLine();
@@ -317,9 +324,11 @@ void Render::ui() {
             ImGui::Text("   Normal:(%f, %f , %f)",n.x,n.y,n.z);
             ImGui::Text("   Delta %f %f",delta.x,delta.y);
         }
+
         ImGui::Checkbox("normalA", &normalATIVO);
         ImGui::SliderFloat("normalV", &normalV,.1, 2);
     }
+
     ImGui::End();
 
     if( terminalOpen ) {
@@ -335,9 +344,8 @@ void Render::ui() {
             ImGui::PopStyleColor();
 
             char buff[256];
-            if( ImGui::InputText("Command", buff, 256) ) {
-                if( ImGui::IsKeyPressed(ImGuiKey_Enter) ) {
-
+            if( ImGui::InputText("Command", buff, 256) )
+            /* -> */ if( ImGui::IsKeyPressed(ImGuiKey_Enter) ) {
                     int lenght = strlen(buff);
                     char *p = (char*)malloc(lenght + 1);
                     memcpy(p, buff, lenght);
@@ -346,8 +354,8 @@ void Render::ui() {
                     logger.terminal.lines.push_back(p);
                     logger.terminal.update();
                 }
-            }
         }
+
         ImGui::End();
     }
 
@@ -355,13 +363,12 @@ void Render::ui() {
     ImGui::SetNextWindowSize(ImVec2(totalLeng, endx));
 
     if( ImGui::Begin("Terminal Bar", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar) ) {
-
         ImGui::Text("%s", logger.terminal.lines[logger.terminal.lines.size() - 1]);
 
-        if( ImGui::IsWindowFocused() ){
-            if( io.MouseDoubleClicked[0] ) terminalOpen = 1;
-        }
+        if( ImGui::IsWindowFocused() )
+        /* -> */ if( io.MouseDoubleClicked[0] ) terminalOpen = 1;
     }
+
     ImGui::End();
 
     bool a = 0;
@@ -369,7 +376,9 @@ void Render::ui() {
 }
 
 void Render::input() {
+    glm::vec3 position = camera.getPosition();
     if( selectedModelIndex < renderData.layers[selectedModelLayer].models.size() ) {
+        printf("merda de seta :> %d\n",selectedModelIndex);
         renderData.positionateModel(renderData.layers[selectedModelLayer].models[selectedModelIndex].getPosition(), 0, LAYER::SPECIAL_LAYER);
         renderData.setAngleModel(renderData.layers[selectedModelLayer].models[selectedModelIndex].getAngle(), 0, LAYER::SPECIAL_LAYER);
     }
@@ -408,18 +417,18 @@ void Render::input() {
 
             renderData.scaleModel(glm::max(0.015f * glm::length(camera.getPosition() - renderData.getPositionOfModel(0, 0)), 0.00001f), 0, 0);
 
-            if( ImGui::IsKeyPressed(ImGuiKey_LeftArrow) )  renderData.translateModel(glm::vec3(1,0,0), selectedModelIndex, selectedModelLayer);
+            if( ImGui::IsKeyPressed(ImGuiKey_LeftArrow)  ) renderData.translateModel(glm::vec3(1,0,0),  selectedModelIndex, selectedModelLayer);
             if( ImGui::IsKeyPressed(ImGuiKey_RightArrow) ) renderData.translateModel(glm::vec3(-1,0,0), selectedModelIndex, selectedModelLayer);
-            if( ImGui::IsKeyPressed(ImGuiKey_UpArrow) )    renderData.translateModel(glm::vec3(0,0,1), selectedModelIndex, selectedModelLayer);
-            if( ImGui::IsKeyPressed(ImGuiKey_DownArrow) )  renderData.translateModel(glm::vec3(0,0,-1), selectedModelIndex, selectedModelLayer);
+            if( ImGui::IsKeyPressed(ImGuiKey_UpArrow)    ) renderData.translateModel(glm::vec3(0,0,1),  selectedModelIndex, selectedModelLayer);
+            if( ImGui::IsKeyPressed(ImGuiKey_DownArrow)  ) renderData.translateModel(glm::vec3(0,0,-1), selectedModelIndex, selectedModelLayer);
 
-            if( ImGui::IsKeyPressed(ImGuiKey_A) ) camera.localTranslation = glm::translate(camera.localTranslation, b*glm::vec3(camera.getRight()));
-            if( ImGui::IsKeyPressed(ImGuiKey_D) ) camera.localTranslation = glm::translate(camera.localTranslation, b*glm::vec3(-camera.getRight()));
-            if( ImGui::IsKeyPressed(ImGuiKey_W) ) camera.localTranslation = glm::translate(camera.localTranslation, b*glm::vec3(-camera.getFoward()));
-            if( ImGui::IsKeyPressed(ImGuiKey_S) ) camera.localTranslation = glm::translate(camera.localTranslation, b*glm::vec3(camera.getFoward()));
+            if( ImGui::IsKeyPressed(ImGuiKey_A) ) position += b * glm::vec3(-camera.getRight());
+            if( ImGui::IsKeyPressed(ImGuiKey_D) ) position += b * glm::vec3(camera.getRight());
+            if( ImGui::IsKeyPressed(ImGuiKey_W) ) position += b * glm::vec3(camera.getFoward());
+            if( ImGui::IsKeyPressed(ImGuiKey_S) ) position += b * glm::vec3(-camera.getFoward());
 
-            camera.translation = camera.localTranslation;
-            camera.viewMatrix = camera.rotation * camera.translation;
+
+            camera.updatePosition(position);
         }
 
         if( io.MouseReleased[1] ) ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);

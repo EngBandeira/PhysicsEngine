@@ -5,6 +5,7 @@
 
 struct MeshGenData {
     char *path;
+    unsigned int flags = 0;
 };
 
 
@@ -14,6 +15,7 @@ class Mesh {
     // {vertices[verticesCount],vertices[verticesCount+1],vertices[verticesCount+2]}
     // Ponto[textureVerticesCount/2] =
     // {textureVertices[textureVerticesCount],textureVertices[textureVerticesCount+1]}
+    unsigned int flags;
     unsigned int oCount = 0;
     char *mtl;
     char **o;

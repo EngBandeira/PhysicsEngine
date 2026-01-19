@@ -17,7 +17,6 @@ const uint MATERIAL_MAPS_KD = 1u;
 const uint MATERIAL_MAPS_KS = 2u;
 const uint MATERIAL_MAPS_NORMAL = 3u;
 
-
 struct Material {
     float K[9];
     float Ni, d, bm;
@@ -28,34 +27,47 @@ struct Material {
 layout(std430, binding = 0) buffer modelMxBuffer {
     mat4 modelsMatrix[];
 };
+
 layout(std430, binding = 1) buffer TexCoordBuffer {
     vec2 texCoord[];
 };
+
 layout(std430, binding = 2) buffer TexIndexBuffer {
     uint indexTexture[];
 };
+
 layout(std430, binding = 3) buffer ModelsMaterialsBuffer {
     uint modelsMaterials[];
 };
+
 layout(std430, binding = 4) buffer NormalVecsBuffer {
     float normalVecsBuffer[]; // to getway with vec3 limitations
 };
+
 layout(std430, binding = 5) buffer NormalVecsIndexBuffer {
     uint normalVecsIndexBuffer[];
 };
-layout(std430, binding = 6) buffer MaterialsBuffer {
+
+layout(std430, binding = 6) buffer ModelLayersBuffer {
+    uint models_layers[];
+};
+layout(std430, binding = 7) buffer ModelFlagsBuffer {
+    uint models_flags[];
+};
+layout(std430, binding = 8) buffer MaterialsBuffer {
     Material materials[];
 };
 
 out flat Material material;
 out vec2 g_texCoord;
 out flat uint modelParentFrag;
+out flat uint modelLayer;
 out vec3 normalVec;
 out vec4 worldPos;
 
 in uint modelParentGeom[3];
 
-uniform sampler2DArray textures[16];
+uniform sampler2DArray textures[7];
 uniform mat4 projection;
 uniform mat4 view;
 
@@ -76,8 +88,8 @@ void main() {
 
     modelParentFrag = modelParentGeom[1];
     gl_PrimitiveID = gl_PrimitiveIDIn;
-
-    material = materials[modelsMaterials[modelParentGeom[1]]];
+    modelLayer = models_layers[modelParentFrag];
+    material = materials[modelsMaterials[modelParentFrag]];
 
     uvec3 inxTex = uvec3(indexTexture[3 * gl_PrimitiveIDIn], indexTexture[3 * gl_PrimitiveIDIn + 1], indexTexture[3 * gl_PrimitiveIDIn + 2]);
     for (int i = 0; i < 3; i++) {
