@@ -1,5 +1,3 @@
-#include "render/ui.hpp"
-
 #include "common.hpp"
 
 #include <cstdlib>
@@ -8,6 +6,8 @@
 #include <bits/stdc++.h>
 #include <stdio.h>
 
+#include "mesh.hpp"
+#include "render_data.hpp"
 #include "vendor/glad/glad.h"
 #include <GLFW/glfw3.h>
 
@@ -20,79 +20,43 @@
 #include "vendor/imgui/imgui_impl_opengl3.h"
 
 #include "render.hpp"
+GLFWwindow *glfw_window;
+void init();
 
+#include "utils.hpp"
 
 // 4.6 (Core Profile) Mesa 25.1.3-arch1.3
-void framebuffer_size_callback(GLFWwindow *window, int width, int height);
-void processInput(GLFWwindow *window, int key, int scancode, int action,
-                  int mods);
-void error_callback(GLenum source, GLenum type, unsigned int id,
-                    GLenum severity, GLsizei length, const GLchar *message,
-                    const void *userParam);
-
-
-void pr() {}
-
 int main() {
-    setenv("XDG_SESSION_TYPE", "x11" , 1); // THIS IN NECESSARY TO USE THE RENDERDOC, IT DONT RUNS ON WAYLAND
-    glfwInit();
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 4);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
+    init();
 
-    GLFWwindow *bigWindow = glfwCreateWindow(SCR_X, SCR_Y, "PhysicsEngine", NULL, NULL);
-    if( bigWindow == NULL ) {
-        logger.sendError("failed to crate a Glfw Window", 1);
-        glfwTerminate();
-        return -1;
+    Render m_render(glfw_window);
+
+    logger.terminal.lines.push_back("Console Init\n");
+    m_render.render_data.addMesh(MeshGenData{
+        .path = (char*)"assets/3dmodels/Cube.obj"
+    });
+    m_render.addObject(GameObjectGenData{
+        .name = "PretoVeio",
+        .uuid = "a"
+    });
+    while(!glfwWindowShouldClose(glfw_window)) {
+        m_render.newframe();
+
+        m_render.draw();
+
+        m_render.ui();
+
+
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+        glfwSwapBuffers(glfw_window);
+        glfwPollEvents();
+        m_render.flags  = m_render.flags & ~(1&2);
     }
 
-    glfwMakeContextCurrent(bigWindow);
-    glfwSwapInterval(1);
-    glfwSetFramebufferSizeCallback(bigWindow,
-        [](GLFWwindow *window, int width, int height) {
-            glViewport(0, 0, width, height);
-        });
-
-    if(! gladLoadGLLoader((GLADloadproc)glfwGetProcAddress) ) {
-        logger.sendError("cannot init glad", 1);
-    }
-
-    glEnable(GL_DEPTH_TEST);
-    glEnable(GL_DEBUG_OUTPUT);
-    glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glDebugMessageCallback(&error_callback, 0);
-    glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_TRUE);
-    glfwMakeContextCurrent(bigWindow);
-
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGuiIO &io = ImGui::GetIO();
-    (void)io;
-    io.IniFilename = nullptr;
-    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad; // Enable Gamepad Controls
-
-    ImGui::StyleColorsDark();
-
-    ImGui_ImplGlfw_InitForOpenGL(bigWindow, true);
-    ImGui_ImplOpenGL3_Init("#version 460");
-    glfwSetKeyCallback(bigWindow,ImGui_ImplGlfw_KeyCallback);
-
-    {
-        Render m_render(bigWindow);
-        m_render.start(pr, pr, pr);
-    }
-
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
-    ImGui::DestroyContext();
-    glfwDestroyWindow(bigWindow);
-    glfwTerminate();
+    free(m_render.assets.directory);
     return 0;
 }
 
@@ -108,11 +72,62 @@ void error_callback(GLenum source, GLenum type, unsigned int id, GLenum severity
     }
 }
 
-void framebuffer_size_callback(GLFWwindow *window, int width, int height) {
-  glViewport(0, 0, width, height);
+
+void init(){
+    setenv("XDG_SESSION_TYPE", "x11" , 1); // THIS IN NECESSARY TO USE THE RENDERDOC, IT DONT RUNS ON WAYLAND
+    glfwInit();
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 4);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
+
+    glfw_window = glfwCreateWindow(SCR_X, SCR_Y, "PhysicsEngine", NULL, NULL);
+    if( glfw_window == NULL ) {
+        glfwTerminate();
+        logger.sendError("failed to crate a Glfw Window", 1);
+    }
+
+    glfwMakeContextCurrent(glfw_window);
+    glfwSwapInterval(1);
+    glfwSetFramebufferSizeCallback(glfw_window,
+        [](GLFWwindow *window, int width, int height) {
+            glViewport(0, 0, width, height);
+        });
+
+    if(! gladLoadGLLoader((GLADloadproc)glfwGetProcAddress) ) {
+        logger.sendError("cannot init glad", 1);
+    }
+
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_DEBUG_OUTPUT);
+    glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glDebugMessageCallback(error_callback, 0);
+    glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_TRUE);
+    glfwMakeContextCurrent(glfw_window);
+
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO &io = ImGui::GetIO();
+    (void)io;
+    io.IniFilename = nullptr;
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad; // Enable Gamepad Controls
+
+    ImGui::StyleColorsDark();
+
+    ImGui_ImplGlfw_InitForOpenGL(glfw_window, true);
+    ImGui_ImplOpenGL3_Init("#version 460");
+
+    glfwSetKeyCallback(glfw_window, ImGui_ImplGlfw_KeyCallback);
 }
-// GL CALLBACK:  type = 0x8251, severity = 0x826b, message = Shader Stats:
-// SGPRS: 16 VGPRS: 8 Code Size: 52 LDS: 0 Scratch: 0 Max Waves: 20 Spilled
-// SGPRs: 0 Spilled VGPRs: 0 PrivMem VGPRs: 0 LSOutputs: 0 HSOutputs: 0
-// HSPatchOuts: 0 ESOutputs: 0 GSOutputs: 0 VSOutputs: 0 PSOutputs: 1
-// InlineUniforms: 0 DivergentLoop: 0 (PS, W32)
+
+void close(){
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+    glfwDestroyWindow(glfw_window);
+    glfwTerminate();
+}

@@ -10,16 +10,14 @@ enum AXIS { X, Y, Z };
 #define GLFW_INCLUDE_NONE
 #define STB_IMAGE_IMPLEMENTATION
 
-const char VERTEX_SHADERS_LOCALPATH[]   = "vShader.vert";
-const char FRAGMENT_SHADERS_LOCALPATH[] = "fShader.frag";
-const char GEOMETRY_SHADERS_LOCALPATH[] = "gShader.geom";
+const char VERTEX_SHADERS_LOCALPATH[]   = "src/shaders/vShader.vert";
+const char FRAGMENT_SHADERS_LOCALPATH[] = "src/shaders/fShader.frag";
+const char GEOMETRY_SHADERS_LOCALPATH[] = "src/shaders/gShader.geom";
 const char RAW_TEX_EXTENSION[] =  "raw";
 
 const int TEXTURE_HANDLERS_COUNT = 7;
-const int LAYERS_COUNT           = 2;
-const int SSBO_PER_LAYER_COUNT   = 8;
-const int VBO_COUNT              = 2;
-const int LEVEL                  =  0;
+const int SSBOS_COUNT            = 2;
+const int LEVEL                  = 0;
 const double MOUSE_SENSI         = 0.05f;
 
 const double MAX_RATIO_OF_EMPTY_TEXTURES  = .5;
@@ -29,7 +27,7 @@ const int MAX_EMPTY_TEXTURES_COUNT        = 10;
 const int MATERIAL_CHANGE_FLAG = 1 << 0;
 const int MATRICES_CHANGE_FLAG = 1 << 1;
 const int MODELS_CHANGE_FLAG   = 1 << 2;
-const int LAMPS_CHANGE_FLAG   = 1 << 3;
+const int LAMPS_CHANGE_FLAG    = 1 << 3;
 
 // Render defines
 const int SCR_X = 1920;
@@ -59,16 +57,8 @@ enum VertexCase {
 };
 
 enum SSBOS {
-    ModelMatricesSSBO ,
     TextureCoordSSBO,
     TextureIndexSSBO,
-    ModelsMaterialsSSBO,
-    NormalVecsSSBO,
-    NormalVecsIndexSSBO,
-    ModelLayersSSBO,
-    ModelFlagsSSBO,
-    MaterialsSSBO,
-    LampsSSBO,
 };
 
 enum FILE_TYPES {

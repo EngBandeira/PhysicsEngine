@@ -1,12 +1,60 @@
 #include "common.hpp"
 #include "utils.hpp"
+#include "render.hpp"
 #include <stdio.h>
 
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/trigonometric.hpp>
 
+#include <cstdlib>
+#include <glm/ext/matrix_transform.hpp>
+#include <glm/fwd.hpp>
+#include <bits/stdc++.h>
+#include <stdio.h>
 
-char* Utils::readFile(const char *localPath, unsigned int *fileLenght, const char *flags) {
+#include "vendor/glad/glad.h"
+#include <GLFW/glfw3.h>
+
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
+void Utils::get_shader_status(unsigned int shaderProgram,int status){
+    int linkStatus;
+    glGetShaderiv(shaderProgram, status, &linkStatus);
+    if (!linkStatus) {
+        GLint infoLogLength;
+        glGetShaderiv(shaderProgram, GL_INFO_LOG_LENGTH, &infoLogLength);
+        char *c = (char*)malloc(infoLogLength + 1);
+        glGetShaderInfoLog(shaderProgram, infoLogLength, nullptr, c);
+        c[infoLogLength] = 0;
+        logger.sendError(c);
+        free(c);
+    }
+}
+
+void Utils::get_program_status(unsigned int shaderProgram,int status){
+    int linkStatus;
+    glGetProgramiv(shaderProgram, status, &linkStatus);
+    if (!linkStatus) {
+        GLint infoLogLength;
+        glGetProgramiv(shaderProgram, GL_INFO_LOG_LENGTH, &infoLogLength);
+        char *c = (char*)malloc(infoLogLength + 1);
+        glGetProgramInfoLog(shaderProgram, infoLogLength, nullptr, c);
+        c[infoLogLength] = 0;
+        logger.sendError(c);
+        free(c);
+    }
+}
+
+//Returns the index of the point on the extension
+unsigned int Utils::get_extension_index(char *str,unsigned int size){
+    unsigned int i = size - 2;
+    while( str[i] != '.' && i > 0 ) i--;
+    return i;
+}
+
+char* Utils::read_file(const char *localPath, unsigned int *fileLenght, const char *flags) {
     FILE *file = fopen(localPath, flags);
     char *buffer;
 
@@ -32,43 +80,22 @@ char* Utils::readFile(const char *localPath, unsigned int *fileLenght, const cha
     return buffer;
 }
 
-Utils::Utils(){
-    axis[0] = glm::vec3(1,0,0);
-    axis[1] = glm::vec3(0,1,0);
-    axis[2] = glm::vec3(0,0,1);
-}
-
-glm::mat4 Utils::getScaleMatrix(glm::vec3 scale){
-    glm::mat4 scaleM(1);
-    scaleM[0][0] = scale.x;
-    scaleM[1][1] = scale.y;
-    scaleM[2][2] = scale.z;
-    return scaleM;
-}
-
-glm::mat4 Utils::getAngleMatrix(glm::vec3 angle_radians) {
-    glm::mat4 rotationM = glm::rotate(glm::mat4(1), angle_radians.x, axis[0]);
-    rotationM = glm::rotate(rotationM, angle_radians.y, axis[1]);
-    rotationM = glm::rotate(rotationM, angle_radians.z, axis[2]);
-    return rotationM;
-}
-
-
-glm::mat4 Utils::getPositionMatrix(glm::vec3 position){
-    glm::mat4 translationM(1);
-    translationM[3][0] = position.x;
-    translationM[3][1] = position.y;
-    translationM[3][2] = position.z;
-    return translationM;
-}
-
-glm::mat4 Utils::aimMatrix(glm::vec3 direction){
-    glm::vec3 normali = glm::normalize(direction);
-    float theta = -atan(normali.z / normali.x);
-    if(normali.x < 0){
-        theta += glm::pi<float>();
+unsigned short Utils::get_old_index_of_new(unsigned short i, unsigned short n, unsigned short *index) {
+    unsigned short rt = i;
+    for( unsigned short j = 0; j < n; j++ ) {
+        if( index[j] <= rt ) rt++;
     }
-    float phi = asin(normali.y);
-    printf("amin: %f %f\n",glm::degrees(theta),glm::degrees(phi));
-    return utils.getAngleMatrix(glm::vec3(0,theta,phi));
+    return rt;
+}
+
+unsigned short Utils::get_new_index_of_old(unsigned short i, unsigned short n, unsigned short *index) {
+    unsigned short rt = i;
+    for( unsigned short j = 0; j < n; j++ ) {
+        if(index[j] == i){
+            logger.sendError("Acess of Delete Index");
+            return 0;
+        }
+        if(index[j] < i) rt--;
+    }
+    return  rt;
 }

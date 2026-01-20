@@ -1,7 +1,7 @@
 #!/bin/bash
-vert=$(glslang vShader.vert)
-frag=$(glslang fShader.frag)
-geom=$(glslang gShader.geom)
+vert=$(glslang src/shaders/vShader.vert)
+frag=$(glslang src/shaders/fShader.frag)
+geom=$(glslang src/shaders/gShader.geom)
 
 if [[ "$vert" = "" && "$frag" = ""  && "$geom" = ""  ]]; then
   ./build.pl   && ./build/final

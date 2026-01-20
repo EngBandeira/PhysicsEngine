@@ -3,4 +3,6 @@ build/*.o
 .vscode/*
 .cache
 .cache/*
+.cached_comp
+.assets
 assets/3dmodels/*.raw

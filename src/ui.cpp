@@ -1,6 +1,6 @@
 // #include "vendor/imgui/imgui_internal.h"
 // #include "glm/glm.hpp"
-#include "render/ui.hpp"
+#include "ui.hpp"
 #include <cstdio>
 #include <glm/gtc/matrix_transform.hpp>
 #include "common.hpp"
@@ -12,6 +12,7 @@ bool fileWinOpen = 0,terminalOpen = 0;
 unsigned int fileIndexOpen;
 char *filePath;
 ImVec2 delta;
+
 void Render::ui() {
     ImGuiIO& io = ImGui::GetIO();
     ImGuiViewport *view = ImGui::GetMainViewport();
@@ -76,97 +77,39 @@ void Render::ui() {
 
     ImGui::SetNextWindowDockID(dockspace_id2, ImGuiCond_Once);
     if(ImGui::Begin("World", nullptr, ImGuiWindowFlags_None)) {
-        if( ImGui::Button("Add") ) {
-            if(selectedModelIndex < renderData.layers[selectedModelLayer].models.size()) {
-                // const char *meshPath = renderData.LayersData[selectedModelLayer].models[selectedModelIndex].mesh.meshPath;
-            }
-        }
+        // if( ImGui::Button("Add") ) {
+        //     if(selectedModelIndex < renderData.layers[selectedModelLayer].models.size()) {
+        //         // const char *meshPath = renderData.LayersData[selectedModelLayer].models[selectedModelIndex].mesh.meshPath;
+        //     }
+        // }
 
-        ImGui::SameLine();
+        // ImGui::SameLine();
 
-        if( ImGui::Button("Remove") ) {
-            if(renderData.layers[selectedModelLayer].models.size() > selectedModelIndex) {
-                renderData.popModels(selectedModelIndex, selectedModelLayer);
-                if(selectedModelIndex > 0) selectedModelIndex--;
-            }
-        }
+        // if( ImGui::Button("Remove") ) {
+        //     if(renderData.layers[selectedModelLayer].models.size() > selectedModelIndex) {
+        //         renderData.popModels(selectedModelIndex, selectedModelLayer);
+        //         if(selectedModelIndex > 0) selectedModelIndex--;
+        //     }
+        // }
 
-        ImGui::Text("LAYER::COMMON");
+        ImGui::Text("GameObjects");
 
-        if( ImGui::BeginTable("LAYER::COMMON", 1) ) {
-            char label[100];
-            for( unsigned int i = 0; i < renderData.layers[LAYER::COMMON_LAYER].models.size(); i++ ) {
+        if( ImGui::BeginTable("GameObjects", 1) ) {
+            for( unsigned int i = 0; i < objects_count; i++ ) {
 
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex(0);
-                sprintf(label, "Model %d", i);
-                if(i == selectedModelIndex && selectedModelLayer == LAYER::COMMON_LAYER) {
+                if(i == selected_object) {
                     ImGui::TableSetBgColor(
                         ImGuiTableBgTarget_RowBg0,
                         IM_COL32(138, 38, 38, 255)
                     );
                 }
-
-                if(ImGui::Selectable(label)) {
-                    selectedModelIndex = i;
-                    selectedModelLayer = LAYER::COMMON_LAYER;
+                if(ImGui::Selectable(objects[i].name)) {
+                    selected_object = i;
                 }
 
             }
-            ImGui::EndTable();
-        }
-
-        ImGui::Text("LAYER::SPECIAL");
-
-        if( ImGui::BeginTable("LAYER::SPECIAL", 1) ) {
-            char label[100];
-            for( unsigned int i = 0; i < renderData.layers[LAYER::SPECIAL_LAYER].models.size(); i++ ) {
-
-                ImGui::TableNextRow();
-                ImGui::TableSetColumnIndex(0);
-                sprintf(label, "Model %d", i);
-
-                if(i == selectedModelIndex && selectedModelLayer == LAYER::SPECIAL_LAYER) {
-                    ImGui::TableSetBgColor(
-                        ImGuiTableBgTarget_RowBg0,
-                        IM_COL32(138, 38, 38, 255)
-                    );
-                }
-
-                if(ImGui::Selectable(label)) {
-                    selectedModelIndex = i;
-                    selectedModelLayer = LAYER::SPECIAL_LAYER;
-                }
-
-            }
-
-            ImGui::EndTable();
-        }
-
-        ImGui::Text("LAYER::LAMPS");
-
-        if( ImGui::BeginTable("LAYER::LAMPS", 1) ) {
-            char label[100];
-            for( unsigned int i = 0; i < renderData.lampsCount; i++ ) {
-
-                ImGui::TableNextRow();
-                ImGui::TableSetColumnIndex(0);
-                sprintf(label, "Model %d", i);
-
-                if(i == selectedModelIndex && selectedModelLayer == LAYER::SPECIAL_LAYER) {
-                    ImGui::TableSetBgColor(
-                        ImGuiTableBgTarget_RowBg0,
-                        IM_COL32(138, 38, 38, 255)
-                    );
-                }
-
-                if(ImGui::Selectable(label)) {
-                    selectedModelIndex = i;
-                    selectedModelLayer = LAYER::LAMPS;
-                }
-
-            }
-
             ImGui::EndTable();
         }
     }
@@ -257,11 +200,11 @@ void Render::ui() {
         if( ImGui::Begin("File Properties", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar) ) {
             switch(assets.files[fileIndexOpen].type) {
                 case MESH_FILE:{
-                    if(ImGui::Button("Add Model")){
-                        renderData.pushModels(MeshGenData{
-                            .path = filePath,
-                        },LAYER::COMMON_LAYER);
-                    }
+                    // if(ImGui::Button("Add Model")){
+                    //     renderData.pushModels(MeshGenData{
+                    //         .path = filePath,
+                    //     },LAYER::COMMON_LAYER);
+                    // }
                 } break;
                 default: break;
             }
@@ -285,48 +228,48 @@ void Render::ui() {
 
     if( ImGui::Begin("Properties") ) {
 
-        if( renderData.layers[selectedModelLayer].models.size() > selectedModelIndex ) {
+        // if( renderData.layers[selectedModelLayer].models.size() > selectedModelIndex ) {
 
-            Model &m = renderData.layers[selectedModelLayer].models[selectedModelIndex];
-            glm::vec3 transf[3] = {m.getPosition(),m.getAngle(),m.getScale()};
+        //     Model &m = renderData.layers[selectedModelLayer].models[selectedModelIndex];
+        //     glm::vec3 transf[3] = {m.getPosition(),m.getAngle(),m.getScale()};
 
-            if(ImGui::Button("virar para camera")){
-                camera.updateRotation(utils.aimMatrix(-camera.getPosition()));
-                setAVector(camera.getPosition(), -camera.getPosition());
-            }
+        //     if(ImGui::Button("virar para camera")){
+        //         camera.updateRotation(utils.aim_matrix(-camera.getPosition()));
+        //         setAVector(camera.getPosition(), -camera.getPosition());
+        //     }
 
-            ImGui::Text("Transform:");
-            ImGui::Text("   Position:( ");
-            ImGui::SameLine();
+        //     ImGui::Text("Transform:");
+        //     ImGui::Text("   Position:( ");
+        //     ImGui::SameLine();
 
-            if( ImGui::InputFloat3("newPos ", &transf[0].x) ) {
-                renderData.positionateModel(transf[0], selectedModelIndex, selectedModelLayer);
-            }
+        //     if( ImGui::InputFloat3("newPos ", &transf[0].x) ) {
+        //         renderData.positionateModel(transf[0], selectedModelIndex, selectedModelLayer);
+        //     }
 
-            ImGui::Text("   Rotation:( ");
-            ImGui::SameLine();
+        //     ImGui::Text("   Rotation:( ");
+        //     ImGui::SameLine();
 
-            if( ImGui::InputFloat3("newRot ", &transf[1].x) ) {
-                renderData.setAngleModel(transf[1], selectedModelIndex, selectedModelLayer);
-            }
+        //     if( ImGui::InputFloat3("newRot ", &transf[1].x) ) {
+        //         renderData.setAngleModel(transf[1], selectedModelIndex, selectedModelLayer);
+        //     }
 
-            ImGui::Text("   Scale:( ");
-            ImGui::SameLine();
+        //     ImGui::Text("   Scale:( ");
+        //     ImGui::SameLine();
 
-            if( ImGui::InputFloat3("newSca ", &transf[2].x) ) {
-                renderData.scaleModel(transf[2], selectedModelIndex, selectedModelLayer);
-            }
+        //     if( ImGui::InputFloat3("newSca ", &transf[2].x) ) {
+        //         renderData.scaleModel(transf[2], selectedModelIndex, selectedModelLayer);
+        //     }
 
-            glm::vec3 pi = camera.getPosition();
-            ImGui::Text("Camera:");
-            ImGui::Text("   Position:(%f, %f , %f)",pi.x,pi.y,pi.z);
-            glm::vec n = camera.getFoward();
-            ImGui::Text("   Normal:(%f, %f , %f)",n.x,n.y,n.z);
-            ImGui::Text("   Delta %f %f",delta.x,delta.y);
-        }
+        //     glm::vec3 pi = camera.getPosition();
+        //     ImGui::Text("Camera:");
+        //     ImGui::Text("   Position:(%f, %f , %f)",pi.x,pi.y,pi.z);
+        //     glm::vec n = camera.getFoward();
+        //     ImGui::Text("   Normal:(%f, %f , %f)",n.x,n.y,n.z);
+        //     ImGui::Text("   Delta %f %f",delta.x,delta.y);
+        // }
 
-        ImGui::Checkbox("normalA", &normalATIVO);
-        ImGui::SliderFloat("normalV", &normalV,.1, 2);
+        // ImGui::Checkbox("normalA", &normalATIVO);
+        // ImGui::SliderFloat("normalV", &normalV,.1, 2);
     }
 
     ImGui::End();
@@ -377,25 +320,13 @@ void Render::ui() {
 
 void Render::input() {
     glm::vec3 position = camera.getPosition();
-    if( selectedModelIndex < renderData.layers[selectedModelLayer].models.size() ) {
-        printf("merda de seta :> %d\n",selectedModelIndex);
-        renderData.positionateModel(renderData.layers[selectedModelLayer].models[selectedModelIndex].getPosition(), 0, LAYER::SPECIAL_LAYER);
-        renderData.setAngleModel(renderData.layers[selectedModelLayer].models[selectedModelIndex].getAngle(), 0, LAYER::SPECIAL_LAYER);
-    }
+    // if( selectedModelIndex < renderData.layers[selectedModelLayer].models.size() ) {
+    //     renderData.positionateModel(renderData.layers[selectedModelLayer].models[selectedModelIndex].getPosition(), 0, LAYER::SPECIAL_LAYER);
+    //     renderData.setAngleModel(renderData.layers[selectedModelLayer].models[selectedModelIndex].getAngle(), 0, LAYER::SPECIAL_LAYER);
+    // }
 
     ImGuiIO& io = ImGui::GetIO();
     if( ImGui::IsWindowFocused() && ImGui::GetMousePos().y >= ImGui::GetCursorScreenPos().y ) {
-
-        // if( io.MouseDown[0] ) {
-        //     glm::vec3 camP = camera.getPosition();
-        //     glm::vec3 normal = camera.getFoward();
-        //     ImVec2 per = ((io.MousePos - ImGui::GetWindowPos() - ImVec2(0,27) )/ ImGui::GetWindowSize()) - ImVec2(0.5,0.5);
-        //     glm::vec3 pica = camera.getRight()  * per.x + camera.getUp() * -1.f * per.y;
-        //     glm::vec3 ajtd = pica + normal;
-        //     // renderData.positionateModel(camP + ajtd * 3.0f, 0, LAYER::COMMON);
-
-        //     setAVector(camP, ajtd);
-        // }
 
         if( io.MouseDown[1] ) {
             ImVec2 mousePos = io.MousePos;
@@ -415,12 +346,12 @@ void Render::input() {
             camera.rotation = glm::rotate(camera.rotation, glm::radians(camera.angle.y), glm::vec3(camera.getRight()));
             float b = .05;
 
-            renderData.scaleModel(glm::max(0.015f * glm::length(camera.getPosition() - renderData.getPositionOfModel(0, 0)), 0.00001f), 0, 0);
+            // renderData.scaleModel(glm::max(0.015f * glm::length(camera.getPosition() - renderData.getPositionOfModel(0, 0)), 0.00001f), 0, 0);
 
-            if( ImGui::IsKeyPressed(ImGuiKey_LeftArrow)  ) renderData.translateModel(glm::vec3(1,0,0),  selectedModelIndex, selectedModelLayer);
-            if( ImGui::IsKeyPressed(ImGuiKey_RightArrow) ) renderData.translateModel(glm::vec3(-1,0,0), selectedModelIndex, selectedModelLayer);
-            if( ImGui::IsKeyPressed(ImGuiKey_UpArrow)    ) renderData.translateModel(glm::vec3(0,0,1),  selectedModelIndex, selectedModelLayer);
-            if( ImGui::IsKeyPressed(ImGuiKey_DownArrow)  ) renderData.translateModel(glm::vec3(0,0,-1), selectedModelIndex, selectedModelLayer);
+            // if( ImGui::IsKeyPressed(ImGuiKey_LeftArrow)  ) renderData.translateModel(glm::vec3(1,0,0),  selectedModelIndex, selectedModelLayer);
+            // if( ImGui::IsKeyPressed(ImGuiKey_RightArrow) ) renderData.translateModel(glm::vec3(-1,0,0), selectedModelIndex, selectedModelLayer);
+            // if( ImGui::IsKeyPressed(ImGuiKey_UpArrow)    ) renderData.translateModel(glm::vec3(0,0,1),  selectedModelIndex, selectedModelLayer);
+            // if( ImGui::IsKeyPressed(ImGuiKey_DownArrow)  ) renderData.translateModel(glm::vec3(0,0,-1), selectedModelIndex, selectedModelLayer);
 
             if( ImGui::IsKeyPressed(ImGuiKey_A) ) position += b * glm::vec3(-camera.getRight());
             if( ImGui::IsKeyPressed(ImGuiKey_D) ) position += b * glm::vec3(camera.getRight());
@@ -428,7 +359,7 @@ void Render::input() {
             if( ImGui::IsKeyPressed(ImGuiKey_S) ) position += b * glm::vec3(-camera.getFoward());
 
 
-            camera.updatePosition(position);
+            // camera.updatePosition(position);
         }
 
         if( io.MouseReleased[1] ) ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);

@@ -13,7 +13,7 @@ Shader::Shader() {
     {
         // if(i == 3)
         // break;
-        char *file = utils.readFile (shadersPath[i], nullptr);
+        char *file = utils.read_file (shadersPath[i], nullptr);
         Shaders[i] = glCreateShader (sets[i]);
         glShaderSource (Shaders[i], 1, &file, NULL);//aq
         glCompileShader (Shaders[i]);

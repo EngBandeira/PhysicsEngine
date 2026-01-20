@@ -6,23 +6,20 @@
 #include "mesh.hpp"
 #include "common.hpp"
 
-
 template <typename T>
 T *exportvec(unsigned int *count, std::vector<T> vec) {
-  *count = vec.size();
-  T *rt = (T *) malloc(sizeof(T) * (*count));
-  memcpy(rt,vec.data(),sizeof(T) * (*count));
-  return rt;
+    *count = vec.size();
+    T *rt = (T *) malloc(sizeof(T) * (*count));
+    memcpy(rt,vec.data(),sizeof(T) * (*count));
+    return rt;
 }
 
-
-Mesh::Mesh(MeshGenData genData): flags(genData.flags),meshPath(genData.path){
-
+void Mesh::sanatize() {
     o = (char**)malloc(0);
     std::vector<float> vertices_,textureVertices_,normalVertices_;
     std::vector<unsigned int> verticesIndex_, textureVerticesIndex_,normalVerticesIndex_;
     unsigned int fileLenght = 0;
-    char *buffer = utils.readFile(meshPath, &fileLenght);
+    char *buffer = utils.read_file(meshPath, &fileLenght);
     char c;
     unsigned int i = 0;
     while(1) {
@@ -40,7 +37,7 @@ Mesh::Mesh(MeshGenData genData): flags(genData.flags),meshPath(genData.path){
             continue;
         }
 
-        if( utils.matchPairs(buffer, i, {'m', 't', 'l', 'l', 'i', 'b', ' '})) {
+        if( utils.match_pairs(buffer, i, {'m', 't', 'l', 'l', 'i', 'b', ' '})) {
             i += 7;
 
             unsigned int k = i;
@@ -183,6 +180,7 @@ Mesh::Mesh(MeshGenData genData): flags(genData.flags),meshPath(genData.path){
 
         i++;
     }
+
     free(buffer);
     verticesIndex = exportvec<unsigned int>(&verticesIndexCount, verticesIndex_);
     textureVerticesIndex = exportvec<unsigned int>(&textureVerticesIndexCount, textureVerticesIndex_);
@@ -191,19 +189,4 @@ Mesh::Mesh(MeshGenData genData): flags(genData.flags),meshPath(genData.path){
     vertices = exportvec<float>(&verticesCount, vertices_);
     textureVertices = exportvec<float>(&textureVerticesCount, textureVertices_);
     normalVertices = exportvec<float>(&normalVerticesCount, normalVertices_);
-}
-
-Mesh::~Mesh() {}
-
-void Mesh::deleteMesh() {
-    free(vertices);
-    free(textureVertices);
-    free(normalVertices);
-    free(verticesIndex);
-    free(textureVerticesIndex);
-    free(normalVerticesIndex);
-    free(mtl);
-    for(unsigned int i = 0; i < oCount; i++ ) free(o[i]);
-    free(o);
-    // free(meshPath);
 }

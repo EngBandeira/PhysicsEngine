@@ -23,6 +23,6 @@ class Model {
     glm::vec3 getScale();
     glm::vec3 getAngle();
     glm::vec3 getPosition();
-    Model(){};
+    Model() = default;
     Model(Mesh mesh,unsigned int materialIndex);
 };

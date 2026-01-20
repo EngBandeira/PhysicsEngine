@@ -1,77 +1,59 @@
 #pragma once
-#include "render/ui.hpp"
-
-#include "common.hpp"
-
-#include <GLFW/glfw3.h>
+#include "game_object.hpp"
+#include "assets.hpp"
 #include <asm-generic/errno.h>
-#include <vector>
 
-#include "model.hpp"
-#include "log.hpp"
 #include "shader.hpp"
 
-#include "render/render_data.hpp"
-#include "render/camera.hpp"
-
-
-
-struct File {
-    char *simpleName; // complete name = simpleName + '.' + extension
-    char *extension;
-    char *completeName;
-    FILE_TYPES type = FILE_TYPES::COMMON_FILE;
-};
-
-struct Assets {
-    std::vector<File> files;
-    unsigned int framesDelay = ASSETS_DELAY;
-    char *directory = nullptr;
-    void update();
-    unsigned int delayCounter = 0;
-};
-
-
+#include "render_data.hpp"
+#include "camera.hpp"
 
 class Render {
-    public:
+public:
+
     bool normalATIVO = 0;
     float normalV = 1;
     char flags = 0;
-    unsigned int FBO_FROM, FBO_TO, RBO, TBO, QUERY,
-                 texToRenderOver,texToShowFrom;
-    unsigned int feedbacksize,feedbacknumber, samples=4;
+    unsigned int FBO_FROM,
+                 FBO_TO,
+                 RBO,
+                 TBO,
+                 QUERY,
+                 texToRenderOver,
+                 texToShowFrom,
+                 feedbacksize,
+                 feedbacknumber,
+                 shaderProgram,
+                 samples = 4;
 
     Camera camera;
     bool transFeed = false;
 
-    void start(void(*op1)(),void(*op2)(),void(*op3)());
-
     Render(GLFWwindow *win);
     ~Render();
 
+    GameObject *objects;
+    unsigned int objects_count = 0;
 
+    unsigned int selected_object;
     Assets assets;
-    RenderData renderData;
-    LAYER selectedModelLayer = LAYER::COMMON_LAYER;
-    unsigned int selectedModelIndex=0;
-    unsigned int shaderProgram;
+    RenderData render_data;
     Shader shader;
     GLFWwindow *glfwWin;
     unsigned short getOldIndexOfNew(unsigned short i, unsigned short n,unsigned short *index);
     unsigned short getNewIndexOfOld(unsigned short i, unsigned short n,unsigned short *index);
 
-    void getProgramStatus(unsigned int shaderProgram,int status);
-    void getShaderStatus(unsigned int shaderProgram,int status);
-
     unsigned int setAVector(glm::vec3 position,glm::vec3 direction);
 
-    void updatePipeline(unsigned int layerIndex);
+    unsigned int addObject(GameObjectGenData genData);
+    void rmObject();
+
+    void update();
     void once();
     void input();
     void ui();
-    void update();
     void newframe();
-    void draw(unsigned int layerIndex);
+    void draw();
 
 };
+// Render() -> loop() -> once() ->
