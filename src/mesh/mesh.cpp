@@ -10,14 +10,14 @@ template <typename T>
 T *exportvec(unsigned int *count, std::vector<T> vec) {
     *count = vec.size();
     T *rt = (T *) malloc(sizeof(T) * (*count));
-    memcpy(rt,vec.data(),sizeof(T) * (*count));
+    memcpy(rt, vec.data(), sizeof(T) * (*count));
     return rt;
 }
 
 void Mesh::sanatize() {
     o = (char**)malloc(0);
-    std::vector<float> vertices_,textureVertices_,normalVertices_;
-    std::vector<unsigned int> verticesIndex_, textureVerticesIndex_,normalVerticesIndex_;
+    std::vector<float> vertices_, texture_vertices_, normal_vertices_;
+    std::vector<unsigned int> vertices_index_, texture_vertices_index_, normal_vertices_index_;
     unsigned int fileLenght = 0;
     char *buffer = utils.read_file(meshPath, &fileLenght);
     char c;
@@ -88,7 +88,7 @@ void Mesh::sanatize() {
                     while(buffer[i] != '\n' && buffer[i] != ' ') i++;
 
                     buffer[i] = 0;
-                    normalVertices_.push_back((float) atof(buffer+ k));
+                    normal_vertices_.push_back((float) atof(buffer+ k));
                     buffer[i] = ' ';
                     i++;
                 }
@@ -104,7 +104,7 @@ void Mesh::sanatize() {
                     while(buffer[i] != '\n' && buffer[i] != ' ') i++;
 
                     buffer[i] = 0;
-                    textureVertices_.push_back((float)atof(buffer+ k));
+                    texture_vertices_.push_back((float)atof(buffer+ k));
                     buffer[i] = ' ';
                     i++;
                 }
@@ -147,15 +147,15 @@ void Mesh::sanatize() {
                         prev[2] = value[2];
                     } break;
                     default: {
-                        verticesIndex_.push_back(first[0]);
-                        verticesIndex_.push_back(prev[0]);
-                        verticesIndex_.push_back(value[0]);
+                        vertices_index_.push_back(first[0]);
+                        vertices_index_.push_back(prev[0]);
+                        vertices_index_.push_back(value[0]);
 
-                        textureVerticesIndex_.push_back(first[1]);
-                        textureVerticesIndex_.push_back(prev[1]);
-                        textureVerticesIndex_.push_back(value[1]);
+                        texture_vertices_index_.push_back(first[1]);
+                        texture_vertices_index_.push_back(prev[1]);
+                        texture_vertices_index_.push_back(value[1]);
 
-                        normalVerticesIndex_.push_back(first[2]);
+                        normal_vertices_index_.push_back(first[2]);
 
                         prev[0] = value[0];
                         prev[1] = value[1];
@@ -182,11 +182,11 @@ void Mesh::sanatize() {
     }
 
     free(buffer);
-    verticesIndex = exportvec<unsigned int>(&verticesIndexCount, verticesIndex_);
-    textureVerticesIndex = exportvec<unsigned int>(&textureVerticesIndexCount, textureVerticesIndex_);
-    normalVerticesIndex = exportvec<unsigned int>(&verticesCount, normalVerticesIndex_);
+    vertices_index = exportvec<unsigned int>(&vertices_index_count, vertices_index_);
+    texture_vertices_index = exportvec<unsigned int>(&texture_vertices_index_count, texture_vertices_index_);
+    normal_vertices_index = exportvec<unsigned int>(&normal_vertices_count, normal_vertices_index_);
 
-    vertices = exportvec<float>(&verticesCount, vertices_);
-    textureVertices = exportvec<float>(&textureVerticesCount, textureVertices_);
-    normalVertices = exportvec<float>(&normalVerticesCount, normalVertices_);
+    vertices = exportvec<float>(&vertices_count, vertices_);
+    texture_vertices = exportvec<float>(&texture_vertices_count, texture_vertices_);
+    normal_vertices = exportvec<float>(&normal_vertices_count, normal_vertices_);
 }

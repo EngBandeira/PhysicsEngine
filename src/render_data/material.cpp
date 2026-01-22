@@ -32,7 +32,7 @@ unsigned int RenderData::allocMaterial(MaterialGenData data) {
         else mater->maps[i] = TextureLocation {.handler = -1};
     }
 
-    *flags = *flags | MATERIAL_CHANGE_FLAG;
+    flags = flags | MATERIAL_CHANGE_FLAG;
     return materialsCount - 1;
 }
 
@@ -57,5 +57,5 @@ void RenderData::freeMaterial(unsigned int index) {
     materials = newMat;
     materialsCount--;
 
-    *flags = *flags | MATERIAL_CHANGE_FLAG;
+    flags = flags | MATERIAL_CHANGE_FLAG;
 }

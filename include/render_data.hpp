@@ -24,32 +24,47 @@ struct TextureHandler {
 
 struct VadiaMeshes {
     unsigned int verticesCount = 0,
-                verticesIndexCount = 0;
+                 verticesIndexCount = 0,
+                 mesh_objects = -1;
 };
 
-struct VadiaGenMeshes {
-    unsigned int verticesCount = 0,
-                 verticesIndexCount = 0,
-                *verticesIndex;
-    float *vertices;
-};
 
 class RenderData {
 public:
-    char *flags;
-
     int delayCounter = -1;
     TextureHandler textureHandlers[TEXTURE_HANDLERS_COUNT];
 
+    // unsigned int verticesCount = 0,
+    //              verticesIndexCount = 0,
+    // //              textureVerticesCount = 0,
+    // //              textureVerticesIndexCount = 0,
+    // //              verticesOffsetIndex = 0, // normalIndexCount = nOfPrimitives = verticesIndexCount /3
+
+    // //             // pointers
+    //             *verticesIndex,
+    // //             *textureVerticesIndex,
+
+    // float *vertices,
+    //       *textureVertices,
+
     struct Compacted_Meshes{
-        VadiaGenMeshes* meshes;
-        unsigned int meshesCount = 0,
-                     verticesCount = 0,
-                     verticesIndexCount = 0,
-                    *verticesIndex,
-                    *verticesIndexOffsets,//[0] = 0,[1] = v
-                    *meshObjects;
-        float *vertices;
+        VadiaMeshes* meshes;
+        unsigned int meshes_count = 0,
+
+                     vertices_count = 0,
+                    *vertices_offsets,
+
+                     vertices_index_count = 0,
+                    *vertices_index,
+                    *vertices_index_offsets,
+
+                    texture_vertices_count = 0,
+                    *texture_vertices_offsets,
+
+                    texture_vertices_index_count = 0,
+                    *texture_vertices_index,
+                    *texture_vertices_index_offsets;
+        float *vertices,*texture_vertices;
         void init();
         void freeData();
     } compacted_meshes;

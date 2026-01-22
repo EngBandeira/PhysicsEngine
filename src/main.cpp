@@ -32,13 +32,47 @@ int main() {
     Render m_render(glfw_window);
 
     logger.terminal.lines.push_back("Console Init\n");
+    // m_render.render_data.addMesh(MeshGenData{
+    //     .path = (char*)"assets/3dmodels/Cube.obj"
+    // });
+    // m_render.addObject(GameObjectGenData{
+    //     .name = "Cube",
+    //     .uuid = "a"
+    // });
+    // m_render.objects[0].material.maps[0] = m_render.render_data.addTexToHandler("assets/3dmodels/Cube.jpg");
+    // m_render.render_data.compacted_meshes.mesh_objects[0] = 0;
+
+    // m_render.render_data.addMesh(MeshGenData{
+    //     .path = (char*)"assets/3dmodels/Cube.obj"
+    // });
+    // m_render.addObject(GameObjectGenData{
+    //     .name = "Piston",
+    //     .uuid = "a"
+    // });
+    // m_render.objects[1].material.maps[0] = m_render.render_data.addTexToHandler("assets/3dmodels/Piston.jpg");
+    // m_render.render_data.compacted_meshes.mesh_objects[1] = 1;
+
     m_render.render_data.addMesh(MeshGenData{
-        .path = (char*)"assets/3dmodels/Cube.obj"
+        .path = (char*)"assets/3dmodels/cannon_01_4k.obj"
     });
     m_render.addObject(GameObjectGenData{
-        .name = "PretoVeio",
+        .name = "Canhao",
         .uuid = "a"
     });
+    m_render.objects[0].material.maps[0] = m_render.render_data.addTexToHandler("assets/3dmodels/cannon_01_diff_4k.jpg");
+    m_render.render_data.compacted_meshes.mesh_objects[0] = 0;
+
+    m_render.render_data.addMesh(MeshGenData{
+        .path = (char*)"assets/3dmodels/marble_bust_01_4k.obj"
+    });
+    m_render.addObject(GameObjectGenData{
+        .name = "Busto",
+        .uuid = "a"
+    });
+    m_render.objects[1].material.maps[0] = m_render.render_data.addTexToHandler("assets/3dmodels/marble_bust_01_diff_4k.jpg");
+
+    m_render.render_data.compacted_meshes.mesh_objects[1] = 1;
+
     while(!glfwWindowShouldClose(glfw_window)) {
         m_render.newframe();
 
@@ -53,10 +87,9 @@ int main() {
 
         glfwSwapBuffers(glfw_window);
         glfwPollEvents();
-        m_render.flags  = m_render.flags & ~(1&2);
+        flags  = flags & ~(1&2);
     }
 
-    free(m_render.assets.directory);
     return 0;
 }
 

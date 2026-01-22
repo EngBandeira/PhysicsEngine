@@ -23,8 +23,6 @@
 int fodase[16] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
 
 Render::Render(GLFWwindow *win) : glfwWin(win) {
-
-    render_data.flags = &flags;
     shaderProgram = glCreateProgram();
     shader.attach(shaderProgram);
 
@@ -32,7 +30,7 @@ Render::Render(GLFWwindow *win) : glfwWin(win) {
         const GLchar *feedbackVaryings[] = { "transformFeedback" };
         glTransformFeedbackVaryings(shaderProgram, 1, feedbackVaryings, GL_INTERLEAVED_ATTRIBS);
 
-        feedbacknumber = 4 * render_data.compacted_meshes.verticesIndexCount;
+        feedbacknumber = 4 * render_data.compacted_meshes.vertices_index_count;
         feedbacksize = feedbacknumber * sizeof(float);
 
         glGenQueries(1, &QUERY);
@@ -78,13 +76,13 @@ Render::Render(GLFWwindow *win) : glfwWin(win) {
 
 
     glUniform1iv(glGetUniformLocation(shaderProgram, "textures"), TEXTURE_HANDLERS_COUNT, fodase);
-    // camera.updateMatrix(glm::vec3(1,1,1), utils.aim_matrix(-glm::vec3(1,1,1)));
-    glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "view"), 1, GL_FALSE, glm::value_ptr(camera.viewMatrix));
 }
 
 unsigned int Render::addObject(GameObjectGenData genData) {
     objects = (GameObject*)realloc(objects, ++objects_count * sizeof(GameObject));
-    objects[objects_count - 1].name = genData.name;
+    GameObject obj;
+    obj.name = genData.name;
+    memcpy(objects + objects_count - 1, &obj,sizeof(obj));
     return objects_count - 1;
 }
 

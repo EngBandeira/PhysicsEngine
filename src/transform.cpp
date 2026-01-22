@@ -1,107 +1,91 @@
-// #include "transform.hpp"
-// #include "common.hpp"
-// #include "utils.hpp"
-// #include <stdio.h>
+#include "transform.hpp"
+#include "common.hpp"
 
-// #include <glm/ext/matrix_transform.hpp>
-// #include <glm/trigonometric.hpp>
+#include <glm/ext/matrix_transform.hpp>
+#include <glm/trigonometric.hpp>
 
-// #include <glm/ext/matrix_transform.hpp>
-// #include <glm/fwd.hpp>
-// #include <bits/stdc++.h>
-// #include <stdio.h>
+#include <glm/ext/matrix_transform.hpp>
+#include <glm/fwd.hpp>
+#include <bits/stdc++.h>
 
-// #include "vendor/glad/glad.h"
-// #include <GLFW/glfw3.h>
+#include "vendor/glad/glad.h"
+#include <GLFW/glfw3.h>
 
-// #include <glm/glm.hpp>
-// #include <glm/gtc/matrix_transform.hpp>
-// #include <glm/gtc/type_ptr.hpp>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
-// Transform::Transform(){
-//     axis[0] = glm::vec3(1,0,0);
-//     axis[1] = glm::vec3(0,1,0);
-//     axis[2] = glm::vec3(0,0,1);
-// }
+Transform::Transform(): translation_matrix(1), rotation_matrix(1), scale_matrix(1), matrix(1), angle(0) {};
 
-// glm::mat4 Transform::get_scale_matrix(glm::vec3 scale){
-//     glm::mat4 scaleM(1);
-//     scaleM[0][0] = scale.x;
-//     scaleM[1][1] = scale.y;
-//     scaleM[2][2] = scale.z;
-//     return scaleM;
-// }
+void Transform::scale(glm::vec3 scale) {
+    scale_matrix[0][0] = scale.x;
+    scale_matrix[1][1] = scale.y;
+    scale_matrix[2][2] = scale.z;
+    updateMatrix();
+}
 
-// glm::mat4 Transform::get_angle_matrix(glm::vec3 angle_radians) {
-//     glm::mat4 rotationM = glm::rotate(glm::mat4(1), angle_radians.x, axis[0]);
-//     rotationM = glm::rotate(rotationM, angle_radians.y, axis[1]);
-//     rotationM = glm::rotate(rotationM, angle_radians.z, axis[2]);
-//     return rotationM;
-// }
+void Transform::scale(float scale) {
+    this->scale(glm::vec3(scale));
+}
+
+void Transform::positionate(glm::vec3 position) {
+    this->translation_matrix[3][0] = position.x;
+    this->translation_matrix[3][1] = position.y;
+    this->translation_matrix[3][2] = position.z;
+
+    updateMatrix();
+}
 
 
-// glm::mat4 Transform::get_position_matrix(glm::vec3 position){
-//     glm::mat4 translationM(1);
-//     translationM[3][0] = position.x;
-//     translationM[3][1] = position.y;
-//     translationM[3][2] = position.z;
-//     return translationM;
-// }
+void Transform::translate(glm::vec3 translation) {
+    this->translation_matrix[3][0] += translation.x;
+    this->translation_matrix[3][1] += translation.y;
+    this->translation_matrix[3][2] += translation.z;
 
-// glm::mat4 Transform::aim_matrix(glm::vec3 direction){
-//     glm::vec3 normali = glm::normalize(direction);
-//     float theta = -atan(normali.z / normali.x);
-//     if(normali.x < 0){
-//         theta += glm::pi<float>();
-//     }
-//     float phi = asin(normali.y);
-//     printf("amin: %f %f\n", glm::degrees(theta),glm::degrees(phi));
-//     return get_angle_matrix(glm::vec3(0,theta,phi));
-// }
+    updateMatrix();
+    glm::vec3 aa = get_position();
+}
 
-// glm::mat4 *Transform::get_matrix(unsigned short index, unsigned int layerIndex){
-//     return (glm::mat4*) (layers[layerIndex].matrices + 16*index);
-// }
+void Transform::set_angle(glm::vec3 angle) {
 
-// void Transform::scale(glm::vec3 scale, unsigned short index, unsigned int layerIndex) {
-//     layers[layerIndex].models[index].scale(scale);
+    if(this->angle.x == angle.x && this->angle.y == angle.y && this->angle.z == angle.z) {
+        return;
+    }
+    rotation_matrix = glm::rotate(glm::mat4(1), angle.x, axis[0]);
+    rotation_matrix = glm::rotate(rotation_matrix, angle.y, axis[1]);
+    rotation_matrix = glm::rotate(rotation_matrix, angle.z, axis[2]);
+    this->angle = angle;
 
-//     *getNMatrix(index, layerIndex) = layers[layerIndex].models[index].matrix;
-//     *flags = *flags | MATRICES_CHANGE_FLAG;
-// }
+    updateMatrix();
+}
 
-// void Transform::scale(float scale, unsigned short index, unsigned int layerIndex) {
-//     scaleModel(glm::vec3(scale), index, layerIndex);
-// }
+void Transform::rotate(glm::vec3 rotation) {
+    if(rotation[0] == 0 && rotation[1] == 0  && rotation[2] == 0 ) {
+        return;
+    }
 
-// void Transform::translate(glm::vec3 translation, unsigned short index, unsigned int layerIndex) {
-//     layers[layerIndex].models[index].translate(translation);
+    angle += rotation;
+    rotation_matrix = glm::rotate(glm::mat4(1), angle.x, axis[0]);
+    rotation_matrix = glm::rotate(rotation_matrix, angle.y, axis[1]);
+    rotation_matrix = glm::rotate(rotation_matrix, angle.z, axis[2]);
 
-//     *getNMatrix(index, layerIndex) = layers[layerIndex].models[index].matrix;
-//     *flags = *flags | MATRICES_CHANGE_FLAG;
-// }
+    updateMatrix();
+}
 
-// void Transform::rotate(glm::vec3 rotation, unsigned short index, unsigned int layerIndex) {
-//     layers[layerIndex].models[index].rotate(rotation);
+glm::vec3 Transform::get_position() {
+    return (translation_matrix * glm::vec4(0, 0, 0, 1));
+}
+glm::vec3 Transform::get_scale() {
+    return glm::vec3(scale_matrix[0][0],scale_matrix[1][1],scale_matrix[2][2]);
+}
 
-//     *getNMatrix(index, layerIndex) = layers[layerIndex].models[index].matrix;
-//     *flags = *flags | MATRICES_CHANGE_FLAG;
-// }
 
-// void Transform::set_angle(glm::vec3 angle, unsigned short index, unsigned int layerIndex) {
-//     layers[layerIndex].models[index].setAngle(angle);
+glm::vec3 Transform::get_rotation() {
+    return angle;
+}
 
-//     *getNMatrix(index, layerIndex) = layers[layerIndex].models[index].matrix;
-//     *flags = *flags | MATRICES_CHANGE_FLAG;
-// }
 
-// void Transform::positionate(glm::vec3 position, unsigned short index, unsigned int layerIndex) {
-//     layers[layerIndex].models[index].positionate(position);
-
-//     *getNMatrix(index, layerIndex) = layers[layerIndex].models[index].matrix;
-//     *flags = *flags | MATRICES_CHANGE_FLAG;
-// }
-
-// glm::vec4 Transform::get_position(unsigned short index, unsigned int layerIndex) {
-//     return *getNMatrix(index, layerIndex) * glm::vec4(0, 0, 0, 1);
-// }
+void Transform::updateMatrix() {
+    matrix = translation_matrix * rotation_matrix;
+    flags = flags | MATRICES_CHANGE_FLAG;
+}

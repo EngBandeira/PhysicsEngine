@@ -1,24 +1,15 @@
 #pragma once
 #include "glm/glm.hpp"
+#include "transform.hpp"
 
 class Camera {
     public:
-    glm::vec4 *up,*foward,*right;
-    glm::vec3 angle;
-    glm::mat4 rotation, translation, viewMatrix, projMatrix;
-    glm::vec4 getPosition();
-    glm::vec4 getUp();
-    glm::vec4 getFoward();
-    glm::vec4 getRight();
-    // void updateRotation(glm::vec3 rotation);
-    // void updatePosition(glm::vec3 position);
-
-    // void updateRotation(glm::mat4 rotation);
-    // void updatePosition(glm::mat4 position);
-
-    // void updateMatrix(glm::mat4 position, glm::mat4 rotation);
-    // void updateMatrix(glm::vec3 position, glm::vec3 rotation);
-    // void updateMatrix(glm::vec3 position, glm::mat4 rotation);
-    // void updateMatrix();
+    Transform transform;
+    glm::mat4 proj_matrix;
+    glm::vec3 get_position();
+    glm::vec3 get_up();
+    glm::vec3 get_foward();
+    glm::vec3 get_right();
+    glm::mat4 get_view();
     Camera();
 };

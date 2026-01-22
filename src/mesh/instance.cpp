@@ -18,11 +18,11 @@ Mesh::~Mesh() {}
 
 void Mesh::deleteMesh() {
     free(vertices);
-    free(textureVertices);
-    free(normalVertices);
-    free(verticesIndex);
-    free(textureVerticesIndex);
-    free(normalVerticesIndex);
+    free(texture_vertices);
+    free(normal_vertices);
+    free(vertices_index);
+    free(texture_vertices_index);
+    free(normal_vertices_index);
     free(mtl);
     for( unsigned int i = 0; i < oCount; i++ ) free(o[i]);
     free(o);

@@ -50,13 +50,43 @@ void Render::draw() {
         glBeginTransformFeedback(GL_TRIANGLES);
     }
 
-    for( int i = 0; i < render_data.compacted_meshes.meshesCount; i++ ) {
+    // struct Material {
+    //     float K[9];
+    //     float Ni, d, bm;
+    //     TextureLocation maps[4];
+    //     uint type;
+    // };
+
+    // uniform Material material;
+
+    // struct TextureLocation {
+    //     int handler;
+    //     uint index;
+    // };
+
+    for( int i = 0; i < render_data.compacted_meshes.meshes_count; i++ ) {
         //pinto
-        if(render_data.compacted_meshes.meshObjects[i] == (unsigned int )-1)
+        if(render_data.compacted_meshes.mesh_objects[i] == (unsigned int )-1)
             continue;
-        GameObject& obj = objects[render_data.compacted_meshes.meshObjects[i]];
-        glDrawElements(GL_TRIANGLES, render_data.compacted_meshes.verticesIndexOffsets[i], GL_UNSIGNED_INT,
-                      (void*)render_data.compacted_meshes.meshes[i].verticesIndexCount);
+        GameObject& obj = objects[render_data.compacted_meshes.mesh_objects[i]];
+        glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "model_matrix"), 1, GL_FALSE, glm::value_ptr(obj.tranform.matrix));
+        glUniform1ui(glGetUniformLocation(shaderProgram, "texture_vertices_offset"),render_data.compacted_meshes.texture_vertices_offsets[i]);
+        glUniform1ui(glGetUniformLocation(shaderProgram, "texture_vertices_index_offset"),render_data.compacted_meshes.texture_vertices_index_offsets[i]);
+
+        glUniform1i(glGetUniformLocation(shaderProgram, "material.maps[0].handler"),obj.material.maps[0].handler);
+        glUniform1ui(glGetUniformLocation(shaderProgram, "material.maps[0].index"),obj.material.maps[0].index);
+
+
+        glBindVertexArray(render_data.vao);
+        glBindBuffer(GL_ARRAY_BUFFER,render_data.vbo);
+        glBufferData(GL_ARRAY_BUFFER,  sizeof(float) * render_data.compacted_meshes.meshes[i].verticesCount,
+                            render_data.compacted_meshes.vertices+render_data.compacted_meshes.vertices_offsets[i],GL_DYNAMIC_DRAW);
+
+        glDrawElements(GL_TRIANGLES, render_data.compacted_meshes.meshes[i].verticesIndexCount, GL_UNSIGNED_INT,
+                      (void*)(render_data.compacted_meshes.vertices_index_offsets[i]*sizeof(int)));
+
+        glBindBuffer(GL_ARRAY_BUFFER,0);
+        glBindVertexArray(0);
     }
 
     if(transFeed) {

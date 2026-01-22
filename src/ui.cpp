@@ -1,11 +1,10 @@
 // #include "vendor/imgui/imgui_internal.h"
 // #include "glm/glm.hpp"
 #include "ui.hpp"
-#include <cstdio>
 #include <glm/gtc/matrix_transform.hpp>
 #include "common.hpp"
+#include "game_object.hpp"
 #include "render.hpp"
-#include "utils.hpp"
 #include "vendor/imgui/imgui.h"
 
 bool fileWinOpen = 0,terminalOpen = 0;
@@ -35,8 +34,6 @@ void Render::ui() {
         }
 
         if( ImGui::BeginMenu("Preferences") ) {
-            // ImGui::MenuItem("Scale");
-            // io.FontGlobalScale = 1.3;
             ImGui::SliderFloat("Scale", &io.FontGlobalScale, .8, 2);
             ImGui::EndMenu();
         }
@@ -228,48 +225,42 @@ void Render::ui() {
 
     if( ImGui::Begin("Properties") ) {
 
-        // if( renderData.layers[selectedModelLayer].models.size() > selectedModelIndex ) {
+        if( objects_count > selected_object) {
+            GameObject& selected = objects[selected_object];
+            glm::vec3 transf[3] = {selected.tranform.get_position(),selected.tranform.get_rotation(),selected.tranform.get_scale()};
 
-        //     Model &m = renderData.layers[selectedModelLayer].models[selectedModelIndex];
-        //     glm::vec3 transf[3] = {m.getPosition(),m.getAngle(),m.getScale()};
+            ImGui::Text("Transform:");
+            ImGui::Text("   Position:( ");
+            ImGui::SameLine();
 
-        //     if(ImGui::Button("virar para camera")){
-        //         camera.updateRotation(utils.aim_matrix(-camera.getPosition()));
-        //         setAVector(camera.getPosition(), -camera.getPosition());
-        //     }
+            if( ImGui::InputFloat3("newPos ", &transf[0].x) ) {
+                selected.tranform.positionate(transf[0]);
+            }
 
-        //     ImGui::Text("Transform:");
-        //     ImGui::Text("   Position:( ");
-        //     ImGui::SameLine();
+            ImGui::Text("   Rotation:( ");
+            ImGui::SameLine();
 
-        //     if( ImGui::InputFloat3("newPos ", &transf[0].x) ) {
-        //         renderData.positionateModel(transf[0], selectedModelIndex, selectedModelLayer);
-        //     }
+            if( ImGui::InputFloat3("newRot ", &transf[1].x) ) {
+                selected.tranform.rotate(transf[1]);
+            }
 
-        //     ImGui::Text("   Rotation:( ");
-        //     ImGui::SameLine();
+            ImGui::Text("   Scale:( ");
+            ImGui::SameLine();
 
-        //     if( ImGui::InputFloat3("newRot ", &transf[1].x) ) {
-        //         renderData.setAngleModel(transf[1], selectedModelIndex, selectedModelLayer);
-        //     }
+            if( ImGui::InputFloat3("newSca ", &transf[2].x) ) {
+                selected.tranform.scale(transf[2]);
+            }
 
-        //     ImGui::Text("   Scale:( ");
-        //     ImGui::SameLine();
+        }
+        glm::vec3 pi = camera.get_position();
+        ImGui::Text("Camera:");
+        ImGui::Text("   Position:(%f, %f , %f)",pi.x,pi.y,pi.z);
+        glm::vec3 n = camera.get_foward();
+        ImGui::Text("   Normal:(%f, %f , %f)",n.x,n.y,n.z);
+        ImGui::Text("   Delta %f %f",delta.x,delta.y);
 
-        //     if( ImGui::InputFloat3("newSca ", &transf[2].x) ) {
-        //         renderData.scaleModel(transf[2], selectedModelIndex, selectedModelLayer);
-        //     }
-
-        //     glm::vec3 pi = camera.getPosition();
-        //     ImGui::Text("Camera:");
-        //     ImGui::Text("   Position:(%f, %f , %f)",pi.x,pi.y,pi.z);
-        //     glm::vec n = camera.getFoward();
-        //     ImGui::Text("   Normal:(%f, %f , %f)",n.x,n.y,n.z);
-        //     ImGui::Text("   Delta %f %f",delta.x,delta.y);
-        // }
-
-        // ImGui::Checkbox("normalA", &normalATIVO);
-        // ImGui::SliderFloat("normalV", &normalV,.1, 2);
+        ImGui::Checkbox("normalA", &normalATIVO);
+        ImGui::SliderFloat("normalV", &normalV,.1, 2);
     }
 
     ImGui::End();
@@ -319,8 +310,9 @@ void Render::ui() {
 }
 
 void Render::input() {
-    glm::vec3 position = camera.getPosition();
-    // if( selectedModelIndex < renderData.layers[selectedModelLayer].models.size() ) {
+    glm::vec3 position(0);
+    // if(objects_count > selected_object) {
+
     //     renderData.positionateModel(renderData.layers[selectedModelLayer].models[selectedModelIndex].getPosition(), 0, LAYER::SPECIAL_LAYER);
     //     renderData.setAngleModel(renderData.layers[selectedModelLayer].models[selectedModelIndex].getAngle(), 0, LAYER::SPECIAL_LAYER);
     // }
@@ -340,26 +332,32 @@ void Render::input() {
             glfwSetCursorPos(glfwWin,windowCenter.x,windowCenter.y);
             ImGui::Dummy(ImVec2(0, 0));
             delta = mouseDelta;
-            camera.angle.x += MOUSE_SENSI * mouseDelta.x;
-            camera.angle.y += .5f * MOUSE_SENSI * mouseDelta.y;
-            camera.rotation = glm::rotate(glm::mat4(1), glm::radians(camera.angle.x), glm::vec3(0, 1, 0));
-            camera.rotation = glm::rotate(camera.rotation, glm::radians(camera.angle.y), glm::vec3(camera.getRight()));
-            float b = .05;
+            camera.transform.angle.x += MOUSE_SENSI * mouseDelta.x;
+            camera.transform.angle.y += -.5f * MOUSE_SENSI * mouseDelta.y;
+            camera.transform.rotation_matrix = glm::rotate(glm::mat4(1), glm::radians(camera.transform.angle.x), glm::vec3(0, 1, 0));
+            camera.transform.rotation_matrix = glm::rotate(camera.transform.rotation_matrix, glm::radians(camera.transform.angle.y), glm::vec3(camera.get_right()));
 
-            // renderData.scaleModel(glm::max(0.015f * glm::length(camera.getPosition() - renderData.getPositionOfModel(0, 0)), 0.00001f), 0, 0);
+            float b = .1;
 
-            // if( ImGui::IsKeyPressed(ImGuiKey_LeftArrow)  ) renderData.translateModel(glm::vec3(1,0,0),  selectedModelIndex, selectedModelLayer);
-            // if( ImGui::IsKeyPressed(ImGuiKey_RightArrow) ) renderData.translateModel(glm::vec3(-1,0,0), selectedModelIndex, selectedModelLayer);
-            // if( ImGui::IsKeyPressed(ImGuiKey_UpArrow)    ) renderData.translateModel(glm::vec3(0,0,1),  selectedModelIndex, selectedModelLayer);
-            // if( ImGui::IsKeyPressed(ImGuiKey_DownArrow)  ) renderData.translateModel(glm::vec3(0,0,-1), selectedModelIndex, selectedModelLayer);
+            // renderData.scaleModel(glm::max(0.015f * glm::length(camera.get_position() - renderData.getPositionOfModel(0, 0)), 0.00001f), 0, 0);
+            if(objects_count > selected_object){
 
-            if( ImGui::IsKeyPressed(ImGuiKey_A) ) position += b * glm::vec3(-camera.getRight());
-            if( ImGui::IsKeyPressed(ImGuiKey_D) ) position += b * glm::vec3(camera.getRight());
-            if( ImGui::IsKeyPressed(ImGuiKey_W) ) position += b * glm::vec3(camera.getFoward());
-            if( ImGui::IsKeyPressed(ImGuiKey_S) ) position += b * glm::vec3(-camera.getFoward());
+                if( ImGui::IsKeyPressed(ImGuiKey_LeftArrow)  ) objects[selected_object].tranform.translate(glm::vec3(1, 0, 0));
+                if( ImGui::IsKeyPressed(ImGuiKey_RightArrow) ) objects[selected_object].tranform.translate(glm::vec3(-1,0, 0));
+                if( ImGui::IsKeyPressed(ImGuiKey_UpArrow)    ) objects[selected_object].tranform.translate(glm::vec3(0, 0, 1));
+                if( ImGui::IsKeyPressed(ImGuiKey_DownArrow)  ) objects[selected_object].tranform.translate(glm::vec3(0, 0,-1));
+            }
 
 
-            // camera.updatePosition(position);
+
+            if( ImGui::IsKeyPressed(ImGuiKey_A) ) position += b * glm::vec3(-camera.get_right());
+            if( ImGui::IsKeyPressed(ImGuiKey_D) ) position += b * glm::vec3(camera.get_right());
+            if( ImGui::IsKeyPressed(ImGuiKey_W) ) position += b * glm::vec3(camera.get_foward());
+            if( ImGui::IsKeyPressed(ImGuiKey_S) ) position += b * glm::vec3(-camera.get_foward());
+
+
+            if(position.x != 0 || position.y != 0  || position.z != 0)
+                camera.transform.translate(position);
         }
 
         if( io.MouseReleased[1] ) ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);

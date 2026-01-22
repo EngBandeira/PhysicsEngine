@@ -19,21 +19,40 @@ void setTexParameter(unsigned int tex_type){
     glTexParameteri(tex_type, GL_TEXTURE_MAX_LEVEL, LEVEL);
 }
 
+
 void RenderData::Compacted_Meshes::init(){
-    meshes = (VadiaGenMeshes*)malloc(0);
-    verticesIndex = (unsigned int*)malloc(0);
-    verticesIndexOffsets = (unsigned int*)malloc(0);
-    meshObjects = (unsigned int*)malloc(0);
+    meshes = (VadiaMeshes*)malloc(0);
+
     vertices = (float*)malloc(0);
+    vertices_index = (unsigned int*)malloc(0);
+
+    vertices_index_offsets = (unsigned int*)malloc(sizeof(int));
+    vertices_index_offsets[0] = 0;
+
+    vertices_offsets = (unsigned int*)malloc(sizeof(int));
+    vertices_offsets[0] = 0;
+
+    texture_vertices = (float*)malloc(0);
+    texture_vertices_index = (unsigned int*)malloc(0);
+
+    texture_vertices_index_offsets = (unsigned int*)malloc(sizeof(int));
+    texture_vertices_index_offsets[0] = 0;
+
+    texture_vertices_offsets = (unsigned int*)malloc(sizeof(int));
+    texture_vertices_offsets[0] = 0;
+
 }
 
 void RenderData::Compacted_Meshes::freeData() {
     free(meshes);
 
-    free(verticesIndex);
-    free(verticesIndexOffsets);
-    free(meshObjects);
     free(vertices);
+    free(vertices_index);
+    free(vertices_index_offsets);
+
+    free(texture_vertices);
+    free(texture_vertices_index);
+    free(texture_vertices_index_offsets);
 }
 
 RenderData::RenderData() {

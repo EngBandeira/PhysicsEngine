@@ -12,21 +12,21 @@ class Mesh {
     char *mtl;
     char **o;
 
-    unsigned int verticesCount = 0,
-                 verticesIndexCount = 0,
-                 textureVerticesCount = 0,
-                 textureVerticesIndexCount = 0,
-                 normalVerticesCount = 0,
-                 verticesOffsetIndex = 0, // normalIndexCount = nOfPrimitives = verticesIndexCount /3
+    unsigned int vertices_count = 0,
+                 vertices_index_count = 0,
+                 texture_vertices_count = 0,
+                 texture_vertices_index_count = 0,
+                 normal_vertices_count = 0,
+                 vertices_offset_index = 0, // normalIndexCount = nOfPrimitives = verticesIndexCount /3
 
                 // pointers
-                *verticesIndex,
-                *textureVerticesIndex,
-                *normalVerticesIndex;
+                *vertices_index,
+                *texture_vertices_index,
+                *normal_vertices_index;
 
     float *vertices,
-          *textureVertices,
-          *normalVertices;
+          *texture_vertices,
+          *normal_vertices;
 
     const char *meshPath;
 

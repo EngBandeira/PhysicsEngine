@@ -13,7 +13,6 @@ public:
 
     bool normalATIVO = 0;
     float normalV = 1;
-    char flags = 0;
     unsigned int FBO_FROM,
                  FBO_TO,
                  RBO,
@@ -26,7 +25,6 @@ public:
                  shaderProgram,
                  samples = 4;
 
-    Camera camera;
     bool transFeed = false;
 
     Render(GLFWwindow *win);
@@ -34,7 +32,7 @@ public:
 
     GameObject *objects;
     unsigned int objects_count = 0;
-
+    Camera camera;
     unsigned int selected_object;
     Assets assets;
     RenderData render_data;

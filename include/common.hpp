@@ -1,7 +1,9 @@
 #pragma once
 #include "log.hpp"
 #include "utils.hpp"
+#include "glm/glm.hpp"
 
+extern glm::vec3 axis[3];
 extern Log logger;
 extern Utils utils;
 
@@ -9,6 +11,8 @@ enum AXIS { X, Y, Z };
 
 #define GLFW_INCLUDE_NONE
 #define STB_IMAGE_IMPLEMENTATION
+
+static char flags = 0;
 
 const char VERTEX_SHADERS_LOCALPATH[]   = "src/shaders/vShader.vert";
 const char FRAGMENT_SHADERS_LOCALPATH[] = "src/shaders/fShader.frag";
@@ -57,7 +61,7 @@ enum VertexCase {
 };
 
 enum SSBOS {
-    TextureCoordSSBO,
+    TextureVerticesSSBO,
     TextureIndexSSBO,
 };
 

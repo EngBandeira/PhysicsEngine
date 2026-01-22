@@ -21,44 +21,72 @@
 
 #include "render_data.hpp"
 
-// struct {
-    VadiaMeshes* meshes;
-    unsigned int meshesCount = 0,
-                 verticesCount = 0,
-                 verticesIndexCount = 0,
-//                 *verticesIndex,
-                *verticesIndexOffsets,//[0] = 0,[1] = v
-                *meshObjects;
-//     float *vertices;
-// } compacted_meshes;
 
 void RenderData::addMesh(MeshGenData genData) {
     Mesh mesh(genData);
-    compacted_meshes.meshes = (VadiaGenMeshes*)realloc(compacted_meshes.meshes,++compacted_meshes.meshesCount * sizeof(VadiaMeshes));
-    VadiaMeshes va {
-        .verticesCount = mesh.verticesCount,
-        .verticesIndexCount = mesh.verticesIndexCount
-    };
+    compacted_meshes.meshes = (VadiaMeshes*)realloc(compacted_meshes.meshes,++compacted_meshes.meshes_count * sizeof(VadiaMeshes));
 
-    memcpy(compacted_meshes.meshes + compacted_meshes.meshesCount - 1, &va, sizeof(VadiaMeshes));
+    compacted_meshes.meshes[compacted_meshes.meshes_count - 1].verticesCount = mesh.vertices_count;
+    compacted_meshes.meshes[compacted_meshes.meshes_count - 1].verticesIndexCount = mesh.vertices_index_count;
 
-    compacted_meshes.meshObjects = (unsigned int*)realloc(compacted_meshes.meshObjects,compacted_meshes.meshesCount * sizeof(int));
+    compacted_meshes.mesh_objects = (unsigned int*)realloc(compacted_meshes.mesh_objects,compacted_meshes.meshes_count * sizeof(int));
 
-    compacted_meshes.verticesIndexOffsets = (unsigned int*)realloc(compacted_meshes.verticesIndexOffsets,compacted_meshes.meshesCount * sizeof(int));
-    compacted_meshes.verticesIndexOffsets[compacted_meshes.meshesCount-1] = mesh.verticesIndexCount;
-
-    if(compacted_meshes.meshesCount > 1)
-        compacted_meshes.verticesIndexOffsets[compacted_meshes.meshesCount-1] += compacted_meshes.verticesIndexOffsets[compacted_meshes.meshesCount-2];
+    compacted_meshes.vertices_index_offsets = (unsigned int*)realloc(compacted_meshes.vertices_index_offsets,(compacted_meshes.meshes_count + 1) * sizeof(int));
+    compacted_meshes.vertices_index_offsets[compacted_meshes.meshes_count] = mesh.vertices_index_count + compacted_meshes.vertices_index_offsets[compacted_meshes.meshes_count-1];
 
 
-    compacted_meshes.verticesCount += mesh.verticesCount;
-    compacted_meshes.verticesIndexCount += mesh.verticesIndexCount;
+    compacted_meshes.vertices_offsets = (unsigned int*)realloc(compacted_meshes.vertices_offsets,(compacted_meshes.meshes_count + 1) * sizeof(int));
+    compacted_meshes.vertices_offsets[compacted_meshes.meshes_count] = mesh.vertices_count + compacted_meshes.vertices_offsets[compacted_meshes.meshes_count-1];
 
-    compacted_meshes.vertices = (float*)realloc(compacted_meshes.vertices,compacted_meshes.verticesCount * sizeof(float));
-    memcpy(compacted_meshes.vertices - mesh.verticesCount, mesh.vertices, mesh.verticesCount);
 
-    compacted_meshes.verticesIndex = (unsigned int*)realloc(compacted_meshes.verticesIndex,compacted_meshes.verticesIndexCount * sizeof(int));
-    memcpy(compacted_meshes.verticesIndex - mesh.verticesIndexCount, mesh.verticesIndex, mesh.verticesIndexCount);
+    compacted_meshes.texture_vertices_index_offsets = (unsigned int*)realloc(compacted_meshes.texture_vertices_index_offsets,(compacted_meshes.meshes_count + 1) * sizeof(int));
+    compacted_meshes.texture_vertices_index_offsets[compacted_meshes.meshes_count] = mesh.texture_vertices_index_count + compacted_meshes.texture_vertices_index_offsets[compacted_meshes.meshes_count-1];
+
+
+    compacted_meshes.texture_vertices_offsets = (unsigned int*)realloc(compacted_meshes.texture_vertices_offsets,(compacted_meshes.meshes_count + 1) * sizeof(int));
+    compacted_meshes.texture_vertices_offsets[compacted_meshes.meshes_count] = mesh.texture_vertices_count/2 + compacted_meshes.texture_vertices_offsets[compacted_meshes.meshes_count-1];
+
+
+
+    compacted_meshes.vertices_count += mesh.vertices_count;
+    compacted_meshes.vertices_index_count += mesh.vertices_index_count;
+
+    compacted_meshes.texture_vertices_count += mesh.texture_vertices_count;
+    compacted_meshes.texture_vertices_index_count += mesh.texture_vertices_index_count;
+
+    compacted_meshes.vertices = (float*)realloc(compacted_meshes.vertices,compacted_meshes.vertices_count * sizeof(float));
+    memcpy(compacted_meshes.vertices + compacted_meshes.vertices_count - mesh.vertices_count, mesh.vertices, mesh.vertices_count * sizeof(float));
+
+    compacted_meshes.vertices_index = (unsigned int*)realloc(compacted_meshes.vertices_index,compacted_meshes.vertices_index_count * sizeof(int));
+    memcpy(compacted_meshes.vertices_index + compacted_meshes.vertices_index_count - mesh.vertices_index_count, mesh.vertices_index, mesh.vertices_index_count * sizeof(int));
+
+
+    compacted_meshes.texture_vertices = (float*)realloc(compacted_meshes.texture_vertices,compacted_meshes.texture_vertices_count * sizeof(float));
+    memcpy(compacted_meshes.texture_vertices + compacted_meshes.texture_vertices_count - mesh.texture_vertices_count, mesh.texture_vertices, mesh.texture_vertices_count * sizeof(float));
+
+    compacted_meshes.texture_vertices_index = (unsigned int*)realloc(compacted_meshes.texture_vertices_index,compacted_meshes.texture_vertices_index_count * sizeof(int));
+    memcpy(compacted_meshes.texture_vertices_index + compacted_meshes.texture_vertices_index_count - mesh.texture_vertices_index_count, mesh.texture_vertices_index, mesh.texture_vertices_index_count * sizeof(int));
+
+    compacted_meshes.mesh_objects[compacted_meshes.meshes_count-1] = -1;
+
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER,ssbos[SSBOS::TextureVerticesSSBO]);
+    glBufferData(GL_SHADER_STORAGE_BUFFER,
+                    sizeof(float) * compacted_meshes.texture_vertices_count,
+                    compacted_meshes.texture_vertices,GL_DYNAMIC_DRAW);
+
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER,ssbos[SSBOS::TextureIndexSSBO]);
+    glBufferData(GL_SHADER_STORAGE_BUFFER,
+                    sizeof(unsigned int) * compacted_meshes.texture_vertices_index_count,
+                    compacted_meshes.texture_vertices_index,GL_DYNAMIC_DRAW);
+
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER,0);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+                    sizeof(unsigned int) * compacted_meshes.vertices_index_count,
+                    compacted_meshes.vertices_index,GL_DYNAMIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
 }
 
 void RenderData::removeMesh(unsigned int index) {
