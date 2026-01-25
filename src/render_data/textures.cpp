@@ -14,7 +14,7 @@
 
 #include "utils.hpp"
 
-TextureLocation RenderData::addTexToHandler(char *localPath, bool toProcess) {
+TextureLocation Render_Data::add_tex_to_handler(char *localPath, bool toProcess) {
     char *path = localPath;
     if( toProcess ) {
         int i = 0, k;
@@ -76,7 +76,7 @@ TextureLocation RenderData::addTexToHandler(char *localPath, bool toProcess) {
     unsigned short width = *((unsigned short*)(localBuffer + 7));
 
     int handlerIndex = (unsigned char)floor(log2(width)-6);
-    unsigned int index = textureHandlers[handlerIndex].addTex((unsigned char*)localBuffer+13);
+    unsigned int index = textureHandlers[handlerIndex].add_tex((unsigned char*)localBuffer+13);
     free(localBuffer);
 
     if( toProcess ) free(path);
@@ -87,7 +87,7 @@ TextureLocation RenderData::addTexToHandler(char *localPath, bool toProcess) {
     };
 }
 
-unsigned int TextureHandler::addTex(unsigned char *localBuffer){
+unsigned int Texture_Handler::add_tex(unsigned char *localBuffer){
     if(emptyTexturesCount) {
         unsigned int i = emptyTextures[0];
         glBindTexture(GL_TEXTURE_2D_ARRAY,texture);
@@ -126,7 +126,7 @@ unsigned int TextureHandler::addTex(unsigned char *localBuffer){
     return texturesCount-1;
 }
 
-void TextureHandler::rmTex(unsigned int index) {
+void Texture_Handler::rm_tex(unsigned int index) {
     emptyTexturesCount++;
 
     if( emptyTexturesCount > MAX_EMPTY_TEXTURES_COUNT

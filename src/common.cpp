@@ -1,5 +1,6 @@
 #include "common.hpp"
 #include "log.hpp"
+#include "render.hpp"
 #include "utils.hpp"
 
 Log logger = Log();

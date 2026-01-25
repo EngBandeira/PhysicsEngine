@@ -8,6 +8,7 @@
 #include "render_data.hpp"
 #include "camera.hpp"
 
+
 class Render {
 public:
 
@@ -26,7 +27,7 @@ public:
                  samples = 4;
 
     bool transFeed = false;
-
+    Render(){}
     Render(GLFWwindow *win);
     ~Render();
 
@@ -35,7 +36,7 @@ public:
     Camera camera;
     unsigned int selected_object;
     Assets assets;
-    RenderData render_data;
+    Render_Data render_data;
     Shader shader;
     GLFWwindow *glfwWin;
     unsigned short getOldIndexOfNew(unsigned short i, unsigned short n,unsigned short *index);
@@ -54,4 +55,5 @@ public:
     void draw();
 
 };
-// Render() -> loop() -> once() ->
+
+extern Render render;

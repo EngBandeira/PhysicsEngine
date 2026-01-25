@@ -1,5 +1,6 @@
 #pragma once
 #include "log.hpp"
+// #include "render.hpp"
 #include "utils.hpp"
 #include "glm/glm.hpp"
 
@@ -63,6 +64,8 @@ enum VertexCase {
 enum SSBOS {
     TextureVerticesSSBO,
     TextureIndexSSBO,
+    MatricesSSBO,
+    VerticesOffsetSSBO
 };
 
 enum FILE_TYPES {

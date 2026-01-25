@@ -1,12 +1,13 @@
 #pragma once
 #include "common.hpp"
 
+#include "draw_group.hpp"
 #include "material.hpp"
 #include "mesh.hpp"
 
 void setTexParameter(unsigned int tex_type);
 
-struct TextureHandler {
+struct Texture_Handler {
     unsigned int texture,
                  texDimensions,
                   emptyTexturesCount,
@@ -17,22 +18,22 @@ struct TextureHandler {
                   *emptyTextures,
                   *texUtilitary;
 
-    unsigned int addTex(unsigned char *localBuffer);
-    void rmTex(unsigned int index);
-    TextureHandler() = default;
+    unsigned int add_tex(unsigned char *localBuffer);
+    void rm_tex(unsigned int index);
+    Texture_Handler() = default;
 };
 
-struct VadiaMeshes {
-    unsigned int verticesCount = 0,
-                 verticesIndexCount = 0,
+struct Vadia_Mesh {
+    unsigned int vertices_count = 0,
+                 vertices_index_count = 0,
                  mesh_objects = -1;
 };
 
 
-class RenderData {
+class Render_Data {
 public:
     int delayCounter = -1;
-    TextureHandler textureHandlers[TEXTURE_HANDLERS_COUNT];
+    Texture_Handler textureHandlers[TEXTURE_HANDLERS_COUNT];
 
     // unsigned int verticesCount = 0,
     //              verticesIndexCount = 0,
@@ -48,32 +49,30 @@ public:
     //       *textureVertices,
 
     struct Compacted_Meshes{
-        VadiaMeshes* meshes;
+        Vadia_Mesh* meshes;
+        DrawGroup *draw_groups;
         unsigned int meshes_count = 0,
+                     draw_groups_count = 0,
 
                      vertices_count = 0,
-                    *vertices_offsets,
 
                      vertices_index_count = 0,
                     *vertices_index,
-                    *vertices_index_offsets,
-
-                    texture_vertices_count = 0,
-                    *texture_vertices_offsets,
-
-                    texture_vertices_index_count = 0,
-                    *texture_vertices_index,
-                    *texture_vertices_index_offsets;
-        float *vertices,*texture_vertices;
+                    *vertices_index_offsets;
+        float *vertices;
         void init();
         void freeData();
     } compacted_meshes;
 
 
+    unsigned int alloc_draw_group();
+
+
+
     Material *materials;
 
     unsigned int texUtilitary,
-                 ebo,
+                 buffer_utilitary,
                  vao,
                  vbo,
                  ssbos[SSBOS_COUNT],
@@ -82,15 +81,15 @@ public:
 
     void update();
 
-    TextureLocation addTexToHandler(char *path,bool toProcess=1);
+    TextureLocation add_tex_to_handler(char *path,bool toProcess=1);
 
-    unsigned int allocMaterial(MaterialGenData data);
-    void freeMaterial(unsigned int index);
+    unsigned int alloc_material(MaterialGenData data);
+    void free_material(unsigned int index);
 
-    void addMesh(MeshGenData genData);
-    void removeMesh(unsigned int index);
+    unsigned int add_mesh(MeshGenData genData);
+    void remove_mesh(unsigned int index);
 
-    RenderData();
+    Render_Data();
 
-    void freeData();
+    void free_data();
 };

@@ -20,42 +20,25 @@ void setTexParameter(unsigned int tex_type){
 }
 
 
-void RenderData::Compacted_Meshes::init(){
-    meshes = (VadiaMeshes*)malloc(0);
+void Render_Data::Compacted_Meshes::init(){
+    meshes = (Vadia_Mesh*)malloc(0);
 
     vertices = (float*)malloc(0);
     vertices_index = (unsigned int*)malloc(0);
-
     vertices_index_offsets = (unsigned int*)malloc(sizeof(int));
-    vertices_index_offsets[0] = 0;
-
-    vertices_offsets = (unsigned int*)malloc(sizeof(int));
-    vertices_offsets[0] = 0;
-
-    texture_vertices = (float*)malloc(0);
-    texture_vertices_index = (unsigned int*)malloc(0);
-
-    texture_vertices_index_offsets = (unsigned int*)malloc(sizeof(int));
-    texture_vertices_index_offsets[0] = 0;
-
-    texture_vertices_offsets = (unsigned int*)malloc(sizeof(int));
-    texture_vertices_offsets[0] = 0;
-
+    draw_groups = (DrawGroup*)malloc(0);
 }
 
-void RenderData::Compacted_Meshes::freeData() {
+void Render_Data::Compacted_Meshes::freeData() {
     free(meshes);
 
     free(vertices);
     free(vertices_index);
     free(vertices_index_offsets);
-
-    free(texture_vertices);
-    free(texture_vertices_index);
-    free(texture_vertices_index_offsets);
+    free(draw_groups);
 }
 
-RenderData::RenderData() {
+Render_Data::Render_Data() {
     compacted_meshes.init();
 
     for( unsigned int i = 0; i < TEXTURE_HANDLERS_COUNT; i++ ) {
@@ -78,7 +61,7 @@ RenderData::RenderData() {
     glBindVertexArray(0);
     glBindBuffer(GL_ARRAY_BUFFER,0);
 
-    glGenBuffers(1, &ebo);
+    // glGenBuffers(1, &ebo);
 
 
     glGenBuffers(SSBOS_COUNT, ssbos);
@@ -87,6 +70,9 @@ RenderData::RenderData() {
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbos[j]);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, j, ssbos[j]);
     }
+    glGenBuffers(1,&buffer_utilitary);
+
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
 
     glGenTextures(1, &texUtilitary);
@@ -109,7 +95,7 @@ RenderData::RenderData() {
     glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
 }
 
-void RenderData::freeData() {
+void Render_Data::free_data() {
     for( unsigned int i = 0; i < TEXTURE_HANDLERS_COUNT; i++ ) {
         free(textureHandlers[i].materialIndex);
         free(textureHandlers[i].emptyTextures);
@@ -117,10 +103,12 @@ void RenderData::freeData() {
 
     compacted_meshes.freeData();
 
-    glDeleteBuffers(1, &ebo);
-    glDeleteBuffers(1,&vbo);
-    glDeleteVertexArrays(1,&vao);
-    glDeleteBuffers(SSBOS_COUNT,ssbos);
+    // glDeleteBuffers(1, &ebo);
+    glDeleteBuffers(1, &vbo);
+    glDeleteVertexArrays(1, &vao);
+
+    glDeleteBuffers(1, &buffer_utilitary);
+    glDeleteBuffers(SSBOS_COUNT, ssbos);
 
 
     free(materials);

@@ -11,7 +11,7 @@
 #include <GLFW/glfw3.h>
 
 
-unsigned int RenderData::allocMaterial(MaterialGenData data) {
+unsigned int Render_Data::alloc_material(MaterialGenData data) {
     materialsCount++;
     materials = (Material*) realloc(materials, sizeof(Material) * materialsCount);
     Material *mater = materials + materialsCount - 1;
@@ -28,7 +28,7 @@ unsigned int RenderData::allocMaterial(MaterialGenData data) {
     }
 
     for( int i = 0; i < 4; i++ ) {
-        if( data.type == TEXTURE && data.maps[i] != nullptr ) mater->maps[i] = addTexToHandler(data.maps[i]);
+        if( data.type == TEXTURE && data.maps[i] != nullptr ) mater->maps[i] = add_tex_to_handler(data.maps[i]);
         else mater->maps[i] = TextureLocation {.handler = -1};
     }
 
@@ -36,7 +36,7 @@ unsigned int RenderData::allocMaterial(MaterialGenData data) {
     return materialsCount - 1;
 }
 
-void RenderData::freeMaterial(unsigned int index) {
+void Render_Data::free_material(unsigned int index) {
     Material *newMat = (Material*) malloc(sizeof(Material) * (materialsCount - 1));
 
     if( index < 0 ) {

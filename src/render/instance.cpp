@@ -1,3 +1,4 @@
+#include "common.hpp"
 #include "game_object.hpp"
 #include "render.hpp"
 
@@ -20,10 +21,14 @@
 #include <GLFW/glfw3.h>
 #include "vendor/glad/glad.h"
 
+Render render;
+
+
 int fodase[16] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
 
 Render::Render(GLFWwindow *win) : glfwWin(win) {
     shaderProgram = glCreateProgram();
+    shader.init(VERTEX_SHADERS_LOCALPATH, GEOMETRY_SHADERS_LOCALPATH, FRAGMENT_SHADERS_LOCALPATH);
     shader.attach(shaderProgram);
 
     if( transFeed ) {
@@ -80,15 +85,18 @@ Render::Render(GLFWwindow *win) : glfwWin(win) {
 
 unsigned int Render::addObject(GameObjectGenData genData) {
     objects = (GameObject*)realloc(objects, ++objects_count * sizeof(GameObject));
-    GameObject obj;
-    obj.name = genData.name;
-    memcpy(objects + objects_count - 1, &obj,sizeof(obj));
+    GameObject *obj = objects + objects_count;
+    obj->init();
+    obj->name = genData.name;
+    if(genData.mesh_index != -1){
+        obj->link_mesh(genData.mesh_index);
+    }
     return objects_count - 1;
 }
 
 
 Render::~Render() {
-    render_data.freeData();
+    render_data.free_data();
 
     if( transFeed ) {
         glDeleteQueries(1,&QUERY);
@@ -100,5 +108,6 @@ Render::~Render() {
     glDeleteRenderbuffers(1, &RBO);
     glDeleteTextures(1,&texToRenderOver);
     glDeleteTextures(1,&texToShowFrom);
+    shader.free_data();
     glDeleteProgram(shaderProgram);
 }

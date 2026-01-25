@@ -5,13 +5,14 @@
 struct GameObjectGenData {
     char *name;
     char *uuid;
+    unsigned int mesh_index = -1;
 };
 
 class GameObject {
   public:
   Transform tranform;
-  Material material;
   char *name;
   unsigned int mesh_index = -1;
-  GameObject();
+  void link_mesh(unsigned int index);
+  void init();
 };

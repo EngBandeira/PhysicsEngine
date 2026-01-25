@@ -24,6 +24,6 @@
 //     void freeData();
 // } compacted_meshes;
 
-void RenderData::update() {
+void Render_Data::update() {
 
 }

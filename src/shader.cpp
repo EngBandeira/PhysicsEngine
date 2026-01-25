@@ -4,7 +4,7 @@
 #include "shader.hpp"
 #include "utils.hpp"
 
-Shader::Shader() {
+void Shader::init(const char *vertex_shaders, const char *geometry_shaders, const char *fragment_shaders) {
     const char *shadersPath[3] = {VERTEX_SHADERS_LOCALPATH, GEOMETRY_SHADERS_LOCALPATH, FRAGMENT_SHADERS_LOCALPATH};
     unsigned int sets[3]
         = { GL_VERTEX_SHADER, GL_GEOMETRY_SHADER, GL_FRAGMENT_SHADER };
@@ -14,15 +14,15 @@ Shader::Shader() {
         // if(i == 3)
         // break;
         char *file = utils.read_file (shadersPath[i], nullptr);
-        Shaders[i] = glCreateShader (sets[i]);
-        glShaderSource (Shaders[i], 1, &file, NULL);//aq
-        glCompileShader (Shaders[i]);
+        shaders[i] = glCreateShader (sets[i]);
+        glShaderSource (shaders[i], 1, &file, NULL);//aq
+        glCompileShader (shaders[i]);
         free (file);
 
-        glGetShaderiv (Shaders[i], GL_COMPILE_STATUS, &rt);
+        glGetShaderiv (shaders[i], GL_COMPILE_STATUS, &rt);
 
         if (!rt) {
-            glGetShaderiv (Shaders[i],
+            glGetShaderiv (shaders[i],
                             GL_INFO_LOG_LENGTH,
                             &rt);
             char *info = (char *) malloc(rt);
@@ -32,16 +32,15 @@ Shader::Shader() {
         }
     }
 }
-void
-Shader::attach (unsigned int program)
+void Shader::attach (unsigned int program)
 {
-    glAttachShader (program, Shaders[0]);
-    glAttachShader (program, Shaders[1]);
-    glAttachShader (program, Shaders[2]);
+    glAttachShader (program, shaders[0]);
+    glAttachShader (program, shaders[1]);
+    glAttachShader (program, shaders[2]);
 }
-Shader::~Shader ()
+void Shader::free_data()
 {
-    glDeleteShader (Shaders[0]);
-    glDeleteShader (Shaders[1]);
-    glDeleteShader (Shaders[2]);
+    glDeleteShader (shaders[0]);
+    glDeleteShader (shaders[1]);
+    glDeleteShader (shaders[2]);
 }

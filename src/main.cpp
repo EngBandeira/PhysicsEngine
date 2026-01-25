@@ -29,56 +29,66 @@ void init();
 int main() {
     init();
 
-    Render m_render(glfw_window);
+    render = Render(glfw_window);
 
-    logger.terminal.lines.push_back("Console Init\n");
-    // m_render.render_data.addMesh(MeshGenData{
+    logger.terminal.lines.push_back((char*)"Console Init\n");
+    // render.render_data.addMesh(MeshGenData{
     //     .path = (char*)"assets/3dmodels/Cube.obj"
     // });
-    // m_render.addObject(GameObjectGenData{
+    // render.addObject(GameObjectGenData{
     //     .name = "Cube",
     //     .uuid = "a"
     // });
-    // m_render.objects[0].material.maps[0] = m_render.render_data.addTexToHandler("assets/3dmodels/Cube.jpg");
-    // m_render.render_data.compacted_meshes.mesh_objects[0] = 0;
+    // render.objects[0].material.maps[0] = render.render_data.addTexToHandler("assets/3dmodels/Cube.jpg");
+    // render.render_data.compacted_meshes.mesh_objects[0] = 0;
 
-    // m_render.render_data.addMesh(MeshGenData{
+    // render.render_data.addMesh(MeshGenData{
     //     .path = (char*)"assets/3dmodels/Cube.obj"
     // });
-    // m_render.addObject(GameObjectGenData{
+    // render.addObject(GameObjectGenData{
     //     .name = "Piston",
     //     .uuid = "a"
     // });
-    // m_render.objects[1].material.maps[0] = m_render.render_data.addTexToHandler("assets/3dmodels/Piston.jpg");
-    // m_render.render_data.compacted_meshes.mesh_objects[1] = 1;
+    // render.objects[1].material.maps[0] = render.render_data.addTexToHandler("assets/3dmodels/Piston.jpg");
+    // render.render_data.compacted_meshes.mesh_objects[1] = 1;
 
-    m_render.render_data.addMesh(MeshGenData{
-        .path = (char*)"assets/3dmodels/cannon_01_4k.obj"
-    });
-    m_render.addObject(GameObjectGenData{
-        .name = "Canhao",
-        .uuid = "a"
-    });
-    m_render.objects[0].material.maps[0] = m_render.render_data.addTexToHandler("assets/3dmodels/cannon_01_diff_4k.jpg");
-    m_render.render_data.compacted_meshes.mesh_objects[0] = 0;
+    unsigned int draw_groups[2];
+    draw_groups[0] = render.render_data.alloc_draw_group();
+    draw_groups[1] = render.render_data.alloc_draw_group();
 
-    m_render.render_data.addMesh(MeshGenData{
-        .path = (char*)"assets/3dmodels/marble_bust_01_4k.obj"
-    });
-    m_render.addObject(GameObjectGenData{
-        .name = "Busto",
-        .uuid = "a"
-    });
-    m_render.objects[1].material.maps[0] = m_render.render_data.addTexToHandler("assets/3dmodels/marble_bust_01_diff_4k.jpg");
+    render.render_data.compacted_meshes.draw_groups[draw_groups[0]].init(render.shader);
+    render.render_data.compacted_meshes.draw_groups[draw_groups[0]].material.maps[0] =
+                render.render_data.add_tex_to_handler((char*)"assets/3dmodels/cannon_01_diff_4k.jpg");
+    render.render_data.compacted_meshes.draw_groups[draw_groups[0]].addObject(
+        render.addObject(GameObjectGenData {
+            .name = (char*)"Canhao",
+            .uuid = (char*)"a",
+            .mesh_index = render.render_data.add_mesh(MeshGenData {
+                .path = (char*)"assets/3dmodels/cannon_01_4k.obj"
+            })
+        })
+    );
 
-    m_render.render_data.compacted_meshes.mesh_objects[1] = 1;
+    render.render_data.compacted_meshes.draw_groups[draw_groups[1]].init(render.shader);
+    render.render_data.compacted_meshes.draw_groups[draw_groups[1]].material.maps[0] =
+                render.render_data.add_tex_to_handler((char*)"assets/3dmodels/marble_bust_01_diff_4k.jpg");
+    render.render_data.compacted_meshes.draw_groups[draw_groups[1]].addObject(
+        render.addObject(GameObjectGenData {
+            .name = (char*)"Busto",
+            .uuid = (char*)"a",
+            .mesh_index = render.render_data.add_mesh(MeshGenData {
+                .path = (char*)"assets/3dmodels/marble_bust_01_4k.obj"
+            })
+        })
+    );
+
 
     while(!glfwWindowShouldClose(glfw_window)) {
-        m_render.newframe();
+        render.newframe();
 
-        m_render.draw();
+        render.draw();
 
-        m_render.ui();
+        render.ui();
 
 
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);

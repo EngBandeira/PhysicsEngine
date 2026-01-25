@@ -1,4 +1,4 @@
-#include "game_object.hpp"
+#include "draw_group.hpp"
 #include "render.hpp"
 
 #include <X11/X.h>
@@ -40,7 +40,7 @@ void Render::draw() {
     glBindVertexArray(render_data.vao);
     glBindBuffer(GL_ARRAY_BUFFER, render_data.vbo);
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, render_data.ebo);
+    // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, render_data.ebo);
 
 
     if(transFeed) {
@@ -64,30 +64,30 @@ void Render::draw() {
     //     uint index;
     // };
 
-    for( int i = 0; i < render_data.compacted_meshes.meshes_count; i++ ) {
+    for( int i = 0; i < render_data.compacted_meshes.draw_groups_count; i++ ) {
         //pinto
-        if(render_data.compacted_meshes.mesh_objects[i] == (unsigned int )-1)
-            continue;
-        GameObject& obj = objects[render_data.compacted_meshes.mesh_objects[i]];
-        glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "model_matrix"), 1, GL_FALSE, glm::value_ptr(obj.tranform.matrix));
-        glUniform1ui(glGetUniformLocation(shaderProgram, "texture_vertices_offset"),render_data.compacted_meshes.texture_vertices_offsets[i]);
-        glUniform1ui(glGetUniformLocation(shaderProgram, "texture_vertices_index_offset"),render_data.compacted_meshes.texture_vertices_index_offsets[i]);
+        // if(render_data.compacted_meshes.mesh_objects[i] == (unsigned int )-1)
+        //     continue;
+        DrawGroup& draw_group = render_data.compacted_meshes.draw_groups[i];
+        // GameObject& obj = objects[draw_group.objects[i]];
+        // glUniform1ui(glGetUniformLocation(shaderProgram, "texture_vertices_offset"),render_data.compacted_meshes.texture_vertices_offsets[i]);
+        // glUniform1ui(glGetUniformLocation(shaderProgram, "texture_vertices_index_offset"),render_data.compacted_meshes.texture_vertices_index_offsets[i]);
 
-        glUniform1i(glGetUniformLocation(shaderProgram, "material.maps[0].handler"),obj.material.maps[0].handler);
-        glUniform1ui(glGetUniformLocation(shaderProgram, "material.maps[0].index"),obj.material.maps[0].index);
+        glUniform1i(glGetUniformLocation(shaderProgram, "material.maps[0].handler"), draw_group.material.maps[0].handler);
+        glUniform1ui(glGetUniformLocation(shaderProgram, "material.maps[0].index"), draw_group.material.maps[0].index);
+        glUniform1ui(glGetUniformLocation(shaderProgram, "objects_count"), draw_group.objects_count);
+
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, draw_group.ebo);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, SSBOS::MatricesSSBO, draw_group.matrices_ssbo);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, SSBOS::VerticesOffsetSSBO, draw_group.vertices_offset_ssbo);
 
 
-        glBindVertexArray(render_data.vao);
-        glBindBuffer(GL_ARRAY_BUFFER,render_data.vbo);
-        glBufferData(GL_ARRAY_BUFFER,  sizeof(float) * render_data.compacted_meshes.meshes[i].verticesCount,
-                            render_data.compacted_meshes.vertices+render_data.compacted_meshes.vertices_offsets[i],GL_DYNAMIC_DRAW);
-
-        glDrawElements(GL_TRIANGLES, render_data.compacted_meshes.meshes[i].verticesIndexCount, GL_UNSIGNED_INT,
-                      (void*)(render_data.compacted_meshes.vertices_index_offsets[i]*sizeof(int)));
-
-        glBindBuffer(GL_ARRAY_BUFFER,0);
-        glBindVertexArray(0);
+        glDrawElements(GL_TRIANGLES, draw_group.vertices_index_count, GL_UNSIGNED_INT,
+                      (void*)0);
     }
+
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
     if(transFeed) {
         glEndTransformFeedback();

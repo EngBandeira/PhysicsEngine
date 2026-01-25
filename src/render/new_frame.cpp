@@ -61,4 +61,8 @@ void Render::newframe() {
 
     assets.delayCounter++;
 
+    for(unsigned int i = 0; i < render_data.compacted_meshes.draw_groups_count; i++){
+        render_data.compacted_meshes.draw_groups[i].update();
+    }
+
 }
