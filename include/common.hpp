@@ -2,7 +2,6 @@
 #include "log.hpp"
 // #include "render.hpp"
 #include "utils.hpp"
-#include "glm/glm.hpp"
 
 extern glm::vec3 axis[3];
 extern Log logger;
@@ -21,7 +20,7 @@ const char GEOMETRY_SHADERS_LOCALPATH[] = "src/shaders/gShader.geom";
 const char RAW_TEX_EXTENSION[] =  "raw";
 
 const int TEXTURE_HANDLERS_COUNT = 7;
-const int SSBOS_COUNT            = 2;
+const int SSBOS_COUNT            = 1;
 const int LEVEL                  = 0;
 const double MOUSE_SENSI         = 0.05f;
 
@@ -63,9 +62,10 @@ enum VertexCase {
 
 enum SSBOS {
     TextureVerticesSSBO,
-    TextureIndexSSBO,
+    TextureVerticesIndexSSBO,
     MatricesSSBO,
-    VerticesOffsetSSBO
+    VerticesOffsetSSBO,
+    TextureVerticesOffsetSSBO
 };
 
 enum FILE_TYPES {

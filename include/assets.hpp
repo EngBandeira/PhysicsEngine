@@ -7,18 +7,19 @@ struct File {
     char *simpleName, // complete name = simpleName + '.' + extension
          *extension,
          *completeName;
-
+    ~File();
     FILE_TYPES type = FILE_TYPES::COMMON_FILE;
 };
 
 struct Assets {
-    std::vector<File> files;
+    File *files;
 
-    unsigned int framesDelay = ASSETS_DELAY,
+    unsigned int files_number = 1,
+                 framesDelay = ASSETS_DELAY,
                  delayCounter = 0;
 
     char *directory;
-    Assets();
-    ~Assets();
+    void init();
+    void free_data();
     void update();
 };

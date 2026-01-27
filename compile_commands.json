@@ -1,19 +1,506 @@
 [
   {
+    "file": "src/assets.cpp",
     "arguments": [
-      "/usr/bin/g++",
+      "g++",
+      "-std=c++17",
       "-Wall",
       "-Iinclude",
       "-I.",
       "-g",
       "-ggdb",
+      "src/assets.cpp",
       "-c",
       "-o",
-      "build/main.o",
-      "src/main.cpp"
+      "build/src_assets.o"
     ],
     "directory": "/home/bandeira/Documents/GIT/PhysicsEngine",
-    "file": "/home/bandeira/Documents/GIT/PhysicsEngine/src/main.cpp",
-    "output": "/home/bandeira/Documents/GIT/PhysicsEngine/build/main.o"
+    "output": "build/src_assets.o"
+  },
+  {
+    "file": "src/common.cpp",
+    "arguments": [
+      "g++",
+      "-std=c++17",
+      "-Wall",
+      "-Iinclude",
+      "-I.",
+      "-g",
+      "-ggdb",
+      "src/common.cpp",
+      "-c",
+      "-o",
+      "build/src_common.o"
+    ],
+    "directory": "/home/bandeira/Documents/GIT/PhysicsEngine",
+    "output": "build/src_common.o"
+  },
+  {
+    "file": "src/draw_groups.cpp",
+    "arguments": [
+      "g++",
+      "-std=c++17",
+      "-Wall",
+      "-Iinclude",
+      "-I.",
+      "-g",
+      "-ggdb",
+      "src/draw_groups.cpp",
+      "-c",
+      "-o",
+      "build/src_draw_groups.o"
+    ],
+    "directory": "/home/bandeira/Documents/GIT/PhysicsEngine",
+    "output": "build/src_draw_groups.o"
+  },
+  {
+    "file": "src/game_object.cpp",
+    "arguments": [
+      "g++",
+      "-std=c++17",
+      "-Wall",
+      "-Iinclude",
+      "-I.",
+      "-g",
+      "-ggdb",
+      "src/game_object.cpp",
+      "-c",
+      "-o",
+      "build/src_game_object.o"
+    ],
+    "directory": "/home/bandeira/Documents/GIT/PhysicsEngine",
+    "output": "build/src_game_object.o"
+  },
+  {
+    "file": "src/log.cpp",
+    "arguments": [
+      "g++",
+      "-std=c++17",
+      "-Wall",
+      "-Iinclude",
+      "-I.",
+      "-g",
+      "-ggdb",
+      "src/log.cpp",
+      "-c",
+      "-o",
+      "build/src_log.o"
+    ],
+    "directory": "/home/bandeira/Documents/GIT/PhysicsEngine",
+    "output": "build/src_log.o"
+  },
+  {
+    "file": "src/main.cpp",
+    "arguments": [
+      "g++",
+      "-std=c++17",
+      "-Wall",
+      "-Iinclude",
+      "-I.",
+      "-g",
+      "-ggdb",
+      "src/main.cpp",
+      "-c",
+      "-o",
+      "build/src_main.o"
+    ],
+    "directory": "/home/bandeira/Documents/GIT/PhysicsEngine",
+    "output": "build/src_main.o"
+  },
+  {
+    "file": "src/material.cpp",
+    "arguments": [
+      "g++",
+      "-std=c++17",
+      "-Wall",
+      "-Iinclude",
+      "-I.",
+      "-g",
+      "-ggdb",
+      "src/material.cpp",
+      "-c",
+      "-o",
+      "build/src_material.o"
+    ],
+    "directory": "/home/bandeira/Documents/GIT/PhysicsEngine",
+    "output": "build/src_material.o"
+  },
+  {
+    "file": "src/model.cpp",
+    "arguments": [
+      "g++",
+      "-std=c++17",
+      "-Wall",
+      "-Iinclude",
+      "-I.",
+      "-g",
+      "-ggdb",
+      "src/model.cpp",
+      "-c",
+      "-o",
+      "build/src_model.o"
+    ],
+    "directory": "/home/bandeira/Documents/GIT/PhysicsEngine",
+    "output": "build/src_model.o"
+  },
+  {
+    "file": "src/persistent_data.cpp",
+    "arguments": [
+      "g++",
+      "-std=c++17",
+      "-Wall",
+      "-Iinclude",
+      "-I.",
+      "-g",
+      "-ggdb",
+      "src/persistent_data.cpp",
+      "-c",
+      "-o",
+      "build/src_persistent_data.o"
+    ],
+    "directory": "/home/bandeira/Documents/GIT/PhysicsEngine",
+    "output": "build/src_persistent_data.o"
+  },
+  {
+    "file": "src/shader.cpp",
+    "arguments": [
+      "g++",
+      "-std=c++17",
+      "-Wall",
+      "-Iinclude",
+      "-I.",
+      "-g",
+      "-ggdb",
+      "src/shader.cpp",
+      "-c",
+      "-o",
+      "build/src_shader.o"
+    ],
+    "directory": "/home/bandeira/Documents/GIT/PhysicsEngine",
+    "output": "build/src_shader.o"
+  },
+  {
+    "file": "src/transform.cpp",
+    "arguments": [
+      "g++",
+      "-std=c++17",
+      "-Wall",
+      "-Iinclude",
+      "-I.",
+      "-g",
+      "-ggdb",
+      "src/transform.cpp",
+      "-c",
+      "-o",
+      "build/src_transform.o"
+    ],
+    "directory": "/home/bandeira/Documents/GIT/PhysicsEngine",
+    "output": "build/src_transform.o"
+  },
+  {
+    "file": "src/ui.cpp",
+    "arguments": [
+      "g++",
+      "-std=c++17",
+      "-Wall",
+      "-Iinclude",
+      "-I.",
+      "-g",
+      "-ggdb",
+      "src/ui.cpp",
+      "-c",
+      "-o",
+      "build/src_ui.o"
+    ],
+    "directory": "/home/bandeira/Documents/GIT/PhysicsEngine",
+    "output": "build/src_ui.o"
+  },
+  {
+    "file": "src/utils.cpp",
+    "arguments": [
+      "g++",
+      "-std=c++17",
+      "-Wall",
+      "-Iinclude",
+      "-I.",
+      "-g",
+      "-ggdb",
+      "src/utils.cpp",
+      "-c",
+      "-o",
+      "build/src_utils.o"
+    ],
+    "directory": "/home/bandeira/Documents/GIT/PhysicsEngine",
+    "output": "build/src_utils.o"
+  },
+  {
+    "file": "src/camera/instance.cpp",
+    "arguments": [
+      "g++",
+      "-std=c++17",
+      "-Wall",
+      "-Iinclude",
+      "-I.",
+      "-g",
+      "-ggdb",
+      "src/camera/instance.cpp",
+      "-c",
+      "-o",
+      "build/camera_instance.o"
+    ],
+    "directory": "/home/bandeira/Documents/GIT/PhysicsEngine",
+    "output": "build/camera_instance.o"
+  },
+  {
+    "file": "src/camera/matrix.cpp",
+    "arguments": [
+      "g++",
+      "-std=c++17",
+      "-Wall",
+      "-Iinclude",
+      "-I.",
+      "-g",
+      "-ggdb",
+      "src/camera/matrix.cpp",
+      "-c",
+      "-o",
+      "build/camera_matrix.o"
+    ],
+    "directory": "/home/bandeira/Documents/GIT/PhysicsEngine",
+    "output": "build/camera_matrix.o"
+  },
+  {
+    "file": "src/camera/movement.cpp",
+    "arguments": [
+      "g++",
+      "-std=c++17",
+      "-Wall",
+      "-Iinclude",
+      "-I.",
+      "-g",
+      "-ggdb",
+      "src/camera/movement.cpp",
+      "-c",
+      "-o",
+      "build/camera_movement.o"
+    ],
+    "directory": "/home/bandeira/Documents/GIT/PhysicsEngine",
+    "output": "build/camera_movement.o"
+  },
+  {
+    "file": "src/mesh/instance.cpp",
+    "arguments": [
+      "g++",
+      "-std=c++17",
+      "-Wall",
+      "-Iinclude",
+      "-I.",
+      "-g",
+      "-ggdb",
+      "src/mesh/instance.cpp",
+      "-c",
+      "-o",
+      "build/mesh_instance.o"
+    ],
+    "directory": "/home/bandeira/Documents/GIT/PhysicsEngine",
+    "output": "build/mesh_instance.o"
+  },
+  {
+    "file": "src/mesh/mesh.cpp",
+    "arguments": [
+      "g++",
+      "-std=c++17",
+      "-Wall",
+      "-Iinclude",
+      "-I.",
+      "-g",
+      "-ggdb",
+      "src/mesh/mesh.cpp",
+      "-c",
+      "-o",
+      "build/mesh_mesh.o"
+    ],
+    "directory": "/home/bandeira/Documents/GIT/PhysicsEngine",
+    "output": "build/mesh_mesh.o"
+  },
+  {
+    "file": "src/render/draw.cpp",
+    "arguments": [
+      "g++",
+      "-std=c++17",
+      "-Wall",
+      "-Iinclude",
+      "-I.",
+      "-g",
+      "-ggdb",
+      "src/render/draw.cpp",
+      "-c",
+      "-o",
+      "build/render_draw.o"
+    ],
+    "directory": "/home/bandeira/Documents/GIT/PhysicsEngine",
+    "output": "build/render_draw.o"
+  },
+  {
+    "file": "src/render/instance.cpp",
+    "arguments": [
+      "g++",
+      "-std=c++17",
+      "-Wall",
+      "-Iinclude",
+      "-I.",
+      "-g",
+      "-ggdb",
+      "src/render/instance.cpp",
+      "-c",
+      "-o",
+      "build/render_instance.o"
+    ],
+    "directory": "/home/bandeira/Documents/GIT/PhysicsEngine",
+    "output": "build/render_instance.o"
+  },
+  {
+    "file": "src/render/new_frame.cpp",
+    "arguments": [
+      "g++",
+      "-std=c++17",
+      "-Wall",
+      "-Iinclude",
+      "-I.",
+      "-g",
+      "-ggdb",
+      "src/render/new_frame.cpp",
+      "-c",
+      "-o",
+      "build/render_new_frame.o"
+    ],
+    "directory": "/home/bandeira/Documents/GIT/PhysicsEngine",
+    "output": "build/render_new_frame.o"
+  },
+  {
+    "file": "src/render/update.cpp",
+    "arguments": [
+      "g++",
+      "-std=c++17",
+      "-Wall",
+      "-Iinclude",
+      "-I.",
+      "-g",
+      "-ggdb",
+      "src/render/update.cpp",
+      "-c",
+      "-o",
+      "build/render_update.o"
+    ],
+    "directory": "/home/bandeira/Documents/GIT/PhysicsEngine",
+    "output": "build/render_update.o"
+  },
+  {
+    "file": "src/render_data/draw_group.cpp",
+    "arguments": [
+      "g++",
+      "-std=c++17",
+      "-Wall",
+      "-Iinclude",
+      "-I.",
+      "-g",
+      "-ggdb",
+      "src/render_data/draw_group.cpp",
+      "-c",
+      "-o",
+      "build/render_data_draw_group.o"
+    ],
+    "directory": "/home/bandeira/Documents/GIT/PhysicsEngine",
+    "output": "build/render_data_draw_group.o"
+  },
+  {
+    "file": "src/render_data/instance.cpp",
+    "arguments": [
+      "g++",
+      "-std=c++17",
+      "-Wall",
+      "-Iinclude",
+      "-I.",
+      "-g",
+      "-ggdb",
+      "src/render_data/instance.cpp",
+      "-c",
+      "-o",
+      "build/render_data_instance.o"
+    ],
+    "directory": "/home/bandeira/Documents/GIT/PhysicsEngine",
+    "output": "build/render_data_instance.o"
+  },
+  {
+    "file": "src/render_data/material.cpp",
+    "arguments": [
+      "g++",
+      "-std=c++17",
+      "-Wall",
+      "-Iinclude",
+      "-I.",
+      "-g",
+      "-ggdb",
+      "src/render_data/material.cpp",
+      "-c",
+      "-o",
+      "build/render_data_material.o"
+    ],
+    "directory": "/home/bandeira/Documents/GIT/PhysicsEngine",
+    "output": "build/render_data_material.o"
+  },
+  {
+    "file": "src/render_data/mesh.cpp",
+    "arguments": [
+      "g++",
+      "-std=c++17",
+      "-Wall",
+      "-Iinclude",
+      "-I.",
+      "-g",
+      "-ggdb",
+      "src/render_data/mesh.cpp",
+      "-c",
+      "-o",
+      "build/render_data_mesh.o"
+    ],
+    "directory": "/home/bandeira/Documents/GIT/PhysicsEngine",
+    "output": "build/render_data_mesh.o"
+  },
+  {
+    "file": "src/render_data/textures.cpp",
+    "arguments": [
+      "g++",
+      "-std=c++17",
+      "-Wall",
+      "-Iinclude",
+      "-I.",
+      "-g",
+      "-ggdb",
+      "src/render_data/textures.cpp",
+      "-c",
+      "-o",
+      "build/render_data_textures.o"
+    ],
+    "directory": "/home/bandeira/Documents/GIT/PhysicsEngine",
+    "output": "build/render_data_textures.o"
+  },
+  {
+    "file": "src/render_data/update.cpp",
+    "arguments": [
+      "g++",
+      "-std=c++17",
+      "-Wall",
+      "-Iinclude",
+      "-I.",
+      "-g",
+      "-ggdb",
+      "src/render_data/update.cpp",
+      "-c",
+      "-o",
+      "build/render_data_update.o"
+    ],
+    "directory": "/home/bandeira/Documents/GIT/PhysicsEngine",
+    "output": "build/render_data_update.o"
   }
 ]

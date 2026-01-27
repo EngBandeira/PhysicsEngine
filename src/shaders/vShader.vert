@@ -10,15 +10,19 @@ layout(std430, binding = 3) buffer VerticesOffsetSSBO {
     uint vertices_offset_ssbo[];
 };
 uniform uint objects_count;
+
+out uint object;
+
 // uniform mvp;
 void main()
 {
     int i = 0;
-    for(; i < objects_count; i++){
-        if(vertices_offset_ssbo[i] > gl_VertexID)
+    for (; i < objects_count; i++) {
+        if (vertices_offset_ssbo[i] > gl_VertexID)
             break;
     }
     i--;
-    mat4 mvp = projection * view  * matrices_ssbo[i];
+    mat4 mvp = projection * view * matrices_ssbo[i];
+    object = i;
     gl_Position = (mvp * vec4(position, 1));
 }

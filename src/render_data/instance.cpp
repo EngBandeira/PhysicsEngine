@@ -20,16 +20,30 @@ void setTexParameter(unsigned int tex_type){
 }
 
 
+
 void Render_Data::Compacted_Meshes::init(){
     meshes = (Vadia_Mesh*)malloc(0);
+    draw_groups = (DrawGroup*)malloc(0);
 
-    vertices = (float*)malloc(0);
     vertices_index = (unsigned int*)malloc(0);
     vertices_index_offsets = (unsigned int*)malloc(sizeof(int));
-    draw_groups = (DrawGroup*)malloc(0);
+    vertices_index_offsets[0] = 0;
+
+    texture_vertices_index = (unsigned int*)malloc(0);
+    texture_vertices_index_offsets = (unsigned int*)malloc(sizeof(int));
+    texture_vertices_index_offsets[0] = 0;
+
+
+    vertices = (float*)malloc(0);
+    texture_vertices = (float*)malloc(0);
 }
 
-void Render_Data::Compacted_Meshes::freeData() {
+void Render_Data::Compacted_Meshes::free_data() {
+
+    for( unsigned int i = 0; i < draw_groups_count; i++ ) {
+        draw_groups[i].freeData();
+    }
+
     free(meshes);
 
     free(vertices);
@@ -38,7 +52,7 @@ void Render_Data::Compacted_Meshes::freeData() {
     free(draw_groups);
 }
 
-Render_Data::Render_Data() {
+void Render_Data::init() {
     compacted_meshes.init();
 
     for( unsigned int i = 0; i < TEXTURE_HANDLERS_COUNT; i++ ) {
@@ -84,7 +98,6 @@ Render_Data::Render_Data() {
     for( int i = 0; i < TEXTURE_HANDLERS_COUNT; i++ ) {
         unsigned short k = pow(2,6+i);
         textureHandlers[i].texturesCount = 0;
-        textureHandlers[i].texUtilitary = &texUtilitary;
         glGenTextures(1,&textureHandlers[i].texture);
         glBindTexture(GL_TEXTURE_2D_ARRAY,textureHandlers[i].texture);
         glTexImage3D(GL_TEXTURE_2D_ARRAY,LEVEL,GL_RGBA8 ,k,k,0,0,GL_RGBA,GL_UNSIGNED_BYTE,nullptr);
@@ -101,7 +114,8 @@ void Render_Data::free_data() {
         free(textureHandlers[i].emptyTextures);
     }
 
-    compacted_meshes.freeData();
+
+    compacted_meshes.free_data();
 
     // glDeleteBuffers(1, &ebo);
     glDeleteBuffers(1, &vbo);

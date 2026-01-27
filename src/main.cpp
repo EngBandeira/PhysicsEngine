@@ -53,31 +53,29 @@ int main() {
     // render.render_data.compacted_meshes.mesh_objects[1] = 1;
 
     unsigned int draw_groups[2];
-    draw_groups[0] = render.render_data.alloc_draw_group();
-    draw_groups[1] = render.render_data.alloc_draw_group();
+    draw_groups[0] = render.render_data.alloc_draw_group(VERTEX_SHADERS_LOCALPATH,GEOMETRY_SHADERS_LOCALPATH,FRAGMENT_SHADERS_LOCALPATH);
+    draw_groups[1] = render.render_data.alloc_draw_group(VERTEX_SHADERS_LOCALPATH,GEOMETRY_SHADERS_LOCALPATH,FRAGMENT_SHADERS_LOCALPATH);
 
-    render.render_data.compacted_meshes.draw_groups[draw_groups[0]].init(render.shader);
     render.render_data.compacted_meshes.draw_groups[draw_groups[0]].material.maps[0] =
-                render.render_data.add_tex_to_handler((char*)"assets/3dmodels/cannon_01_diff_4k.jpg");
-    render.render_data.compacted_meshes.draw_groups[draw_groups[0]].addObject(
-        render.addObject(GameObjectGenData {
-            .name = (char*)"Canhao",
-            .uuid = (char*)"a",
-            .mesh_index = render.render_data.add_mesh(MeshGenData {
-                .path = (char*)"assets/3dmodels/cannon_01_4k.obj"
-            })
-        })
-    );
-
-    render.render_data.compacted_meshes.draw_groups[draw_groups[1]].init(render.shader);
-    render.render_data.compacted_meshes.draw_groups[draw_groups[1]].material.maps[0] =
                 render.render_data.add_tex_to_handler((char*)"assets/3dmodels/marble_bust_01_diff_4k.jpg");
-    render.render_data.compacted_meshes.draw_groups[draw_groups[1]].addObject(
+    render.render_data.compacted_meshes.draw_groups[draw_groups[0]].addObject(
         render.addObject(GameObjectGenData {
             .name = (char*)"Busto",
             .uuid = (char*)"a",
             .mesh_index = render.render_data.add_mesh(MeshGenData {
                 .path = (char*)"assets/3dmodels/marble_bust_01_4k.obj"
+            })
+        })
+    );
+
+    render.render_data.compacted_meshes.draw_groups[draw_groups[1]].material.maps[0] =
+                render.render_data.add_tex_to_handler((char*)"assets/3dmodels/cannon_01_diff_4k.jpg");
+    render.render_data.compacted_meshes.draw_groups[draw_groups[1]].addObject(
+        render.addObject(GameObjectGenData {
+            .name = (char*)"Canhao",
+            .uuid = (char*)"a",
+            .mesh_index = render.render_data.add_mesh(MeshGenData {
+                .path = (char*)"assets/3dmodels/cannon_01_4k.obj"
             })
         })
     );
@@ -99,7 +97,7 @@ int main() {
         glfwPollEvents();
         flags  = flags & ~(1&2);
     }
-
+    render.free_data();
     return 0;
 }
 

@@ -48,6 +48,9 @@ Render::Render(GLFWwindow *win) : glfwWin(win) {
     utils.get_program_status(shaderProgram,GL_LINK_STATUS);
     glUseProgram(shaderProgram);
 
+    render_data.init();
+    assets.init();
+
     glGenFramebuffers(1, &FBO_FROM);
     glBindFramebuffer(GL_FRAMEBUFFER, FBO_FROM);
 
@@ -85,7 +88,8 @@ Render::Render(GLFWwindow *win) : glfwWin(win) {
 
 unsigned int Render::addObject(GameObjectGenData genData) {
     objects = (GameObject*)realloc(objects, ++objects_count * sizeof(GameObject));
-    GameObject *obj = objects + objects_count;
+    GameObject *obj = objects + objects_count - 1;
+    *obj = GameObject();
     obj->init();
     obj->name = genData.name;
     if(genData.mesh_index != -1){
@@ -95,8 +99,9 @@ unsigned int Render::addObject(GameObjectGenData genData) {
 }
 
 
-Render::~Render() {
+void Render::free_data() {
     render_data.free_data();
+    assets.free_data();
 
     if( transFeed ) {
         glDeleteQueries(1,&QUERY);

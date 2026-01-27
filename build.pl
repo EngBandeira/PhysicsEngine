@@ -1,6 +1,9 @@
 #!/usr/bin/env perl
 
 use Getopt::Long;
+use Data::Dumper;
+use File::Find;
+use Cwd;
 
 my $vendor  = 0;
 my $asan = 0;
@@ -20,29 +23,58 @@ foreach $lib (@libs)
 {
   $formatedLibs = $formatedLibs .  " -l" . $lib;
 }
-my $k = " ";
+
+my @files;
+find(
+    sub {
+        return unless /\.cpp$/;
+        push @files, $File::Find::name;
+    },
+    $srcPath
+);
+find(
+    sub {
+        return unless /\.c$/;
+        push @files, $File::Find::name;
+    },
+    $srcPath
+);
+
 if($vendor){
-    $k = $vendorPath;
+    find(
+        sub {
+            return unless /\.c$/;
+            push @files, $File::Find::name;
+        },
+        $vendorPath
+    );
+    find(
+        sub {
+            return unless /\.cpp$/;
+            push @files, $File::Find::name;
+        },
+        $vendorPath
+    );
 }
-my $fileCPP = `find $srcPath $k -name '*.cpp' -print`;
-my $fileC = `find $srcPath $k -name '*.c' -print`;
-my @files = (split (/\n/,$fileCPP), split( /\n/,$fileC));
+
+#Dump(\@files);
+
 # my @files = (split("/\n/",$fileCPP),split("/\n/",$fileC));
 # my $rn ="g++ -Wall -I" . $includePath . " -I" . $vendorPath . " -g -ggdb " . $formatedLibs . " ";
 
-my $rn ="g++ -std=c++17 -Wall -I" . $includePath . " -I." . " -g -ggdb "  . $formatedLibs ." ";
+my $rn =" -std=c++17 -Wall -I" . $includePath . " -I." . " -g -ggdb ";
 if($asan)
 {
- $rn ="g++ -Wall -fsanitize=address -I" . $includePath . " -I." . " -g -ggdb "  . $formatedLibs ." ";
+ $rn =" -Wall -fsanitize=address -I" . $includePath . " -I." . " -g -ggdb ";
 }
 
 foreach $file (@files){
     if( $file =~ /(\w*)\/(\w+)\.\w+/g ) {
-        my $command = $rn . $file ." -c -o " . $buildPath . "/$1_$2" . ".o";
-        print $command;
+        my $command = $rn . $formatedLibs . " "  . $file ." -c -o " . $buildPath . "/$1_$2" . ".o";
         print "\n";
-        my $k = system($command);
+        my $k = system "g++", (split ' ', $command) ;
         if($k != 0){
+            print $command . "\n";
             print STDERR "Error1\n";
             exit 1;
         }
@@ -53,9 +85,19 @@ foreach $file (@files){
     }
 }
 
-my $fileO = `find $buildPath -name '*.o' -print`;
+my $fileO = ``;
+find(
+    sub {
+        return unless /\.o$/;
+        $fileO .= " " . $File::Find::name;
+    },
+    $buildPath
+);
+
 $fileO =~ s/\n/ /g;
-my $pinto = system($rn . $fileO ."-o ".$buildPath ."/final");
+my $caraia = $rn . $formatedLibs . " " . $fileO ." -o ".$buildPath ."/final";
+my $pinto = system "g++", (split ' ', $caraia);
+
 if($pinto != 0){
     print STDERR "Error3\n";
         exit 1;

@@ -2,31 +2,54 @@
 #include "common.hpp"
 
 
-Assets::Assets() {
+void Assets::init() {
     char b[] = "/home/bandeira/Documents/GIT/PhysicsEngine/";
     directory = (char*)malloc(sizeof(b));
     memcpy(directory, b, sizeof(b));
+    files = (File*)malloc(sizeof(File));
+    File fParent;
+    fParent.completeName = (char*)"../";
+    fParent.type = FILE_TYPES::FOLDER_FILE;
+    files[0] = (fParent);
     update();
 }
-Assets::~Assets() {
+void Assets::free_data() {
+    for(int i = 1; i < files_number; i++){
+        if(files[i].simpleName)
+            free(files[i].simpleName);
+        if(files[i].extension)
+            free(files[i].extension);
+        if(files[i].completeName)
+            free(files[i].completeName);
+    }
+    free(files);
     free(directory);
 }
 
 void Assets::update() {
-    if( files.size() ) files.clear();
+    for(int i = 1; i < files_number; i++){
+        if(files[i].simpleName)
+            free(files[i].simpleName);
+        if(files[i].extension)
+            free(files[i].extension);
+        if(files[i].completeName)
+            free(files[i].completeName);
+    }
     if( directory == nullptr ) return;
 
     char *command = (char*) malloc(strlen(directory) + 19);
     sprintf(command, "ls %s -p > .assets", directory);
     pclose(popen(command, "r"));
 
-    unsigned int fileLenght;
+    unsigned int fileLenght, file_i = 1, i = 0;
     char* buffer = utils.read_file(".assets", &fileLenght);
-    unsigned int i = 0;
-    File fParent;
-    fParent.completeName = (char*)"../";
-    fParent.type = FILE_TYPES::FOLDER_FILE;
-    files.push_back(fParent);
+    files_number = 1;
+    for(int i = 0; i < fileLenght; i++) {
+        if(buffer[i] == '\n')
+            files_number++;
+    }
+
+    files = (File*)realloc(files,sizeof(File) * files_number);
     while(1) {
 
         unsigned int k = i;
@@ -48,7 +71,9 @@ void Assets::update() {
         file.completeName = c;
         if( exteIndex == 0 ) {
             file.extension = nullptr;
-            file.simpleName = c;
+
+            file.simpleName = (char*)malloc(i - k + 1);
+            memcpy(file.simpleName, c, i - k + 1);
         }
         else {
             file.extension = (char*)malloc(i - k + 1 - exteIndex);
@@ -61,8 +86,13 @@ void Assets::update() {
         }
 
         if( file.extension != nullptr && utils.match_pairs(file.extension, 1, {'o', 'b', 'j'}) ) file.type = MESH_FILE;
-        files.push_back(file);
+        files[file_i++] = file;
         i++;
     }
     free(buffer);
+    free(command);
+}
+
+File::~File(){
+
 }

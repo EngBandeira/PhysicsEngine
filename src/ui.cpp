@@ -151,7 +151,7 @@ void Render::ui() {
 
     if( ImGui::Begin("Assets", nullptr, ImGuiWindowFlags_None) ) {
         if( ImGui::BeginTable("Files",6) ) {
-            for(unsigned int i = 0; i < assets.files.size(); i ++ ){
+            for(unsigned int i = 0; i < assets.files_number; i ++ ){
                 if(! (i % 6) ) ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex(i % 6);
 

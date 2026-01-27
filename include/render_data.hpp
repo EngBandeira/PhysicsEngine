@@ -15,8 +15,7 @@ struct Texture_Handler {
 
                   // Pointers
                   *materialIndex,
-                  *emptyTextures,
-                  *texUtilitary;
+                  *emptyTextures;
 
     unsigned int add_tex(unsigned char *localBuffer);
     void rm_tex(unsigned int index);
@@ -26,7 +25,10 @@ struct Texture_Handler {
 struct Vadia_Mesh {
     unsigned int vertices_count = 0,
                  vertices_index_count = 0,
+                 texture_vertices_count = 0,
+                 texture_vertices_index_count = 0,
                  mesh_objects = -1;
+    Vadia_Mesh(){}
 };
 
 
@@ -53,19 +55,24 @@ public:
         DrawGroup *draw_groups;
         unsigned int meshes_count = 0,
                      draw_groups_count = 0,
-
                      vertices_count = 0,
-
                      vertices_index_count = 0,
-                    *vertices_index,
-                    *vertices_index_offsets;
-        float *vertices;
+                     texture_vertices_count = 0,
+                     texture_vertices_index_count = 0,
+
+                     *vertices_index,
+                     *vertices_index_offsets,
+
+                     *texture_vertices_index,
+                     *texture_vertices_index_offsets;
+
+
+
+        float *vertices, *texture_vertices;
+        Compacted_Meshes(){}
         void init();
-        void freeData();
+        void free_data();
     } compacted_meshes;
-
-
-    unsigned int alloc_draw_group();
 
 
 
@@ -78,6 +85,8 @@ public:
                  ssbos[SSBOS_COUNT],
                  materialsCount = 0;
 
+    unsigned int alloc_draw_group(const char *vertex_shaders, const char *geometry_shaders, const char *fragment_shaders);
+
 
     void update();
 
@@ -89,7 +98,7 @@ public:
     unsigned int add_mesh(MeshGenData genData);
     void remove_mesh(unsigned int index);
 
-    Render_Data();
+    void init();
 
     void free_data();
 };

@@ -29,7 +29,7 @@ public:
     bool transFeed = false;
     Render(){}
     Render(GLFWwindow *win);
-    ~Render();
+    void free_data();
 
     GameObject *objects;
     unsigned int objects_count = 0;

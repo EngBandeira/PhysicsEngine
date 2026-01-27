@@ -23,7 +23,6 @@ struct Material {
     uint type;
 };
 
-
 layout(std430, binding = 0) buffer TextureVerticesSSBO {
     vec2 texture_vertices[];
 };
@@ -31,14 +30,16 @@ layout(std430, binding = 0) buffer TextureVerticesSSBO {
 layout(std430, binding = 1) buffer TextureIndexSSBO {
     uint texture_vertices_index[];
 };
+layout(std430, binding = 4) buffer TextureVerticesOffsetSSBO {
+    uint texture_vertices_offset_ssbo[];
+};
 
 out vec3 normalVec;
 out vec4 worldPos;
 out vec2 g_texture_vertices;
 
+in uint object[3];
 
-uniform uint texture_vertices_index_offset;
-uniform uint texture_vertices_offset;
 uniform sampler2DArray textures[7];
 uniform mat4 projection;
 uniform mat4 view;
@@ -59,7 +60,7 @@ void main() {
         gl_Position = gl_in[i].gl_Position;
         worldPos = posito[i];
 
-        g_texture_vertices = texture_vertices[texture_vertices_offset + texture_vertices_index[texture_vertices_index_offset + 3 * gl_PrimitiveIDIn + i]];
+        g_texture_vertices = texture_vertices[texture_vertices_index[3 * gl_PrimitiveIDIn + i]];
         EmitVertex();
     }
 

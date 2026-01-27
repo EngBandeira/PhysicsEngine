@@ -1,19 +1,19 @@
 #pragma once
 
-#include "game_object.hpp"
 #include "material.hpp"
 #include "shader.hpp"
 
-class DrawGroup{
+class DrawGroup {
     public:
-    unsigned int *objects, objects_count, shaderProgram, vertices_index_count;
+    unsigned int *objects, objects_count = 0, shaderProgram, vertices_index_count = 0, texture_vertices_index_count = 0;
     float *matrices;
-    unsigned int ebo, matrices_ssbo, vertices_offset_ssbo;
+    unsigned int ebo, matrices_ssbo, vertices_offset_ssbo, texture_vertices_index_ssbo, texture_vertices_offset_ssbo;
     Shader shader;
     Material material;
     unsigned int addObject(unsigned int object);
 
-    void init(Shader shader);
+    DrawGroup(){}
+    void init(const char *vertex_shaders, const char *geometry_shaders, const char *fragment_shaders);
     void update();
     void freeData();
 };

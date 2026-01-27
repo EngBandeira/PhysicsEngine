@@ -13,6 +13,7 @@
 #include "vendor/stb_image/stb_image.h"
 
 #include "utils.hpp"
+#include "render.hpp"
 
 TextureLocation Render_Data::add_tex_to_handler(char *localPath, bool toProcess) {
     char *path = localPath;
@@ -100,13 +101,13 @@ unsigned int Texture_Handler::add_tex(unsigned char *localBuffer){
     }
 
 
-    glBindTexture(GL_TEXTURE_2D_ARRAY, *texUtilitary);
+    glBindTexture(GL_TEXTURE_2D_ARRAY, render.render_data.texUtilitary);
     glTexImage3D(GL_TEXTURE_2D_ARRAY,LEVEL,GL_RGBA8 ,texDimensions,texDimensions,texturesCount+1,0,GL_RGBA,GL_UNSIGNED_BYTE,nullptr);
 
     setTexParameter(GL_TEXTURE_2D_ARRAY);
 
 
-    glCopyImageSubData(texture,GL_TEXTURE_2D_ARRAY,LEVEL,0,0,0,*texUtilitary, GL_TEXTURE_2D_ARRAY, LEVEL,
+    glCopyImageSubData(texture,GL_TEXTURE_2D_ARRAY,LEVEL,0,0,0,render.render_data.texUtilitary, GL_TEXTURE_2D_ARRAY, LEVEL,
                     0,0,0,texDimensions,texDimensions,texturesCount);
 
     glTexSubImage3D(GL_TEXTURE_2D_ARRAY, LEVEL, 0, 0,
@@ -120,8 +121,8 @@ unsigned int Texture_Handler::add_tex(unsigned char *localBuffer){
     texturesCount++;
 
     unsigned int cache = texture;
-    texture = *texUtilitary;
-    *texUtilitary = cache;
+    texture = render.render_data.texUtilitary;
+    render.render_data.texUtilitary = cache;
 
     return texturesCount-1;
 }
