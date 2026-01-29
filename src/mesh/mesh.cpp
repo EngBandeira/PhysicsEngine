@@ -13,13 +13,67 @@ T *exportvec(unsigned int *count, std::vector<T> vec) {
     memcpy(rt, vec.data(), sizeof(T) * (*count));
     return rt;
 }
+std::vector<float> vertices_, texture_vertices_, normal_vertices_;
+std::vector<unsigned int> vertices_index_, texture_vertices_index_, normal_vertices_index_;
+unsigned int fileLenght;
+char *buffer;
 
 void Mesh::sanatize() {
+    vertices_.clear();
+    texture_vertices_.clear();
+    normal_vertices_.clear();
+    vertices_index_.clear();
+    texture_vertices_index_.clear();
+    normal_vertices_index_.clear();
     o = (char**)malloc(0);
-    std::vector<float> vertices_, texture_vertices_, normal_vertices_;
-    std::vector<unsigned int> vertices_index_, texture_vertices_index_, normal_vertices_index_;
-    unsigned int fileLenght = 0;
-    char *buffer = utils.read_file(meshPath, &fileLenght);
+    fileLenght = 0;
+    buffer = utils.read_file(meshPath, &fileLenght);
+    unsigned int path_lenght = strlen(meshPath);
+    unsigned int point_i = utils.get_extension_index((char*)meshPath, path_lenght);
+    char *ext = (char*)malloc(path_lenght - point_i);
+    memcpy(ext, meshPath + point_i + 1, path_lenght - point_i);
+    if(utils.match_pairs(ext, 0, (char[3]){'o','b','j'}))
+        obj();
+    if(utils.match_pairs(ext, 0, (char[2]){'p','e'}))
+        pe();
+
+    free(buffer);
+    vertices_index = exportvec<unsigned int>(&vertices_index_count, vertices_index_);
+    texture_vertices_index = exportvec<unsigned int>(&texture_vertices_index_count, texture_vertices_index_);
+    normal_vertices_index = exportvec<unsigned int>(&normal_vertices_count, normal_vertices_index_);
+
+    vertices = exportvec<float>(&vertices_count, vertices_);
+    texture_vertices = exportvec<float>(&texture_vertices_count, texture_vertices_);
+    normal_vertices = exportvec<float>(&normal_vertices_count, normal_vertices_);
+}
+// abce0
+// 01234
+void Mesh::pe() {
+    unsigned int i = 0;
+    while(i < fileLenght) {
+        if(buffer[i] == 'v' && buffer[i+1] == ' ') {
+            i += 2;
+
+            for( int j = 0; j < 3; j++ ) {
+                unsigned int k = i;
+                while(buffer[i] != '\n' && buffer[i] != ' ' && buffer[i] != 0) i++;
+
+                buffer[i] = 0;
+                vertices_.push_back((float) atof(buffer+ k));
+                buffer[i] = ' ';
+                i++;
+            }
+
+            continue;
+        }
+        i++;
+    }
+    for(unsigned int i = 0; i < vertices_.size()/3; i++){
+        vertices_index_.push_back(i);
+    }
+}
+
+void Mesh::obj(){
     char c;
     unsigned int i = 0;
     while(1) {
@@ -180,13 +234,4 @@ void Mesh::sanatize() {
 
         i++;
     }
-
-    free(buffer);
-    vertices_index = exportvec<unsigned int>(&vertices_index_count, vertices_index_);
-    texture_vertices_index = exportvec<unsigned int>(&texture_vertices_index_count, texture_vertices_index_);
-    normal_vertices_index = exportvec<unsigned int>(&normal_vertices_count, normal_vertices_index_);
-
-    vertices = exportvec<float>(&vertices_count, vertices_);
-    texture_vertices = exportvec<float>(&texture_vertices_count, texture_vertices_);
-    normal_vertices = exportvec<float>(&normal_vertices_count, normal_vertices_);
 }

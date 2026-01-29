@@ -1,4 +1,5 @@
 #include "draw_group.hpp"
+#include "material.hpp"
 #include "render.hpp"
 
 #include <X11/X.h>
@@ -22,11 +23,13 @@
 #include "vendor/glad/glad.h"
 #include <GLFW/glfw3.h>
 
+
+
 void Render::draw() {
 
     for( unsigned short i = 0; i < TEXTURE_HANDLERS_COUNT; i++ ) {
         glActiveTexture(GL_TEXTURE0 + i);
-        glBindTexture(GL_TEXTURE_2D_ARRAY,render_data.textureHandlers[i].texture);
+        glBindTexture(GL_TEXTURE_2D_ARRAY,render.texture_manager.textureHandlers[i].texture);
     }
     glBindFramebuffer(GL_FRAMEBUFFER, FBO_FROM);
 
@@ -50,19 +53,21 @@ void Render::draw() {
         glBeginTransformFeedback(GL_TRIANGLES);
     }
 
-    for( int i = 0; i < render_data.compacted_meshes.draw_groups_count; i++ ) {
-        DrawGroup& draw_group = render_data.compacted_meshes.draw_groups[i];
-        // glUniform1ui(glGetUniformLocation(shaderProgram, "texture_vertices_offset"),render_data.compacted_meshes.texture_vertices_offsets[i]);
-        // glUniform1ui(glGetUniformLocation(shaderProgram, "texture_vertices_index_offset"),render_data.compacted_meshes.texture_vertices_index_offsets[i]);
+    for( int i = 0; i < render.draw_group_manager.groups_count; i++ ) {
 
-        glUniform1i(glGetUniformLocation(shaderProgram, "material.maps[0].handler"), draw_group.material.maps[0].handler);
-        glUniform1ui(glGetUniformLocation(shaderProgram, "material.maps[0].index"), draw_group.material.maps[0].index);
-        glUniform1ui(glGetUniformLocation(shaderProgram, "objects_count"), draw_group.objects_count);
+        DrawGroup& draw_group = render.draw_group_manager.groups[i];
+        Material& material = render.material_manager.materials[draw_group.material];
+
+
+        shaders_manager.programs[draw_group.program].use();
+
+        glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "view"), 1, GL_FALSE, glm::value_ptr(camera.get_view()));
 
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, draw_group.ebo);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, SSBOS::TextureVerticesIndexSSBO, draw_group.texture_vertices_index_ssbo);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, SSBOS::MatricesSSBO, draw_group.matrices_ssbo);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, SSBOS::VerticesOffsetSSBO, draw_group.vertices_offset_ssbo);
+
 
         glDrawElements(GL_TRIANGLES, draw_group.vertices_index_count, GL_UNSIGNED_INT,
                       (void*)0);

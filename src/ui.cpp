@@ -40,7 +40,18 @@ void Render::ui() {
 
         if( ImGui::BeginMenu("Models") ) {
             if( ImGui::BeginMenu("Standarts") ) {
-                ImGui::MenuItem("Cube");
+                if(ImGui::MenuItem("Cube")) {
+                    render.addObject("assets/3dmodels/Cube.obj","Cube", 0);
+                }
+                if(ImGui::MenuItem("Sphere High")) {
+                    render.addObject("assets/3dmodels/SphereHigh.obj","Sphere High", 0);
+                }
+                if(ImGui::MenuItem("Sphere Low")) {
+                    render.addObject("assets/3dmodels/SphereLow.obj","Sphere Low", 0);
+                }
+                if(ImGui::MenuItem("Monkey")) {
+                    render.addObject("assets/3dmodels/Monkey.obj","Monkey", 0);
+                }
                 ImGui::EndMenu();
             }
             ImGui::EndMenu();
@@ -311,11 +322,9 @@ void Render::ui() {
 
 void Render::input() {
     glm::vec3 position(0);
-    // if(objects_count > selected_object) {
-
-    //     renderData.positionateModel(renderData.layers[selectedModelLayer].models[selectedModelIndex].getPosition(), 0, LAYER::SPECIAL_LAYER);
-    //     renderData.setAngleModel(renderData.layers[selectedModelLayer].models[selectedModelIndex].getAngle(), 0, LAYER::SPECIAL_LAYER);
-    // }
+    glm::vec3 cam_position = camera.get_position();
+        // renderData.positionateModel(renderData.layers[selectedModelLayer].models[selectedModelIndex].getPosition(), 0, LAYER::SPECIAL_LAYER);
+        // renderData.setAngleModel(renderData.layers[selectedModelLayer].models[selectedModelIndex].getAngle(), 0, LAYER::SPECIAL_LAYER);
 
     ImGuiIO& io = ImGui::GetIO();
     if( ImGui::IsWindowFocused() && ImGui::GetMousePos().y >= ImGui::GetCursorScreenPos().y ) {
@@ -339,13 +348,16 @@ void Render::input() {
 
             float b = .1;
 
-            // renderData.scaleModel(glm::max(0.015f * glm::length(camera.get_position() - renderData.getPositionOfModel(0, 0)), 0.00001f), 0, 0);
+            objects[default_game_objects.grid].tranform.positionate(glm::vec3(cam_position.x,0,cam_position.z));
+            objects[default_game_objects.grid].tranform.scale(5 * cam_position.y);
+            objects[default_game_objects.seta].tranform.scale(glm::max(0.015f * glm::length(cam_position - objects[default_game_objects.seta].tranform.get_position()),0.f));
             if(objects_count > selected_object){
 
                 if( ImGui::IsKeyPressed(ImGuiKey_LeftArrow)  ) objects[selected_object].tranform.translate(glm::vec3(1, 0, 0));
                 if( ImGui::IsKeyPressed(ImGuiKey_RightArrow) ) objects[selected_object].tranform.translate(glm::vec3(-1,0, 0));
                 if( ImGui::IsKeyPressed(ImGuiKey_UpArrow)    ) objects[selected_object].tranform.translate(glm::vec3(0, 0, 1));
                 if( ImGui::IsKeyPressed(ImGuiKey_DownArrow)  ) objects[selected_object].tranform.translate(glm::vec3(0, 0,-1));
+                if( ImGui::IsKeyPressed(ImGuiKey_H)  ) objects[selected_object].tranform.scale(objects[selected_object].tranform.get_scale() * 2.f);
             }
 
 

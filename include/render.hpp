@@ -1,12 +1,14 @@
 #pragma once
+#include "draw_group_mananger.hpp"
 #include "game_object.hpp"
 #include "assets.hpp"
 #include <asm-generic/errno.h>
 
-#include "shader.hpp"
-
+#include "material_mananger.hpp"
 #include "render_data.hpp"
 #include "camera.hpp"
+#include "shaders_manager.hpp"
+#include "texture_manager.hpp"
 
 
 class Render {
@@ -31,13 +33,20 @@ public:
     Render(GLFWwindow *win);
     void free_data();
 
+    struct default_game_objects {
+        unsigned int seta, grid;
+    } default_game_objects;
+
     GameObject *objects;
     unsigned int objects_count = 0;
     Camera camera;
-    unsigned int selected_object;
+    unsigned int selected_object = 0;
     Assets assets;
     Render_Data render_data;
-    Shader shader;
+    Draw_Group_Mananger draw_group_manager;
+    Shaders_Manager shaders_manager;
+    Material_Manager material_manager;
+    Texture_Mananger texture_manager;
     GLFWwindow *glfwWin;
     unsigned short getOldIndexOfNew(unsigned short i, unsigned short n,unsigned short *index);
     unsigned short getNewIndexOfOld(unsigned short i, unsigned short n,unsigned short *index);
@@ -45,6 +54,8 @@ public:
     unsigned int setAVector(glm::vec3 position,glm::vec3 direction);
 
     unsigned int addObject(GameObjectGenData genData);
+    unsigned int addObject(GameObjectGenData genData, unsigned int draw_group);
+    unsigned int addObject(const char* mesh, const char* name, unsigned int draw_group);
     void rmObject();
 
     void update();

@@ -21,8 +21,7 @@ class Utils {
 public:
     char *read_file(const char *localPath, unsigned int *fileLenght, const char *flags = "r");
 
-
-
+    unsigned int sha256(char* str);
 
     unsigned short get_old_index_of_new(unsigned short i, unsigned short n, unsigned short *index);
     unsigned short get_new_index_of_old(unsigned short i, unsigned short n, unsigned short *index);

@@ -1,11 +1,19 @@
 #include "assets.hpp"
 #include "common.hpp"
+#include <cstdio>
 
 
 void Assets::init() {
-    char b[] = "/home/bandeira/Documents/GIT/PhysicsEngine/";
-    directory = (char*)malloc(sizeof(b));
-    memcpy(directory, b, sizeof(b));
+    const char b[44] = "/home/bandeira/Documents/GIT/PhysicsEngine/";
+    if(directory == nullptr){
+        directory = (char*)malloc(sizeof(b));
+        memcpy(directory, b, sizeof(b));
+    }
+    else {
+        char *p = directory;
+        directory = (char*)malloc(strlen(p)+sizeof(b));
+        sprintf(directory, "%s%s",b,p);
+    }
     files = (File*)malloc(sizeof(File));
     File fParent;
     fParent.completeName = (char*)"../";
@@ -14,7 +22,7 @@ void Assets::init() {
     update();
 }
 void Assets::free_data() {
-    for(int i = 1; i < files_number; i++){
+    for(unsigned int i = 1; i < files_number; i++){
         if(files[i].simpleName)
             free(files[i].simpleName);
         if(files[i].extension)
@@ -27,7 +35,7 @@ void Assets::free_data() {
 }
 
 void Assets::update() {
-    for(int i = 1; i < files_number; i++){
+    for(unsigned int i = 1; i < files_number; i++){
         if(files[i].simpleName)
             free(files[i].simpleName);
         if(files[i].extension)
@@ -44,7 +52,7 @@ void Assets::update() {
     unsigned int fileLenght, file_i = 1, i = 0;
     char* buffer = utils.read_file(".assets", &fileLenght);
     files_number = 1;
-    for(int i = 0; i < fileLenght; i++) {
+    for(unsigned int i = 0; i < fileLenght; i++) {
         if(buffer[i] == '\n')
             files_number++;
     }

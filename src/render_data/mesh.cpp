@@ -29,11 +29,11 @@
 unsigned int Render_Data::add_mesh(MeshGenData genData) {
     Mesh mesh(genData);
 
-    for(int i = 0; i < mesh.vertices_index_count; i++) {
+    for(unsigned int i = 0; i < mesh.vertices_index_count; i++) {
         mesh.vertices_index[i]  += compacted_meshes.vertices_count / 3;
     }
 
-    for(int i = 0; i < mesh.texture_vertices_index_count; i++) {
+    for(unsigned int i = 0; i < mesh.texture_vertices_index_count; i++) {
         mesh.texture_vertices_index[i]  += compacted_meshes.texture_vertices_count / 2;
     }
 

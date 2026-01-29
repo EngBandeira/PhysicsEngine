@@ -22,5 +22,5 @@ class Transform {
     glm::vec3 get_position();
     glm::vec3 get_rotation();
     glm::vec3 get_scale();
-    Transform();
+    Transform(): translation_matrix(1), rotation_matrix(1), scale_matrix(1), matrix(1), angle(0) {};
 };

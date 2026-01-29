@@ -15,7 +15,6 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-Transform::Transform(): translation_matrix(1), rotation_matrix(1), scale_matrix(1), matrix(1), angle(0) {};
 
 void Transform::scale(glm::vec3 scale) {
     scale_matrix[0][0] = scale.x;
@@ -29,21 +28,20 @@ void Transform::scale(float scale) {
 }
 
 void Transform::positionate(glm::vec3 position) {
-    this->translation_matrix[3][0] = position.x;
-    this->translation_matrix[3][1] = position.y;
-    this->translation_matrix[3][2] = position.z;
+    translation_matrix[3][0] = position.x;
+    translation_matrix[3][1] = position.y;
+    translation_matrix[3][2] = position.z;
 
     updateMatrix();
 }
 
 
 void Transform::translate(glm::vec3 translation) {
-    this->translation_matrix[3][0] += translation.x;
-    this->translation_matrix[3][1] += translation.y;
-    this->translation_matrix[3][2] += translation.z;
+    translation_matrix[3][0] += translation.x;
+    translation_matrix[3][1] += translation.y;
+    translation_matrix[3][2] += translation.z;
 
     updateMatrix();
-    glm::vec3 aa = get_position();
 }
 
 void Transform::set_angle(glm::vec3 angle) {
@@ -86,6 +84,6 @@ glm::vec3 Transform::get_rotation() {
 
 
 void Transform::updateMatrix() {
-    matrix = translation_matrix * rotation_matrix;
+    matrix = translation_matrix * rotation_matrix * scale_matrix;
     flags = flags | MATRICES_CHANGE_FLAG;
 }

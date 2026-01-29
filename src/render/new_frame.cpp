@@ -37,13 +37,11 @@ void Render::newframe() {
     ImGui_ImplGlfw_NewFrame();
     ImGui_ImplOpenGL3_NewFrame();
 
-    glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "projection"), 1, GL_FALSE, glm::value_ptr(camera.proj_matrix));
-    glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "view"), 1, GL_FALSE, glm::value_ptr(camera.get_view()));
 
     // glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "view"), 1, GL_FALSE, glm::value_ptr(camera.viewMatrix));
 
     // glm::vec4 po = glm::inverse(camera.get_view_matrix())*glm::vec4(0, 0, 0, 1);
-    glm::vec4 po = glm::vec4(camera.get_position(),1);
+    // glm::vec4 po = glm::vec4(camera.get_position(),1);
     // glUniform4f(glGetUniformLocation(shaderProgram,"camPosition"),po.x, po.y, po.z, po.w);
     // glUniform1i(glGetUniformLocation(shaderProgram,"normalATIVO"),normalATIVO);
     // glUniform1f(glGetUniformLocation(shaderProgram,"normalV"),normalV);
@@ -61,8 +59,8 @@ void Render::newframe() {
 
     assets.delayCounter++;
 
-    for(unsigned int i = 0; i < render_data.compacted_meshes.draw_groups_count; i++){
-        render_data.compacted_meshes.draw_groups[i].update();
+    for(unsigned int i = 0; i < render.draw_group_manager.groups_count; i++){
+        render.draw_group_manager.groups[i].update();
     }
 
 }

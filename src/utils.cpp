@@ -19,6 +19,24 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include <openssl/sha.h>
+
+unsigned int Utils::sha256(char* str) {
+
+    unsigned char *hash = (unsigned char*)malloc(SHA256_DIGEST_LENGTH);
+    SHA256_CTX sha256;
+    SHA256_Init(&sha256);
+    SHA256_Update(&sha256, str, strlen(str));
+    SHA256_Final(hash, &sha256);
+
+    unsigned int rt = 0;
+    for(int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
+        rt += hash[i];
+    }
+
+    return rt;
+}
+
 void Utils::get_shader_status(unsigned int shaderProgram,int status){
     int linkStatus;
     glGetShaderiv(shaderProgram, status, &linkStatus);

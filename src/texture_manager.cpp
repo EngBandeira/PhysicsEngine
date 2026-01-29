@@ -1,23 +1,13 @@
+#include "texture_manager.hpp"
 #include "common.hpp"
-#include "material.hpp"
-#include "log.hpp"
-#include "render_data.hpp"
-#include <cstdlib>
-#include <cstring>
-#include <stdlib.h>
-#include <unistd.h>
-
-#include "vendor/glad/glad.h"
-#include <GLFW/glfw3.h>
-
-#include "vendor/stb_image/stb_image.h"
-
-#include "utils.hpp"
 #include "render.hpp"
+#include "vendor/stb_image/stb_image.h"
+#include <cstdlib>
 
-TextureLocation Render_Data::add_tex_to_handler(char *localPath, bool toProcess) {
-    char *path = localPath;
-    if( toProcess ) {
+
+TextureLocation Texture_Mananger::add_tex_to_handler(char *local_path, bool to_process) {
+    char *path = local_path;
+    if( to_process ) {
         int i = 0, k;
 
         while( path[i] != 0 ) {
@@ -38,7 +28,7 @@ TextureLocation Render_Data::add_tex_to_handler(char *localPath, bool toProcess)
             //localBuffeSize = 4 * width * width
             unsigned char *localBuffer = stbi_load(path, &width,  &height, &bpp, 4);
 
-            if(localPath == nullptr) logger.sendError("image do not exist", 1);
+            if(local_path == nullptr) logger.sendError("image do not exist", 1);
             if(width != height) logger.sendError("Width != Height", 1);
             if(width > 4096) logger.sendError("Width, Height > 4096", 1);
 
@@ -80,7 +70,7 @@ TextureLocation Render_Data::add_tex_to_handler(char *localPath, bool toProcess)
     unsigned int index = textureHandlers[handlerIndex].add_tex((unsigned char*)localBuffer+13);
     free(localBuffer);
 
-    if( toProcess ) free(path);
+    if( to_process ) free(path);
 
     return TextureLocation {
         .handler = handlerIndex,
@@ -127,13 +117,61 @@ unsigned int Texture_Handler::add_tex(unsigned char *localBuffer){
     return texturesCount-1;
 }
 
-void Texture_Handler::rm_tex(unsigned int index) {
-    emptyTexturesCount++;
+// void Texture_Handler::rm_tex(unsigned int index) {
+//     emptyTexturesCount++;
 
-    if( emptyTexturesCount > MAX_EMPTY_TEXTURES_COUNT
-        || (emptyTexturesCount > MIN_EMPTY_TEXTURES_COUNT_TO_RST && emptyTexturesCount > texturesCount * MAX_RATIO_OF_EMPTY_TEXTURES)
-    ) return;
+//     if( emptyTexturesCount > MAX_EMPTY_TEXTURES_COUNT
+//         || (emptyTexturesCount > MIN_EMPTY_TEXTURES_COUNT_TO_RST && emptyTexturesCount > texturesCount * MAX_RATIO_OF_EMPTY_TEXTURES)
+//     ) return;
 
-    emptyTextures = (unsigned int*) realloc(emptyTextures, emptyTexturesCount);
-    emptyTextures[emptyTexturesCount-1] = index;
+//     emptyTextures = (unsigned int*) realloc(emptyTextures, emptyTexturesCount);
+//     emptyTextures[emptyTexturesCount-1] = index;
+// }
+
+unsigned int Texture_Mananger::texture_alredy_exist(unsigned int code) {
+    for(unsigned int i = 0; i < textures_count; i++) {
+        if(textures[i].code == code)
+            return i;
+    }
+    return -1;
+}
+
+unsigned int Texture_Mananger::get_texture(char* path) {
+    unsigned int code = utils.sha256(path);
+
+    unsigned int i = texture_alredy_exist(code);
+    if(i != (unsigned int)-1)
+        return i;
+
+    textures = (Vadia_Texture*)realloc(textures, sizeof(Vadia_Texture) * ++textures_count);
+    textures[textures_count - 1].location = add_tex_to_handler(path);
+    textures[textures_count - 1].name = path;
+    textures[textures_count - 1].code = code;
+    return textures_count - 1;
+}
+
+void Texture_Mananger::init() {
+    textures = (Vadia_Texture*)malloc(0);
+    for( unsigned int i = 0; i < TEXTURE_HANDLERS_COUNT; i++ ) {
+        textureHandlers[i].materialIndex = (unsigned int *) malloc(0);
+        textureHandlers[i].texDimensions = pow(2, i + 6);
+        textureHandlers[i].emptyTextures = (unsigned int *) malloc(0);
+        textureHandlers[i].emptyTexturesCount = 0;
+        textureHandlers[i].texturesCount = 0;
+
+        glGenTextures(1,&textureHandlers[i].texture);
+        glBindTexture(GL_TEXTURE_2D_ARRAY,textureHandlers[i].texture);
+        glTexImage3D(GL_TEXTURE_2D_ARRAY,LEVEL,GL_RGBA8 , textureHandlers[i].texDimensions,
+            textureHandlers[i].texDimensions,0,0,GL_RGBA,GL_UNSIGNED_BYTE,nullptr);
+
+        setTexParameter(GL_TEXTURE_2D_ARRAY);
+    }
+}
+void Texture_Mananger::free_data() {
+    free(textures);
+
+    for( unsigned int i = 0; i < TEXTURE_HANDLERS_COUNT; i++ ) {
+        free(textureHandlers[i].materialIndex);
+        free(textureHandlers[i].emptyTextures);
+    }
 }

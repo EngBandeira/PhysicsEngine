@@ -1,5 +1,4 @@
 #include "common.hpp"
-#include "material.hpp"
 #include "render_data.hpp"
 #include <cstdlib>
 #include <stdlib.h>
@@ -23,7 +22,6 @@ void setTexParameter(unsigned int tex_type){
 
 void Render_Data::Compacted_Meshes::init(){
     meshes = (Vadia_Mesh*)malloc(0);
-    draw_groups = (DrawGroup*)malloc(0);
 
     vertices_index = (unsigned int*)malloc(0);
     vertices_index_offsets = (unsigned int*)malloc(sizeof(int));
@@ -39,29 +37,15 @@ void Render_Data::Compacted_Meshes::init(){
 }
 
 void Render_Data::Compacted_Meshes::free_data() {
-
-    for( unsigned int i = 0; i < draw_groups_count; i++ ) {
-        draw_groups[i].freeData();
-    }
-
     free(meshes);
 
     free(vertices);
     free(vertices_index);
     free(vertices_index_offsets);
-    free(draw_groups);
 }
 
 void Render_Data::init() {
     compacted_meshes.init();
-
-    for( unsigned int i = 0; i < TEXTURE_HANDLERS_COUNT; i++ ) {
-        textureHandlers[i].materialIndex = (unsigned int *) malloc(0);
-        textureHandlers[i].texDimensions = pow(2, i + 6);
-        textureHandlers[i].emptyTextures = (unsigned int *) malloc(0);
-        textureHandlers[i].emptyTexturesCount = 0;
-    }
-    materials = (Material *) malloc(0);
 
 
     glGenVertexArrays(1, &vao);
@@ -74,8 +58,6 @@ void Render_Data::init() {
 
     glBindVertexArray(0);
     glBindBuffer(GL_ARRAY_BUFFER,0);
-
-    // glGenBuffers(1, &ebo);
 
 
     glGenBuffers(SSBOS_COUNT, ssbos);
@@ -95,26 +77,10 @@ void Render_Data::init() {
     setTexParameter(GL_TEXTURE_2D_ARRAY);
     glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
 
-    for( int i = 0; i < TEXTURE_HANDLERS_COUNT; i++ ) {
-        unsigned short k = pow(2,6+i);
-        textureHandlers[i].texturesCount = 0;
-        glGenTextures(1,&textureHandlers[i].texture);
-        glBindTexture(GL_TEXTURE_2D_ARRAY,textureHandlers[i].texture);
-        glTexImage3D(GL_TEXTURE_2D_ARRAY,LEVEL,GL_RGBA8 ,k,k,0,0,GL_RGBA,GL_UNSIGNED_BYTE,nullptr);
-
-        setTexParameter(GL_TEXTURE_2D_ARRAY);
-    }
-
     glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
 }
 
 void Render_Data::free_data() {
-    for( unsigned int i = 0; i < TEXTURE_HANDLERS_COUNT; i++ ) {
-        free(textureHandlers[i].materialIndex);
-        free(textureHandlers[i].emptyTextures);
-    }
-
-
     compacted_meshes.free_data();
 
     // glDeleteBuffers(1, &ebo);
@@ -124,6 +90,4 @@ void Render_Data::free_data() {
     glDeleteBuffers(1, &buffer_utilitary);
     glDeleteBuffers(SSBOS_COUNT, ssbos);
 
-
-    free(materials);
 }

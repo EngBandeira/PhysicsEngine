@@ -17,7 +17,7 @@ my $includePath = "include";
 my $vendorPath = "vendor";
 my $buildPath = "build";
 
-my @libs = ("GL","GLU","glfw","X11");
+my @libs = ("GL","GLU","glfw","X11","ssl","crypto");
 my $formatedLibs = "";
 foreach $lib (@libs)
 {
@@ -62,10 +62,10 @@ if($vendor){
 # my @files = (split("/\n/",$fileCPP),split("/\n/",$fileC));
 # my $rn ="g++ -Wall -I" . $includePath . " -I" . $vendorPath . " -g -ggdb " . $formatedLibs . " ";
 
-my $rn =" -std=c++17 -Wall -I" . $includePath . " -I." . " -g -ggdb ";
+my $rn =" -std=c++17 -Wall -Wno-unused -I" . $includePath . " -I." . " -g -ggdb ";
 if($asan)
 {
- $rn =" -Wall -fsanitize=address -I" . $includePath . " -I." . " -g -ggdb ";
+ $rn =" -Wall -Wno-unused -fsanitize=address -I" . $includePath . " -I." . " -g -ggdb ";
 }
 
 foreach $file (@files){

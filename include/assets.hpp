@@ -3,7 +3,8 @@
 
 #include "common.hpp"
 
-struct File {
+class File {
+    public:
     char *simpleName, // complete name = simpleName + '.' + extension
          *extension,
          *completeName;
@@ -11,14 +12,16 @@ struct File {
     FILE_TYPES type = FILE_TYPES::COMMON_FILE;
 };
 
-struct Assets {
+class Assets {
+    public:
     File *files;
 
     unsigned int files_number = 1,
                  framesDelay = ASSETS_DELAY,
                  delayCounter = 0;
 
-    char *directory;
+    char *directory = nullptr;
+    Assets() {}
     void init();
     void free_data();
     void update();

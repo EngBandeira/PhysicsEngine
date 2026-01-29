@@ -14,9 +14,9 @@ enum AXIS { X, Y, Z };
 
 static char flags = 0;
 
-const char VERTEX_SHADERS_LOCALPATH[]   = "src/shaders/vShader.vert";
-const char FRAGMENT_SHADERS_LOCALPATH[] = "src/shaders/fShader.frag";
-const char GEOMETRY_SHADERS_LOCALPATH[] = "src/shaders/gShader.geom";
+const char VERTEX_SHADERS_LOCALPATH[]   = "vShader.vert";
+const char FRAGMENT_SHADERS_LOCALPATH[] = "fShader.frag";
+const char GEOMETRY_SHADERS_LOCALPATH[] = "gShader.geom";
 const char RAW_TEX_EXTENSION[] =  "raw";
 
 const int TEXTURE_HANDLERS_COUNT = 7;

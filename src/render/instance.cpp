@@ -1,4 +1,3 @@
-#include "common.hpp"
 #include "game_object.hpp"
 #include "render.hpp"
 
@@ -24,12 +23,14 @@
 Render render;
 
 
-int fodase[16] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
 
 Render::Render(GLFWwindow *win) : glfwWin(win) {
-    shaderProgram = glCreateProgram();
-    shader.init(VERTEX_SHADERS_LOCALPATH, GEOMETRY_SHADERS_LOCALPATH, FRAGMENT_SHADERS_LOCALPATH);
-    shader.attach(shaderProgram);
+
+    draw_group_manager.init();
+    texture_manager.init();
+    shaders_manager.init();
+    material_manager.init();
+
 
     if( transFeed ) {
         const GLchar *feedbackVaryings[] = { "transformFeedback" };
@@ -44,9 +45,6 @@ Render::Render(GLFWwindow *win) : glfwWin(win) {
 
     objects = (GameObject*)malloc(0);
 
-    glLinkProgram(shaderProgram);
-    utils.get_program_status(shaderProgram,GL_LINK_STATUS);
-    glUseProgram(shaderProgram);
 
     render_data.init();
     assets.init();
@@ -83,8 +81,26 @@ Render::Render(GLFWwindow *win) : glfwWin(win) {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 
-    glUniform1iv(glGetUniformLocation(shaderProgram, "textures"), TEXTURE_HANDLERS_COUNT, fodase);
 }
+
+unsigned int Render::addObject(const char* mesh, const char* name, unsigned int draw_group) {
+    return render.addObject(GameObjectGenData {
+        .name = (char*)name,
+        .uuid = (char*)"a",
+        .mesh_index = render.render_data.add_mesh(MeshGenData {
+            .path = (char*)mesh
+        })
+    }, draw_group);
+}
+
+
+unsigned int Render::addObject(GameObjectGenData genData, unsigned int draw_group) {
+    unsigned int rt = render.addObject(genData);
+    draw_group_manager.groups[draw_group].addObject(rt);
+    render.objects[rt].draw_group = draw_group;
+    return rt;
+}
+
 
 unsigned int Render::addObject(GameObjectGenData genData) {
     objects = (GameObject*)realloc(objects, ++objects_count * sizeof(GameObject));
@@ -92,7 +108,7 @@ unsigned int Render::addObject(GameObjectGenData genData) {
     *obj = GameObject();
     obj->init();
     obj->name = genData.name;
-    if(genData.mesh_index != -1){
+    if(genData.mesh_index != (unsigned int)-1){
         obj->link_mesh(genData.mesh_index);
     }
     return objects_count - 1;
@@ -113,6 +129,5 @@ void Render::free_data() {
     glDeleteRenderbuffers(1, &RBO);
     glDeleteTextures(1,&texToRenderOver);
     glDeleteTextures(1,&texToShowFrom);
-    shader.free_data();
-    glDeleteProgram(shaderProgram);
+    draw_group_manager.free_data();
 }

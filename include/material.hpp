@@ -11,11 +11,12 @@ enum materialType {
     TEXTURE
 };
 
-struct MaterialGenData{
+struct MaterialGenData {
     glm::vec3 K[3];//Ka Kd Ks
     float Ni, d,bm;
     char *maps[4];// Ka Kd Ks Normal
-    enum materialType type;
+    enum materialType type = TEXTURE;
+    MaterialGenData(char *map_zero);
     MaterialGenData();
 };
 
@@ -23,6 +24,6 @@ class Material {
     public:
     float K[3*3]; // Ka Kd Ks
     float Ni, d,bm;
-    TextureLocation maps[4]; // Ka Kd Ks Normal
+    unsigned int maps[4]; // Ka Kd Ks Normal
     enum materialType type;
 };

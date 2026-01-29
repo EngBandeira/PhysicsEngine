@@ -12,7 +12,7 @@ class GameObject {
   public:
   Transform tranform;
   char *name;
-  unsigned int mesh_index = -1;
+  unsigned int mesh_index = -1, draw_group = -1;
   void link_mesh(unsigned int index);
   void init();
 };

@@ -7,6 +7,8 @@ struct MeshGenData {
 
 
 class Mesh {
+    void obj();
+    void pe();
     public:
     unsigned int oCount = 0;
     char *mtl;

@@ -15,5 +15,5 @@ glm::vec3 Camera::get_right() {
 }
 
 glm::vec3 Camera::get_position() {
-    return (transform.translation_matrix * glm::vec4(0,0,0,1));
+    return (transform.translation_matrix * glm::vec4(0,0,0,1) * -1.f);
 }

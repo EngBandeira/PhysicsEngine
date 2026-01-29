@@ -20,6 +20,11 @@ unsigned int DrawGroup::addObject(unsigned int object) {
     matrices = (float*)realloc(matrices, 16 * sizeof(float) * objects_count);
     memcpy(matrices + 16 * (objects_count - 1),glm::value_ptr(obj.tranform.matrix),16 * sizeof(float));
 
+    render.shaders_manager.programs[program].use();
+
+    glUniform1ui(glGetUniformLocation(render.shaderProgram, "objects_count"), objects_count);
+
+
 //----//----//----//----//----//----// EBO //----//----//----//----//----//----//----
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, render.render_data.buffer_utilitary);
@@ -179,11 +184,7 @@ void DrawGroup::update() {
     glBufferData(GL_SHADER_STORAGE_BUFFER, 16 * sizeof(float) * objects_count, matrices, GL_DYNAMIC_DRAW);
 }
 
-void DrawGroup::init(const char *vertex_shaders, const char *geometry_shaders, const char *fragment_shaders){
-    shader.init(vertex_shaders,geometry_shaders,fragment_shaders);
-    shaderProgram = glCreateProgram();
-    shader.attach(shaderProgram);
-    glLinkProgram(shaderProgram);
+void DrawGroup::init() {
 
     glGenBuffers(1, &ebo);
     glGenBuffers(1, &matrices_ssbo);
@@ -199,16 +200,15 @@ void DrawGroup::init(const char *vertex_shaders, const char *geometry_shaders, c
 
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
+    objects_count = 0;
     objects = (unsigned int*)malloc(0);
     matrices = (float*)malloc(0);
 
 }
 
 void DrawGroup::freeData() {
-    shader.free_data();
     free(matrices);
     free(objects);
-    glDeleteProgram(shaderProgram);
     glDeleteBuffers(1,&matrices_ssbo);
     glDeleteBuffers(1,&vertices_offset_ssbo);
 }
