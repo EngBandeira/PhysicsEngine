@@ -6,6 +6,7 @@
 #include <bits/stdc++.h>
 #include <stdio.h>
 
+#include "material.hpp"
 #include "mesh.hpp"
 #include "render_data.hpp"
 #include "vendor/glad/glad.h"
@@ -36,9 +37,8 @@ int main() {
            Gen_Shader {
                .vertex = (char*)"shader.vert",
                .geometric = (char*)"shader.geom",
-               .fragment = (char*)"shader.frag"
-               },
-           MaterialGenData());
+               .fragment = (char*)"color.frag"
+               },MaterialGenData());
 
     render.draw_group_manager.get_draw_group (
            Gen_Shader {
@@ -52,7 +52,7 @@ int main() {
            Gen_Shader {
                .vertex = (char*)"shader.vert",
                .geometric = (char*)"shader.geom",
-               .fragment = (char*)"shader.frag"
+               .fragment = (char*)"texture.frag"
                },
            MaterialGenData((char*)"assets/3dmodels/Seta.png"));
 

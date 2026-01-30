@@ -53,10 +53,10 @@ void Render::draw() {
         glBeginTransformFeedback(GL_TRIANGLES);
     }
 
-    for( int i = 0; i < render.draw_group_manager.groups_count; i++ ) {
+    for(unsigned int i = 0; i < render.draw_group_manager.groups_count; i++ ) {
 
         DrawGroup& draw_group = render.draw_group_manager.groups[i];
-        Material& material = render.material_manager.materials[draw_group.material];
+        // Material& material = render.material_manager.materials[draw_group.material];
 
 
         shaders_manager.programs[draw_group.program].use();

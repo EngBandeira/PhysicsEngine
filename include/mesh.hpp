@@ -15,11 +15,9 @@ class Mesh {
     char **o;
 
     unsigned int vertices_count = 0,
-                 vertices_index_count = 0,
+                 index_count = 0,
                  texture_vertices_count = 0,
-                 texture_vertices_index_count = 0,
                  normal_vertices_count = 0,
-                 vertices_offset_index = 0, // normalIndexCount = nOfPrimitives = verticesIndexCount /3
 
                 // pointers
                 *vertices_index,
@@ -33,7 +31,7 @@ class Mesh {
     const char *meshPath;
 
     void deleteMesh();
-    Mesh() = default;
+    Mesh() {}
     Mesh(MeshGenData genData);
     void sanatize();
     ~Mesh();

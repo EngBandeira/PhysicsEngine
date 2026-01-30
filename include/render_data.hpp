@@ -7,9 +7,8 @@
 
 struct Vadia_Mesh {
     unsigned int vertices_count = 0,
-                 vertices_index_count = 0,
+                 index_count = 0,
                  texture_vertices_count = 0,
-                 texture_vertices_index_count = 0,
                  mesh_objects = -1;
     Vadia_Mesh(){}
 };
@@ -24,9 +23,8 @@ public:
         unsigned int meshes_count = 0,
                      draw_groups_count = 0,
                      vertices_count = 0,
-                     vertices_index_count = 0,
+                     index_count = 0,
                      texture_vertices_count = 0,
-                     texture_vertices_index_count = 0,
 
                      *vertices_index,
                      *vertices_index_offsets,

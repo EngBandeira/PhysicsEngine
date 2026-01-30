@@ -36,7 +36,7 @@ Render::Render(GLFWwindow *win) : glfwWin(win) {
         const GLchar *feedbackVaryings[] = { "transformFeedback" };
         glTransformFeedbackVaryings(shaderProgram, 1, feedbackVaryings, GL_INTERLEAVED_ATTRIBS);
 
-        feedbacknumber = 4 * render_data.compacted_meshes.vertices_index_count;
+        feedbacknumber = 4 * render_data.compacted_meshes.index_count;
         feedbacksize = feedbacknumber * sizeof(float);
 
         glGenQueries(1, &QUERY);

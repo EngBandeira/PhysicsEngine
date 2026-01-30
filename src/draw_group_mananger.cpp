@@ -35,14 +35,10 @@ unsigned int Draw_Group_Mananger::get_draw_group(Gen_Shader shader, MaterialGenD
     groups[groups_count - 1] = DrawGroup();
     groups[groups_count - 1].material = material;
     groups[groups_count - 1].program = program;
+    groups[groups_count - 1].index = groups_count - 1;
     groups[groups_count - 1].init();
 
     render.shaders_manager.programs[program].use();
-    Material &material_ = render.material_manager.materials[material];
-    if(material_.maps[0] < render.texture_manager.textures_count && render.texture_manager.textures[material_.maps[0]].location.handler){
-        glUniform1i(glGetUniformLocation(render.shaderProgram, "material.maps[0].handler"), render.texture_manager.textures[material_.maps[0]].location.handler);
-        glUniform1ui(glGetUniformLocation(render.shaderProgram, "material.maps[0].index"), render.texture_manager.textures[material_.maps[0]].location.index);
-    }
 
     glUniform1iv(glGetUniformLocation(render.shaderProgram, "textures"), TEXTURE_HANDLERS_COUNT, te);
     glUniformMatrix4fv(glGetUniformLocation(render.shaderProgram, "projection"), 1, GL_FALSE, glm::value_ptr(render.camera.proj_matrix));

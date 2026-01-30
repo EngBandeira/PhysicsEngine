@@ -20,7 +20,7 @@ const char GEOMETRY_SHADERS_LOCALPATH[] = "gShader.geom";
 const char RAW_TEX_EXTENSION[] =  "raw";
 
 const int TEXTURE_HANDLERS_COUNT = 7;
-const int SSBOS_COUNT            = 1;
+const int SSBOS_COUNT            = 2;
 const int LEVEL                  = 0;
 const double MOUSE_SENSI         = 0.05f;
 
@@ -59,6 +59,7 @@ enum VertexCase {
   COMMON_CASE,
   LAMP_CASE
 };
+
 
 enum SSBOS {
     TextureVerticesSSBO,

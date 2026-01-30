@@ -1,5 +1,5 @@
 #version 460 core
-#extension GL_EXT_nonuniform_qualifier : enable
+// #extension GL_EXT_nonuniform_qualifier : enable
 
 layout(location = 0) out vec4 fragColor;
 
@@ -21,7 +21,7 @@ struct TextureLocation {
 };
 
 struct Material {
-    float K[9];
+    vec4 K[3];
     float Ni, d, bm;
     TextureLocation maps[4];
     uint type;
@@ -40,5 +40,5 @@ uniform Material material;
 void main() {
     // fragColor = vec4(1, 0, 0, 1);
     fragColor = texture(textures[material.maps[0].handler],
-                    vec3(g_texture_vertices, material.maps[0].index));
+            vec3(g_texture_vertices, material.maps[0].index));
 }

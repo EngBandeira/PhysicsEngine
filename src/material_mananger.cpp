@@ -63,16 +63,16 @@ unsigned int Material_Manager::material_alredy_exist(MaterialGenData gen_data) {
         if(m.type != gen_data.type) continue;
 
         if(gen_data.maps[0] != 0)
-           if(m.maps[0] < render.texture_manager.textures_count && codes[0] != render.texture_manager.textures[m.maps[0]].code)
+           if(m.maps[0] > render.texture_manager.textures_count || codes[0] != render.texture_manager.textures[m.maps[0]].code)
                continue;
         if(gen_data.maps[1] != 0)
-           if(m.maps[1] < render.texture_manager.textures_count && codes[1] != render.texture_manager.textures[m.maps[1]].code)
+           if(m.maps[1] > render.texture_manager.textures_count || codes[1] != render.texture_manager.textures[m.maps[1]].code)
                continue;
         if(gen_data.maps[2] != 0)
-           if(m.maps[2] < render.texture_manager.textures_count && codes[2] != render.texture_manager.textures[m.maps[2]].code)
+           if(m.maps[2] > render.texture_manager.textures_count || codes[2] != render.texture_manager.textures[m.maps[2]].code)
                continue;
         if(gen_data.maps[3] != 0)
-           if(m.maps[3] < render.texture_manager.textures_count && codes[3] != render.texture_manager.textures[m.maps[3]].code)
+           if(m.maps[3] > render.texture_manager.textures_count || codes[3] != render.texture_manager.textures[m.maps[3]].code)
                continue;
 
         return i;
@@ -95,6 +95,8 @@ unsigned int Material_Manager::get_material(MaterialGenData gen_data, bool *exis
     material.bm   = gen_data.bm;
     material.Ni   = gen_data.Ni;
     material.d    = gen_data.d;
+    if(gen_data.maps[0] == nullptr)
+        material.type = Material_Type::SOLID_COLOR;
 
     for( int i = 0; i < 3; i++ ) {
         material.K[3 * i]     = gen_data.K[i].x;

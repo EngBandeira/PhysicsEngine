@@ -6,25 +6,11 @@
 #include "mesh.hpp"
 #include "common.hpp"
 
-template <typename T>
-T *exportvec(unsigned int *count, std::vector<T> vec) {
-    *count = vec.size();
-    T *rt = (T *) malloc(sizeof(T) * (*count));
-    memcpy(rt, vec.data(), sizeof(T) * (*count));
-    return rt;
-}
-std::vector<float> vertices_, texture_vertices_, normal_vertices_;
-std::vector<unsigned int> vertices_index_, texture_vertices_index_, normal_vertices_index_;
+
 unsigned int fileLenght;
 char *buffer;
 
 void Mesh::sanatize() {
-    vertices_.clear();
-    texture_vertices_.clear();
-    normal_vertices_.clear();
-    vertices_index_.clear();
-    texture_vertices_index_.clear();
-    normal_vertices_index_.clear();
     o = (char**)malloc(0);
     fileLenght = 0;
     buffer = utils.read_file(meshPath, &fileLenght);
@@ -38,47 +24,71 @@ void Mesh::sanatize() {
         pe();
 
     free(buffer);
-    vertices_index = exportvec<unsigned int>(&vertices_index_count, vertices_index_);
-    texture_vertices_index = exportvec<unsigned int>(&texture_vertices_index_count, texture_vertices_index_);
-    normal_vertices_index = exportvec<unsigned int>(&normal_vertices_count, normal_vertices_index_);
-
-    vertices = exportvec<float>(&vertices_count, vertices_);
-    texture_vertices = exportvec<float>(&texture_vertices_count, texture_vertices_);
-    normal_vertices = exportvec<float>(&normal_vertices_count, normal_vertices_);
 }
 // abce0
 // 01234
 void Mesh::pe() {
-    unsigned int i = 0;
-    while(i < fileLenght) {
-        if(buffer[i] == 'v' && buffer[i+1] == ' ') {
-            i += 2;
-
-            for( int j = 0; j < 3; j++ ) {
-                unsigned int k = i;
-                while(buffer[i] != '\n' && buffer[i] != ' ' && buffer[i] != 0) i++;
-
-                buffer[i] = 0;
-                vertices_.push_back((float) atof(buffer+ k));
-                buffer[i] = ' ';
-                i++;
-            }
-
-            continue;
-        }
-        i++;
-    }
-    for(unsigned int i = 0; i < vertices_.size()/3; i++){
-        vertices_index_.push_back(i);
+    obj();
+    vertices_index = (unsigned int*)malloc(sizeof(int) * vertices_count / 3);
+    for(unsigned int i = 0; i < vertices_count / 3; i++){
+        vertices_index[i] = i;
     }
 }
 
 void Mesh::obj(){
     char c;
     unsigned int i = 0;
+    while(fileLenght - 1 > i) {
+
+        if(buffer[i] == '#' ) {
+            while(buffer[i] != '\n') i++;
+            i++;
+            continue;
+        }
+        if(buffer[i] == 'f'){
+            unsigned int space = 0;
+            while(buffer[i] != '\n' && buffer != 0){
+                if(buffer[i] == ' ')
+                    space++;
+                i++;
+            }
+            index_count += 3 * (space - 2);
+            i++;
+            continue;
+        }
+        if(buffer[i] == 'v' && buffer[i+1] == ' ')
+            vertices_count += 3;
+        if(buffer[i] == 'v' && buffer[i+1] == 'n')
+            normal_vertices_count += 3;
+        if(buffer[i] == 'v' && buffer[i+1] == 't')
+            texture_vertices_count += 2;
+        while(buffer[i] != '\n' && buffer != 0) i++;
+
+        if(buffer[i] == 0 ) break;
+
+        i++;
+        // continue;
+    }
+
+
+
+    i = 0;
+    vertices = (float*)malloc(sizeof(float) * vertices_count);
+    texture_vertices = (float*)malloc(sizeof(float) * texture_vertices_count);
+    normal_vertices = (float*)malloc(sizeof(float) * normal_vertices_count);
+
+    vertices_index = (unsigned int*)malloc(sizeof(int) * index_count);
+    texture_vertices_index = (unsigned int*)malloc(sizeof(int) * index_count);
+    normal_vertices_index = (unsigned int*)malloc(sizeof(int) * index_count / 3);
+    unsigned int vertices_i = 0,
+            normal_index_i = 0,
+            texture_vertices_i = 0,
+            normal_vertices_i = 0,
+            index_i = 0;
+
     while(1) {
         c = buffer[i];
-        if( c == '\0' ) break;
+        if( c == 0 ) break;
 
         if( c == '\n' ) {
             i++;
@@ -126,7 +136,7 @@ void Mesh::obj(){
                     while(buffer[i] != '\n' && buffer[i] != ' ') i++;
 
                     buffer[i] = 0;
-                    vertices_.push_back((float) atof(buffer+ k));
+                    vertices[vertices_i++] = atof(buffer+ k);
                     buffer[i] = ' ';
                     i++;
                 }
@@ -142,7 +152,8 @@ void Mesh::obj(){
                     while(buffer[i] != '\n' && buffer[i] != ' ') i++;
 
                     buffer[i] = 0;
-                    normal_vertices_.push_back((float) atof(buffer+ k));
+                    normal_vertices[normal_vertices_i++] = atof(buffer + k);
+
                     buffer[i] = ' ';
                     i++;
                 }
@@ -158,7 +169,8 @@ void Mesh::obj(){
                     while(buffer[i] != '\n' && buffer[i] != ' ') i++;
 
                     buffer[i] = 0;
-                    texture_vertices_.push_back((float)atof(buffer+ k));
+                    texture_vertices[texture_vertices_i++] = atof(buffer + k);
+
                     buffer[i] = ' ';
                     i++;
                 }
@@ -201,15 +213,17 @@ void Mesh::obj(){
                         prev[2] = value[2];
                     } break;
                     default: {
-                        vertices_index_.push_back(first[0]);
-                        vertices_index_.push_back(prev[0]);
-                        vertices_index_.push_back(value[0]);
+                        vertices_index[index_i] = first[0];
+                        vertices_index[index_i + 1] = prev[0];
+                        vertices_index[index_i + 2] = value[0];
 
-                        texture_vertices_index_.push_back(first[1]);
-                        texture_vertices_index_.push_back(prev[1]);
-                        texture_vertices_index_.push_back(value[1]);
+                        texture_vertices_index[index_i] = first[1];
+                        texture_vertices_index[index_i + 1] = prev[1];
+                        texture_vertices_index[index_i + 2] = value[1];
 
-                        normal_vertices_index_.push_back(first[2]);
+                        normal_vertices_index[normal_index_i++] = first[2];
+
+                        index_i += 3;
 
                         prev[0] = value[0];
                         prev[1] = value[1];
