@@ -65,11 +65,15 @@ void Utils::get_program_status(unsigned int shaderProgram,int status){
     }
 }
 
+unsigned int Utils::get_last_c(char *str,unsigned int size, char c){
+    unsigned int i = size - 2;
+    while( str[i] != c && i > 0 ) i--;
+    return i;
+}
+
 //Returns the index of the point on the extension
 unsigned int Utils::get_extension_index(char *str,unsigned int size){
-    unsigned int i = size - 2;
-    while( str[i] != '.' && i > 0 ) i--;
-    return i;
+    return get_last_c(str, size, '.');
 }
 
 char* Utils::read_file(const char *localPath, unsigned int *fileLenght, const char *flags) {

@@ -32,6 +32,11 @@ int main() {
 
     render = Render(glfw_window);
 
+    render.scripts_manager.init();
+    render.scripts_manager.get_script("/src/caralha/pinto.rs");
+
+    render.scripts_manager.compile();
+
     logger.terminal.lines.push_back((char*)"Console Init\n");
     render.draw_group_manager.get_draw_group (
            Gen_Shader {
@@ -56,10 +61,21 @@ int main() {
                },
            MaterialGenData((char*)"assets/3dmodels/Seta.png"));
 
+    render.draw_group_manager.get_draw_group (
+           Gen_Shader {
+               .vertex = (char*)"shader.vert",
+               .geometric = (char*)"shader.geom",
+               .fragment = (char*)"texture.frag"
+               },
+           MaterialGenData((char*)"assets/3dmodels/Cubemap.jpg"));
+
 
     render.default_game_objects.grid = render.addObject("assets/3dmodels/Plane.obj","Grid", 1);
 
     render.default_game_objects.seta = render.addObject("assets/3dmodels/Seta.obj","Seta", 2);
+
+    render.addObject("assets/3dmodels/Cubemap.obj","Cubemap", 3);
+
 
 
 
@@ -91,6 +107,8 @@ int main() {
         render.newframe();
 
         render.draw();
+
+        render.post_processing();
 
         render.ui();
 
@@ -124,6 +142,7 @@ void error_callback(GLenum source, GLenum type, unsigned int id, GLenum severity
 void init(){
     setenv("XDG_SESSION_TYPE", "x11" , 1); // THIS IN NECESSARY TO USE THE RENDERDOC, IT DONT RUNS ON WAYLAND
     glfwInit();
+    glfwWindowHint(GLFW_ALPHA_BITS, 8);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 4);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);

@@ -3,6 +3,7 @@
 #include "material.hpp"
 #include "render.hpp"
 #include <cstdlib>
+#include <cstring>
 
 
 
@@ -54,9 +55,9 @@ unsigned int Material_Manager::material_alredy_exist(MaterialGenData gen_data) {
 
     for(unsigned int i = 0; i < materials_count; i++){
         Material m = materials[i];
-        if(glm::vec3(m.K[0],m.K[1],m.K[2]) != gen_data.K[0])    continue;
-        if(glm::vec3(m.K[3],m.K[4],m.K[5]) != gen_data.K[0])    continue;
-        if(glm::vec3(m.K[6],m.K[7],m.K[8]) != gen_data.K[0])    continue;
+        if(m.K[0] != gen_data.K[0])    continue;
+        if(m.K[1] != gen_data.K[1])    continue;
+        if(m.K[2] != gen_data.K[2])    continue;
         if(m.Ni != gen_data.Ni) continue;
         if(m.d != gen_data.d)   continue;
         if(m.bm != gen_data.bm) continue;
@@ -98,16 +99,56 @@ unsigned int Material_Manager::get_material(MaterialGenData gen_data, bool *exis
     if(gen_data.maps[0] == nullptr)
         material.type = Material_Type::SOLID_COLOR;
 
-    for( int i = 0; i < 3; i++ ) {
-        material.K[3 * i]     = gen_data.K[i].x;
-        material.K[3 * i + 1] = gen_data.K[i].y;
-        material.K[3 * i + 2] = gen_data.K[i].z;
-    }
+    material.K[0] = gen_data.K[0];
+    material.K[1] = gen_data.K[1];
+    material.K[2] = gen_data.K[2];
 
     for( int i = 0; i < 4; i++ ) {
         if( gen_data.type == TEXTURE && gen_data.maps[i] != nullptr ) material.maps[i] = render.texture_manager.get_texture(gen_data.maps[i]);
         else material.maps[i] = -1;
     }
+
+    MaterialCopy material_copy;
+
+    memcpy(&material_copy, &material, 64);
+    if(material.maps[0] != (unsigned int)-1)
+        material_copy.maps[0] = render.texture_manager.textures[material.maps[0]].location;
+    if(material.maps[1] != (unsigned int)-1)
+        material_copy.maps[1] = render.texture_manager.textures[material.maps[1]].location;
+    if(material.maps[2] != (unsigned int)-1)
+        material_copy.maps[2] = render.texture_manager.textures[material.maps[2]].location;
+    if(material.maps[3] != (unsigned int)-1)
+        material_copy.maps[3] = render.texture_manager.textures[material.maps[3]].location;
+
+    unsigned int &materials_ssbo = render.render_data.ssbos[COMMON_BY_SSBOS[SSBOS::MaterialsSSBO]];
+
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, render.render_data.buffer_utilitary);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(MaterialCopy) * materials_count, 0, GL_DYNAMIC_DRAW);
+
+    glBindBuffer(GL_COPY_READ_BUFFER, materials_ssbo);
+    glBindBuffer(GL_COPY_WRITE_BUFFER, render.render_data.buffer_utilitary);
+
+    glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, 0, 0,
+            sizeof(MaterialCopy) * (materials_count - 1));
+
+
+    glBindBuffer(GL_COPY_READ_BUFFER, 0);
+    glBindBuffer(GL_COPY_WRITE_BUFFER, 0);
+
+
+    glBufferSubData(GL_SHADER_STORAGE_BUFFER,
+            sizeof(MaterialCopy) * (materials_count - 1),
+            sizeof(MaterialCopy), &material_copy);
+
+    unsigned int temp = render.render_data.buffer_utilitary;
+    render.render_data.buffer_utilitary = materials_ssbo;
+    materials_ssbo = temp;
+
+
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, render.render_data.buffer_utilitary);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, 0, 0, GL_DYNAMIC_DRAW);
+
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER,0);
 
     flags = flags | MATERIAL_CHANGE_FLAG;
     existed = 0;

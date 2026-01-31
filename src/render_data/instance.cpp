@@ -60,11 +60,11 @@ void Render_Data::init() {
     glBindBuffer(GL_ARRAY_BUFFER,0);
 
 
-    glGenBuffers(SSBOS_COUNT, ssbos);
+    glGenBuffers(COMMON_SSBOS_COUNT, ssbos);
 
-    for( unsigned int j = 0; j < SSBOS_COUNT; j++ ){
+    for( unsigned int j = 0; j < COMMON_SSBOS_COUNT; j++ ){
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbos[j]);
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, j, ssbos[j]);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, COMMON_SSBOS[j], ssbos[j]);
     }
     glGenBuffers(1,&buffer_utilitary);
 
@@ -88,6 +88,6 @@ void Render_Data::free_data() {
     glDeleteVertexArrays(1, &vao);
 
     glDeleteBuffers(1, &buffer_utilitary);
-    glDeleteBuffers(SSBOS_COUNT, ssbos);
+    glDeleteBuffers(COMMON_SSBOS_COUNT, ssbos);
 
 }

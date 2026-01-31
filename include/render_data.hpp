@@ -48,7 +48,7 @@ public:
                  buffer_utilitary,
                  vao,
                  vbo,
-                 ssbos[SSBOS_COUNT],
+                 ssbos[COMMON_SSBOS_COUNT],
                  materialsCount = 0;
 
     void update();

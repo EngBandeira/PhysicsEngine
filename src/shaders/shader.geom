@@ -19,8 +19,8 @@ const uint MATERIAL_MAPS_NORMAL = 3u;
 struct Material {
     vec4 K[3];
     float Ni, d, bm;
-    TextureLocation maps[4];
     uint type;
+    TextureLocation maps[4];
 };
 
 layout(std430, binding = 0) buffer TextureVerticesSSBO {

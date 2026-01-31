@@ -24,7 +24,7 @@ PersistentDataReturn *PersistentData::get(char *file_path) {
     if(!access(file_path, F_OK) ) {
         char *s = (char*)malloc(strlen(file_path) + 7);
         sprintf(s, "mkdir %s",file_path);
-        pclose(popen(s, "r"));
+        system(s);
     }
 
     file_path[clenght -5] = k;
@@ -32,7 +32,7 @@ PersistentDataReturn *PersistentData::get(char *file_path) {
     if(! access(file_path, F_OK) ) {
         char *s = (char*)malloc(clenght + 7);
         sprintf(s, "touch %s",file_path);
-        pclose(popen(s, "r"));
+        system(s);
     }
 
     unsigned int file_length;

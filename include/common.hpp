@@ -20,7 +20,8 @@ const char GEOMETRY_SHADERS_LOCALPATH[] = "gShader.geom";
 const char RAW_TEX_EXTENSION[] =  "raw";
 
 const int TEXTURE_HANDLERS_COUNT = 7;
-const int SSBOS_COUNT            = 2;
+const int SSBOS_COUNT            = 6;
+const int COMMON_SSBOS_COUNT     = 3;
 const int LEVEL                  = 0;
 const double MOUSE_SENSI         = 0.05f;
 
@@ -41,6 +42,8 @@ const int MAX_FILE_EXTENSION_LENGHT = 6;
 const int RAW_TEX_EXTENSION_LENGHT  = 3;
 
 const int ASSETS_DELAY = 120;
+
+
 
 enum LAYER {
     SPECIAL_LAYER,
@@ -66,7 +69,23 @@ enum SSBOS {
     TextureVerticesIndexSSBO,
     MatricesSSBO,
     VerticesOffsetSSBO,
-    TextureVerticesOffsetSSBO
+    TextureVerticesOffsetSSBO,
+    MaterialsSSBO
+};
+
+const unsigned int COMMON_BY_SSBOS[SSBOS_COUNT] {
+    0,
+    1,
+    (unsigned int)-1,
+    (unsigned int)-1,
+    (unsigned int)-1,
+    2
+};
+
+const unsigned int COMMON_SSBOS[COMMON_SSBOS_COUNT] {
+    TextureVerticesSSBO,
+    TextureVerticesIndexSSBO,
+    MaterialsSSBO
 };
 
 enum FILE_TYPES {

@@ -94,6 +94,7 @@ find(
     $buildPath
 );
 
+$fileO .= " build/libscripts.a" ;
 $fileO =~ s/\n/ /g;
 my $caraia = $rn . $formatedLibs . " " . $fileO ." -o ".$buildPath ."/final";
 my $pinto = system "g++", (split ' ', $caraia);

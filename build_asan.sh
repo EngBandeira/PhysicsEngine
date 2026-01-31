@@ -1,10 +1,12 @@
 #!/bin/bash
 vert=$(glslang src/shaders/shader.vert)
-frag=$(glslang src/shaders/shader.frag)
 geom=$(glslang src/shaders/shader.geom)
+frag=$(glslang src/shaders/texture.frag)
+# frag=$(glslang src/shaders/post.frag)
 
 if [[ "$vert" = "" && "$frag" = ""  && "$geom" = ""  ]]; then
-  ./build.pl --asan   && ./build/final
+    cd rust && cargo build --release && cd .. && cp rust/target/release/libscripts.a ./build &&
+  ./build.pl --asan  && ./build/final
 else
   echo $vert
   echo $frag

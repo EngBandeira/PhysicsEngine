@@ -23,8 +23,12 @@ struct TextureLocation {
 struct Material {
     vec4 K[3];
     float Ni, d, bm;
-    TextureLocation maps[4];
     uint type;
+    TextureLocation maps[4];
+};
+
+layout(std430, binding = 5) buffer MaterialsSSBO {
+    Material materials_ssbo[];
 };
 
 in vec2 g_texture_vertices;
@@ -35,7 +39,7 @@ uniform mat4 view;
 
 uniform sampler2DArray textures[7];
 
-uniform Material material;
+uniform uint material_index;
 
 void main() {
     // fragColor = vec4(g_texture_vertices.x, g_texture_vertices.y, 0, 1);

@@ -33,9 +33,9 @@ void Render::draw() {
     }
     glBindFramebuffer(GL_FRAMEBUFFER, FBO_FROM);
 
-    for( unsigned int i = 0; i < SSBOS_COUNT; i++ ){
+    for( unsigned int i = 0; i < COMMON_SSBOS_COUNT; i++ ){
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, render_data.ssbos[i]);
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, i, render_data.ssbos[i]);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, COMMON_SSBOS[i], render_data.ssbos[i]);
     }
 
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
@@ -57,11 +57,13 @@ void Render::draw() {
 
         DrawGroup& draw_group = render.draw_group_manager.groups[i];
         // Material& material = render.material_manager.materials[draw_group.material];
-
+        if(i == 1)
+            glDepthMask(GL_FALSE);
 
         shaders_manager.programs[draw_group.program].use();
 
         glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "view"), 1, GL_FALSE, glm::value_ptr(camera.get_view()));
+        glUniform1ui(glGetUniformLocation(shaderProgram, "material_index"), draw_group.material);
 
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, draw_group.ebo);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, SSBOS::TextureVerticesIndexSSBO, draw_group.texture_vertices_index_ssbo);
@@ -71,6 +73,7 @@ void Render::draw() {
 
         glDrawElements(GL_TRIANGLES, draw_group.vertices_index_count, GL_UNSIGNED_INT,
                       (void*)0);
+        glDepthMask(GL_TRUE);
     }
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
@@ -114,7 +117,7 @@ void Render::draw() {
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, FBO_TO);
         glBlitFramebuffer(0, 0, 1920, 1080,
                           0, 0, 1920, 1080,
-                          GL_COLOR_BUFFER_BIT, GL_LINEAR);
+                          GL_COLOR_BUFFER_BIT, GL_NEAREST);
         glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
     }

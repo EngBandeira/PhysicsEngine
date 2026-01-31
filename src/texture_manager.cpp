@@ -149,7 +149,6 @@ unsigned int Texture_Mananger::get_texture(char* path) {
     textures[textures_count - 1].code = code;
     return textures_count - 1;
 }
-
 void Texture_Mananger::init() {
     textures = (Vadia_Texture*)malloc(0);
     for( unsigned int i = 0; i < TEXTURE_HANDLERS_COUNT; i++ ) {

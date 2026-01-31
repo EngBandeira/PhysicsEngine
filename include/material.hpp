@@ -2,8 +2,8 @@
 #include "glm/glm.hpp"
 
 struct TextureLocation {
-    int handler;
-    unsigned int index;
+    int handler = 0;
+    unsigned int index = 0;
 };
 
 enum Material_Type {
@@ -11,11 +11,20 @@ enum Material_Type {
     TEXTURE
 };
 
-struct MaterialGenData {
-    glm::vec3 K[3];//Ka Kd Ks
+struct MaterialCopy {
+    public:
+    glm::vec4 K[3]; // Ka Kd Ks
     float Ni, d,bm;
-    char *maps[4];// Ka Kd Ks Normal
+    enum Material_Type type;
+    TextureLocation maps[4]; // Ka Kd Ks Normal
+};
+
+
+struct MaterialGenData {
+    glm::vec4 K[3];//Ka Kd Ks
+    float Ni, d,bm;
     enum Material_Type type = TEXTURE;
+    char *maps[4];// Ka Kd Ks Normal
     MaterialGenData(char *map_zero);
     MaterialGenData();
 
@@ -23,8 +32,8 @@ struct MaterialGenData {
 
 class Material {
     public:
-    float K[3*3]; // Ka Kd Ks
+    glm::vec4 K[3]; // Ka Kd Ks
     float Ni, d,bm;
-    unsigned int maps[4]; // Ka Kd Ks Normal
     enum Material_Type type;
+    unsigned int maps[4]; // Ka Kd Ks Normal
 };

@@ -204,41 +204,7 @@ void DrawGroup::init() {
     objects_count = 0;
     objects = (unsigned int*)malloc(0);
     matrices = (float*)malloc(0);
-    Material &mt = render.material_manager.materials[material];
-
-
-    render.shaders_manager.programs[program].use();
-    glUniform4f(glGetUniformLocation(render.shaderProgram, "material.K[0]"), mt.K[0], mt.K[1], mt.K[2], 1);
-    glUniform4f(glGetUniformLocation(render.shaderProgram, "material.K[0]"), mt.K[3], mt.K[4], mt.K[5], 1);
-    glUniform4f(glGetUniformLocation(render.shaderProgram, "material.K[0]"), mt.K[6], mt.K[7], mt.K[8], 1);
-
-    glUniform1f(glGetUniformLocation(render.shaderProgram, "material.Ni"), mt.Ni);
-    glUniform1f(glGetUniformLocation(render.shaderProgram, "material.d"), mt.d);
-    glUniform1f(glGetUniformLocation(render.shaderProgram, "material.bm"), mt.bm);
-
-    glUniform1ui(glGetUniformLocation(render.shaderProgram, "material.type"), mt.type);
-    TextureLocation loc;
-    if(mt.maps[0] != (unsigned int)-1){
-        loc = render.texture_manager.textures[mt.maps[0]].location;
-        glUniform1i(glGetUniformLocation(render.shaderProgram, "material.maps[0].handler"), loc.handler);
-        glUniform1ui(glGetUniformLocation(render.shaderProgram, "material.maps[0].index"), loc.index);
-    }
-    if(mt.maps[1] != (unsigned int)-1){
-        loc = render.texture_manager.textures[mt.maps[1]].location;
-        glUniform1i(glGetUniformLocation(render.shaderProgram, "material.maps[1].handler"), loc.handler);
-        glUniform1ui(glGetUniformLocation(render.shaderProgram, "material.maps[1].index"), loc.index);
-    }
-    if(mt.maps[2] != (unsigned int)-1){
-        loc = render.texture_manager.textures[mt.maps[2]].location;
-        glUniform1i(glGetUniformLocation(render.shaderProgram, "material.maps[2].handler"), loc.handler);
-        glUniform1ui(glGetUniformLocation(render.shaderProgram, "material.maps[2].index"), loc.index);
-    }
-    if(mt.maps[3] != (unsigned int)-1){
-        loc = render.texture_manager.textures[mt.maps[3]].location;
-        glUniform1i(glGetUniformLocation(render.shaderProgram, "material.maps[3].handler"), loc.handler);
-        glUniform1ui(glGetUniformLocation(render.shaderProgram, "material.maps[3].index"), loc.index);
-    }
-
+    // Material &mt = render.material_manager.materials[material];
 }
 
 void DrawGroup::freeData() {

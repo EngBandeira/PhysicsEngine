@@ -22,8 +22,6 @@
 
 Render render;
 
-
-
 Render::Render(GLFWwindow *win) : glfwWin(win) {
 
     draw_group_manager.init();
@@ -55,7 +53,7 @@ Render::Render(GLFWwindow *win) : glfwWin(win) {
     //texToRenderOver
     glGenTextures(1, &texToRenderOver);
     glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, texToRenderOver);
-    glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE,samples,GL_RGB8 , 1920, 1080,GL_TRUE);
+    glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE,samples,GL_RGBA8 , 1920, 1080,GL_TRUE);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, texToRenderOver, 0);
 
     glGenRenderbuffers(1, &RBO);
@@ -72,7 +70,7 @@ Render::Render(GLFWwindow *win) : glfwWin(win) {
     //texToShow
     glGenTextures(1, &texToShowFrom);
     glBindTexture(GL_TEXTURE_2D, texToShowFrom);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1920, 1080, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 1920, 1080, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 
     setTexParameter(GL_TEXTURE_2D);
 
@@ -80,6 +78,34 @@ Render::Render(GLFWwindow *win) : glfwWin(win) {
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+
+
+    glGenTextures(1, &tex_post);
+    glBindTexture(GL_TEXTURE_2D, tex_post);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 1920, 1080, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+
+    setTexParameter(GL_TEXTURE_2D);
+
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+
+    post_program = glCreateProgram();
+
+
+
+    char *file = utils.read_file ("src/shaders/post.frag", nullptr);
+    unsigned int compiled_shader = glCreateShader (GL_COMPUTE_SHADER);
+    glShaderSource (compiled_shader, 1, &file, NULL);//aq
+    glCompileShader (compiled_shader);
+
+    free (file);
+
+    utils.get_shader_status(compiled_shader, GL_COMPILE_STATUS);
+
+    glAttachShader (post_program, compiled_shader);
+
+    glLinkProgram(post_program);
+    utils.get_program_status(post_program,GL_LINK_STATUS);
 
 }
 
@@ -123,11 +149,12 @@ void Render::free_data() {
         glDeleteQueries(1,&QUERY);
         glDeleteBuffers(1, &TBO);
     }
-
+    glDeleteProgram(tex_post);
     glDeleteFramebuffers(1, &FBO_FROM);
     glDeleteFramebuffers(1, &FBO_TO);
     glDeleteRenderbuffers(1, &RBO);
     glDeleteTextures(1,&texToRenderOver);
     glDeleteTextures(1,&texToShowFrom);
+    glDeleteTextures(1,&tex_post);
     draw_group_manager.free_data();
 }

@@ -27,6 +27,7 @@ public:
     unsigned short get_new_index_of_old(unsigned short i, unsigned short n, unsigned short *index);
 
     unsigned int get_extension_index(char *str,unsigned int size);
+    unsigned int get_last_c(char *str,unsigned int size, char c);
 
     void get_shader_status(unsigned int shaderProgram,int status);
 

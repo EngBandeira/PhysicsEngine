@@ -7,6 +7,7 @@
 #include "material_mananger.hpp"
 #include "render_data.hpp"
 #include "camera.hpp"
+#include "scripts_mananger.hpp"
 #include "shaders_manager.hpp"
 #include "texture_manager.hpp"
 
@@ -23,9 +24,11 @@ public:
                  QUERY,
                  texToRenderOver,
                  texToShowFrom,
+                 tex_post,
                  feedbacksize,
                  feedbacknumber,
                  shaderProgram,
+                 post_program,
                  samples = 4;
 
     bool transFeed = false;
@@ -43,6 +46,7 @@ public:
     unsigned int selected_object = 0;
     Assets assets;
     Render_Data render_data;
+    Scripts_Manager scripts_manager;
     Draw_Group_Mananger draw_group_manager;
     Shaders_Manager shaders_manager;
     Material_Manager material_manager;
@@ -62,6 +66,7 @@ public:
     void once();
     void input();
     void ui();
+    void post_processing();
     void newframe();
     void draw();
 
