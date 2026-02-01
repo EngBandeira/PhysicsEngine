@@ -52,23 +52,12 @@ public:
     Material_Manager material_manager;
     Texture_Mananger texture_manager;
     GLFWwindow *glfwWin;
-    unsigned short getOldIndexOfNew(unsigned short i, unsigned short n,unsigned short *index);
-    unsigned short getNewIndexOfOld(unsigned short i, unsigned short n,unsigned short *index);
 
-    unsigned int setAVector(glm::vec3 position,glm::vec3 direction);
 
     unsigned int addObject(GameObjectGenData genData);
     unsigned int addObject(GameObjectGenData genData, unsigned int draw_group);
     unsigned int addObject(const char* mesh, const char* name, unsigned int draw_group);
     void rmObject();
-
-    void update();
-    void once();
-    void input();
-    void ui();
-    void post_processing();
-    void newframe();
-    void draw();
 
 };
 

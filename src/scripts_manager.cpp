@@ -1,10 +1,10 @@
 #include "common.hpp"
 #include "scripts_mananger.hpp"
+#include "render.hpp"
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <cwchar>
-
+#include <unistd.h>
 
 void Scripts_Manager::init() {
     scripts = (Script*)malloc(0);
@@ -30,6 +30,13 @@ unsigned int Scripts_Manager::get_script(char *path) {
     if(i != (unsigned int)-1) {
         return i;
     }
+
+    if(!access(path, F_OK)) {
+        char *c = (char*)malloc(sizeof("cannot open: ") + strlen(path));
+        sprintf(c, "cannot open: %s", path);
+        logger.sendError(c);
+    }
+
     unsigned int p = strlen(path) + 1;
     script.path = (char*)malloc(p);
     memcpy(script.path, path, p);
@@ -54,8 +61,34 @@ void Scripts_Manager::compile() {
         system(command);
     }
 
+    unsigned int scripts_count = 0, scripts_i = 0;
+
+    for(unsigned int i = 0; i < render.objects_count; i++) {
+        scripts_count += render.objects[i].scripts_count;
+    }
+    unsigned int *scripts = (unsigned int*)malloc(sizeof(int) * scripts_count);
+    unsigned int *objects_scripts_count = (unsigned int*)malloc(sizeof(int) * render.objects_count);
+
+    for(unsigned int i = 0; i < render.objects_count; i++) {
+        memcpy(scripts + scripts_i, render.objects[i].scripts, render.objects[i].scripts_count);
+        scripts_i += render.objects[i].scripts_count;
+        objects_scripts_count[i] = render.objects[i].scripts_count;
+    }
+
+
     update_user_mod();
 }
+
+
+void Scripts_Manager::start() {
+    // rCallback *callbacks = get_rust_callbacks(scripts_count);
+    // callbacks[0]()
+}
+void Scripts_Manager::update() {
+    // rCallback *callbacks = get_rust_callbacks(scripts_count);
+    // callbacks[0]()
+}
+
 void Scripts_Manager::update_user_mod() {
     FILE *file = fopen(user_mod_path, "wr");
 

@@ -104,6 +104,8 @@ int main() {
 
 
     while(!glfwWindowShouldClose(glfw_window)) {
+        // render.scripts_manager.update();
+
         render.newframe();
 
         render.draw();

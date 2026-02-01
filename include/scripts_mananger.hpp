@@ -1,5 +1,10 @@
 #pragma once
 
+typedef void (rCallback)();
+extern "C" {
+    rCallback *get_rust_callbacks(unsigned int size);
+}
+
 class Script {
     public:
     char *path;
@@ -8,6 +13,8 @@ class Script {
 };
 
 class Scripts_Manager {
+    unsigned int script_alredy_exist(unsigned int code);
+
     public:
     Script *scripts;
     unsigned int scripts_count = 0;
@@ -16,10 +23,11 @@ class Scripts_Manager {
     void init();
     void free_data();
 
-    unsigned int script_alredy_exist(unsigned int code);
     unsigned int get_script(char *path);
 
     void compile();
+    void start();
+    void update();
     void update_user_mod();
 
     Scripts_Manager() {}

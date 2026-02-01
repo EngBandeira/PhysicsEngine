@@ -11,6 +11,16 @@ void GameObject::link_mesh(unsigned int index) {
 }
 
 
-void GameObject::init() {
+unsigned int GameObject::add_script(char* script) {
+    scripts = (unsigned int*)realloc(scripts, sizeof(int) * ++scripts_count);
+    scripts[scripts_count - 1] = render.scripts_manager.get_script(script);
 
+    return scripts_count - 1;
+}
+
+
+
+
+void GameObject::init() {
+    scripts = (unsigned int*)malloc(0);
 }
