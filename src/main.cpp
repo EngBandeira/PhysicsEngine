@@ -20,32 +20,32 @@
 #include "vendor/imgui/imgui_impl_glfw.h"
 #include "vendor/imgui/imgui_impl_opengl3.h"
 
-#include "render.hpp"
+#include "engine.hpp"
 GLFWwindow *glfw_window;
 void init();
 
 #include "utils.hpp"
-// watch set variable render.draw_group_manager.groups[2].objects_count
+// watch set variable engine.draw_group_manager.groups[2].objects_count
 // 4.6 (Core Profile) Mesa 25.1.3-arch1.3
 int main() {
     init();
 
-    render = Render(glfw_window);
+    engine = Engine(glfw_window);
 
-    render.scripts_manager.init();
-    render.scripts_manager.get_script("/src/caralha/pinto.rs");
+    engine.scripts_manager.init();
+    engine.scripts_manager.get_script("/src/caralha/pinto.rs");
 
-    render.scripts_manager.compile();
+    engine.scripts_manager.compile();
 
     logger.terminal.lines.push_back((char*)"Console Init\n");
-    render.draw_group_manager.get_draw_group (
+    engine.draw_group_manager.get_draw_group (
            Gen_Shader {
                .vertex = (char*)"shader.vert",
                .geometric = (char*)"shader.geom",
                .fragment = (char*)"color.frag"
                },MaterialGenData());
 
-    render.draw_group_manager.get_draw_group (
+    engine.draw_group_manager.get_draw_group (
            Gen_Shader {
                .vertex = (char*)"shader.vert",
                .geometric = (char*)"shader.geom",
@@ -53,7 +53,7 @@ int main() {
                },
            MaterialGenData());
 
-    render.draw_group_manager.get_draw_group (
+    engine.draw_group_manager.get_draw_group (
            Gen_Shader {
                .vertex = (char*)"shader.vert",
                .geometric = (char*)"shader.geom",
@@ -61,7 +61,7 @@ int main() {
                },
            MaterialGenData((char*)"assets/3dmodels/Seta.png"));
 
-    render.draw_group_manager.get_draw_group (
+    engine.draw_group_manager.get_draw_group (
            Gen_Shader {
                .vertex = (char*)"shader.vert",
                .geometric = (char*)"shader.geom",
@@ -70,16 +70,16 @@ int main() {
            MaterialGenData((char*)"assets/3dmodels/Cubemap.jpg"));
 
 
-    render.default_game_objects.grid = render.addObject("assets/3dmodels/Plane.obj","Grid", 1);
+    engine.default_game_objects.grid = engine.addObject("assets/3dmodels/Plane.obj","Grid", 1);
 
-    render.default_game_objects.seta = render.addObject("assets/3dmodels/Seta.obj","Seta", 2);
+    engine.default_game_objects.seta = engine.addObject("assets/3dmodels/Seta.obj","Seta", 2);
 
-    render.addObject("assets/3dmodels/Cubemap.obj","Cubemap", 3);
-
-
+    engine.addObject("assets/3dmodels/Cubemap.obj","Cubemap", 3);
 
 
-    // render.draw_group_manager.get_draw_group (
+
+
+    // engine.draw_group_manager.get_draw_group (
     //        Gen_Shader {
     //            .vertex = (char*)VERTEX_SHADERS_LOCALPATH,
     //            .geometric = (char*)GEOMETRY_SHADERS_LOCALPATH,
@@ -88,7 +88,7 @@ int main() {
     //        MaterialGenData((char*)"assets/3dmodels/marble_bust_01_diff_4k.jpg")
     // );
 
-    // render.draw_group_manager.get_draw_group(
+    // engine.draw_group_manager.get_draw_group(
     //     Gen_Shader {
     //         .vertex = (char*)VERTEX_SHADERS_LOCALPATH,
     //         .geometric = (char*)GEOMETRY_SHADERS_LOCALPATH,
@@ -98,21 +98,21 @@ int main() {
     // );
 
 
-    // render.addObject("Busto","assets/3dmodels/marble_bust_01_4k.obj", 0);
+    // engine.addObject("Busto","assets/3dmodels/marble_bust_01_4k.obj", 0);
 
-    // render.addObject("Canhao","assets/3dmodels/cannon_01_4k.obj", 1);
+    // engine.addObject("Canhao","assets/3dmodels/cannon_01_4k.obj", 1);
 
 
     while(!glfwWindowShouldClose(glfw_window)) {
-        // render.scripts_manager.update();
+        // engine.scripts_manager.update();
+        glClear();
+        engine.newframe();
 
-        render.newframe();
+        engine.draw();
 
-        render.draw();
+        engine.post_processing();
 
-        render.post_processing();
-
-        render.ui();
+        engine.ui();
 
 
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
@@ -124,7 +124,7 @@ int main() {
         glfwPollEvents();
         flags  = flags & ~(1&2);
     }
-    render.free_data();
+    engine.free_data();
     return 0;
 }
 

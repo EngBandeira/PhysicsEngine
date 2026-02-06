@@ -5625,7 +5625,7 @@ ImVec2 ImFontCalcTextSizeEx(ImFont* font, float size, float max_width, float wra
         // Word-wrapping
         if (word_wrap_enabled)
         {
-            // Calculate how far we can render. Requires two passes on the string data but keeps the code simple and not intrusive for what's essentially an uncommon feature.
+            // Calculate how far we can engine. Requires two passes on the string data but keeps the code simple and not intrusive for what's essentially an uncommon feature.
             if (!word_wrap_eol)
                 word_wrap_eol = ImFontCalcWordWrapPositionEx(font, size, s, text_end, wrap_width - line_width, flags);
 
@@ -5814,7 +5814,7 @@ begin:
     {
         if (word_wrap_enabled)
         {
-            // Calculate how far we can render. Requires two passes on the string data but keeps the code simple and not intrusive for what's essentially an uncommon feature.
+            // Calculate how far we can engine. Requires two passes on the string data but keeps the code simple and not intrusive for what's essentially an uncommon feature.
             if (!word_wrap_eol)
                 word_wrap_eol = ImFontCalcWordWrapPositionEx(this, size, s, text_end, wrap_width - (x - origin_x), flags);
 

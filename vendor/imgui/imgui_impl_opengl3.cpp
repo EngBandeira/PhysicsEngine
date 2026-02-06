@@ -374,7 +374,7 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
     if (bd->GlVersion >= 320)
         io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
 #endif
-    io.BackendFlags |= ImGuiBackendFlags_RendererHasTextures;       // We can honor ImGuiPlatformIO::Textures[] requests during render.
+    io.BackendFlags |= ImGuiBackendFlags_RendererHasTextures;       // We can honor ImGuiPlatformIO::Textures[] requests during engine.
     io.BackendFlags |= ImGuiBackendFlags_RendererHasViewports;      // We can create multi-viewports on the Renderer side (optional)
 
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();

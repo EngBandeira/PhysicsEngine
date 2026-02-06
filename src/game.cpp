@@ -1,5 +1,5 @@
 #include "game.hpp"
-#include "render.hpp"
+#include "engine.hpp"
 #include <GLFW/glfw3.h>
 
 #include "vendor/imgui/imgui.h"
@@ -7,20 +7,20 @@
 #include "vendor/imgui/imgui_impl_opengl3.h"
 
 void Game::compile() {
-    render.scripts_manager.compile();
+    engine.scripts_manager.compile();
 }
 void Game::runtime() {
-    render.scripts_manager.start();
-    while(!glfwWindowShouldClose(render.glfwWin)) {
-        render.scripts_manager.update();
+    engine.scripts_manager.start();
+    while(!glfwWindowShouldClose(engine.glfwWin)) {
+        engine.scripts_manager.update();
 
-        render.newframe();
+        engine.newframe();
 
-        render.draw();
+        engine.draw();
 
-        render.post_processing();
+        engine.post_processing();
 
-        render.ui();
+        engine.ui();
 
 
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
@@ -28,7 +28,7 @@ void Game::runtime() {
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-        glfwSwapBuffers(render.glfwWin);
+        glfwSwapBuffers(engine.glfwWin);
         glfwPollEvents();
         flags  = flags & ~(1&2);
     }

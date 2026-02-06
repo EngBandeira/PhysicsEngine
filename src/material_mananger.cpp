@@ -1,7 +1,7 @@
 #include "material_mananger.hpp"
 #include "common.hpp"
 #include "material.hpp"
-#include "render.hpp"
+#include "engine.hpp"
 #include <cstdlib>
 #include <cstring>
 
@@ -64,16 +64,16 @@ unsigned int Material_Manager::material_alredy_exist(MaterialGenData gen_data) {
         if(m.type != gen_data.type) continue;
 
         if(gen_data.maps[0] != 0)
-           if(m.maps[0] > render.texture_manager.textures_count || codes[0] != render.texture_manager.textures[m.maps[0]].code)
+           if(m.maps[0] > engine.texture_manager.textures_count || codes[0] != engine.texture_manager.textures[m.maps[0]].code)
                continue;
         if(gen_data.maps[1] != 0)
-           if(m.maps[1] > render.texture_manager.textures_count || codes[1] != render.texture_manager.textures[m.maps[1]].code)
+           if(m.maps[1] > engine.texture_manager.textures_count || codes[1] != engine.texture_manager.textures[m.maps[1]].code)
                continue;
         if(gen_data.maps[2] != 0)
-           if(m.maps[2] > render.texture_manager.textures_count || codes[2] != render.texture_manager.textures[m.maps[2]].code)
+           if(m.maps[2] > engine.texture_manager.textures_count || codes[2] != engine.texture_manager.textures[m.maps[2]].code)
                continue;
         if(gen_data.maps[3] != 0)
-           if(m.maps[3] > render.texture_manager.textures_count || codes[3] != render.texture_manager.textures[m.maps[3]].code)
+           if(m.maps[3] > engine.texture_manager.textures_count || codes[3] != engine.texture_manager.textures[m.maps[3]].code)
                continue;
 
         return i;
@@ -104,7 +104,7 @@ unsigned int Material_Manager::get_material(MaterialGenData gen_data, bool *exis
     material.K[2] = gen_data.K[2];
 
     for( int i = 0; i < 4; i++ ) {
-        if( gen_data.type == TEXTURE && gen_data.maps[i] != nullptr ) material.maps[i] = render.texture_manager.get_texture(gen_data.maps[i]);
+        if( gen_data.type == TEXTURE && gen_data.maps[i] != nullptr ) material.maps[i] = engine.texture_manager.get_texture(gen_data.maps[i]);
         else material.maps[i] = -1;
     }
 
@@ -112,21 +112,21 @@ unsigned int Material_Manager::get_material(MaterialGenData gen_data, bool *exis
 
     memcpy(&material_copy, &material, 64);
     if(material.maps[0] != (unsigned int)-1)
-        material_copy.maps[0] = render.texture_manager.textures[material.maps[0]].location;
+        material_copy.maps[0] = engine.texture_manager.textures[material.maps[0]].location;
     if(material.maps[1] != (unsigned int)-1)
-        material_copy.maps[1] = render.texture_manager.textures[material.maps[1]].location;
+        material_copy.maps[1] = engine.texture_manager.textures[material.maps[1]].location;
     if(material.maps[2] != (unsigned int)-1)
-        material_copy.maps[2] = render.texture_manager.textures[material.maps[2]].location;
+        material_copy.maps[2] = engine.texture_manager.textures[material.maps[2]].location;
     if(material.maps[3] != (unsigned int)-1)
-        material_copy.maps[3] = render.texture_manager.textures[material.maps[3]].location;
+        material_copy.maps[3] = engine.texture_manager.textures[material.maps[3]].location;
 
-    unsigned int &materials_ssbo = render.render_data.ssbos[COMMON_BY_SSBOS[SSBOS::MaterialsSSBO]];
+    unsigned int &materials_ssbo = engine.render_data.ssbos[COMMON_BY_SSBOS[SSBOS::MaterialsSSBO]];
 
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, render.render_data.buffer_utilitary);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, engine.render_data.buffer_utilitary);
     glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(MaterialCopy) * materials_count, 0, GL_DYNAMIC_DRAW);
 
     glBindBuffer(GL_COPY_READ_BUFFER, materials_ssbo);
-    glBindBuffer(GL_COPY_WRITE_BUFFER, render.render_data.buffer_utilitary);
+    glBindBuffer(GL_COPY_WRITE_BUFFER, engine.render_data.buffer_utilitary);
 
     glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, 0, 0,
             sizeof(MaterialCopy) * (materials_count - 1));
@@ -140,12 +140,12 @@ unsigned int Material_Manager::get_material(MaterialGenData gen_data, bool *exis
             sizeof(MaterialCopy) * (materials_count - 1),
             sizeof(MaterialCopy), &material_copy);
 
-    unsigned int temp = render.render_data.buffer_utilitary;
-    render.render_data.buffer_utilitary = materials_ssbo;
+    unsigned int temp = engine.render_data.buffer_utilitary;
+    engine.render_data.buffer_utilitary = materials_ssbo;
     materials_ssbo = temp;
 
 
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, render.render_data.buffer_utilitary);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, engine.render_data.buffer_utilitary);
     glBufferData(GL_SHADER_STORAGE_BUFFER, 0, 0, GL_DYNAMIC_DRAW);
 
     glBindBuffer(GL_SHADER_STORAGE_BUFFER,0);

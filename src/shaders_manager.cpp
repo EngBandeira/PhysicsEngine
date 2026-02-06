@@ -1,7 +1,7 @@
 
 #include "shaders_manager.hpp"
 #include "common.hpp"
-#include "render.hpp"
+#include "engine.hpp"
 #include "utils.hpp"
 #include <cstdio>
 #include <cstdlib>
@@ -40,7 +40,7 @@ void Program::init() {
 
 void Program::use() {
     glUseProgram(program);
-    render.shaderProgram = program;
+    engine.shaderProgram = program;
 }
 
 void Program::free_data()

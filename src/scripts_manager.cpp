@@ -1,6 +1,6 @@
 #include "common.hpp"
 #include "scripts_mananger.hpp"
-#include "render.hpp"
+#include "engine.hpp"
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -63,16 +63,16 @@ void Scripts_Manager::compile() {
 
     unsigned int scripts_count = 0, scripts_i = 0;
 
-    for(unsigned int i = 0; i < render.objects_count; i++) {
-        scripts_count += render.objects[i].scripts_count;
+    for(unsigned int i = 0; i < engine.objects_count; i++) {
+        scripts_count += engine.objects[i].scripts_count;
     }
     unsigned int *scripts = (unsigned int*)malloc(sizeof(int) * scripts_count);
-    unsigned int *objects_scripts_count = (unsigned int*)malloc(sizeof(int) * render.objects_count);
+    unsigned int *objects_scripts_count = (unsigned int*)malloc(sizeof(int) * engine.objects_count);
 
-    for(unsigned int i = 0; i < render.objects_count; i++) {
-        memcpy(scripts + scripts_i, render.objects[i].scripts, render.objects[i].scripts_count);
-        scripts_i += render.objects[i].scripts_count;
-        objects_scripts_count[i] = render.objects[i].scripts_count;
+    for(unsigned int i = 0; i < engine.objects_count; i++) {
+        memcpy(scripts + scripts_i, engine.objects[i].scripts, engine.objects[i].scripts_count);
+        scripts_i += engine.objects[i].scripts_count;
+        objects_scripts_count[i] = engine.objects[i].scripts_count;
     }
 
 

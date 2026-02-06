@@ -1,7 +1,7 @@
 #include "draw_group_mananger.hpp"
 #include "draw_group.hpp"
 
-#include "render.hpp"
+#include "engine.hpp"
 #include "shaders_manager.hpp"
 
 int te[16] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
@@ -9,8 +9,8 @@ int te[16] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
 
 unsigned int Draw_Group_Mananger::draw_group_alredy_exist(Gen_Shader shader, MaterialGenData material_gen, unsigned int *program, unsigned int *material) {
     bool program_existed, material_existed;
-    *program = render.shaders_manager.get_program((char*[3]){shader.vertex, shader.geometric, shader.fragment}, &program_existed);
-    *material = render.material_manager.get_material(material_gen, &material_existed);
+    *program = engine.shaders_manager.get_program((char*[3]){shader.vertex, shader.geometric, shader.fragment}, &program_existed);
+    *material = engine.material_manager.get_material(material_gen, &material_existed);
     if(!program_existed)
         return -1;
     if(!material_existed)
@@ -38,10 +38,10 @@ unsigned int Draw_Group_Mananger::get_draw_group(Gen_Shader shader, MaterialGenD
     groups[groups_count - 1].index = groups_count - 1;
     groups[groups_count - 1].init();
 
-    render.shaders_manager.programs[program].use();
+    engine.shaders_manager.programs[program].use();
 
-    glUniform1iv(glGetUniformLocation(render.shaderProgram, "textures"), TEXTURE_HANDLERS_COUNT, te);
-    glUniformMatrix4fv(glGetUniformLocation(render.shaderProgram, "projection"), 1, GL_FALSE, glm::value_ptr(render.camera.proj_matrix));
+    glUniform1iv(glGetUniformLocation(engine.shaderProgram, "textures"), TEXTURE_HANDLERS_COUNT, te);
+    glUniformMatrix4fv(glGetUniformLocation(engine.shaderProgram, "projection"), 1, GL_FALSE, glm::value_ptr(engine.camera.proj_matrix));
 
     return groups_count - 1;
 }
@@ -57,7 +57,7 @@ void Draw_Group_Mananger::free_data() {
         groups[i].freeData();
     }
     free(groups);
-    render.texture_manager.free_data();
-    render.shaders_manager.free_data();
-    render.material_manager.free_data();
+    engine.texture_manager.free_data();
+    engine.shaders_manager.free_data();
+    engine.material_manager.free_data();
 }

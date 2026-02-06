@@ -4,7 +4,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include "common.hpp"
 #include "game_object.hpp"
-#include "render.hpp"
+#include "engine.hpp"
 #include "vendor/imgui/imgui.h"
 
 bool fileWinOpen = 0,terminalOpen = 0;
@@ -12,7 +12,7 @@ unsigned int fileIndexOpen;
 char *filePath;
 ImVec2 delta;
 
-void Render::ui() {
+void Engine::ui() {
     ImGuiIO& io = ImGui::GetIO();
     ImGuiViewport *view = ImGui::GetMainViewport();
 
@@ -41,16 +41,16 @@ void Render::ui() {
         if( ImGui::BeginMenu("Models") ) {
             if( ImGui::BeginMenu("Standarts") ) {
                 if(ImGui::MenuItem("Cube")) {
-                    render.addObject("assets/3dmodels/Cube.obj","Cube", 0);
+                    engine.addObject("assets/3dmodels/Cube.obj","Cube", 0);
                 }
                 if(ImGui::MenuItem("Sphere High")) {
-                    render.addObject("assets/3dmodels/SphereHigh.obj","Sphere High", 0);
+                    engine.addObject("assets/3dmodels/SphereHigh.obj","Sphere High", 0);
                 }
                 if(ImGui::MenuItem("Sphere Low")) {
-                    render.addObject("assets/3dmodels/SphereLow.obj","Sphere Low", 0);
+                    engine.addObject("assets/3dmodels/SphereLow.obj","Sphere Low", 0);
                 }
                 if(ImGui::MenuItem("Monkey")) {
-                    render.addObject("assets/3dmodels/Monkey.obj","Monkey", 0);
+                    engine.addObject("assets/3dmodels/Monkey.obj","Monkey", 0);
                 }
                 ImGui::EndMenu();
             }
@@ -320,7 +320,7 @@ void Render::ui() {
     ImGui::ShowDemoWindow(&a);
 }
 
-void Render::input() {
+void Engine::input() {
     glm::vec3 position(0);
     glm::vec3 cam_position = camera.get_position();
         // renderData.positionateModel(renderData.layers[selectedModelLayer].models[selectedModelIndex].getPosition(), 0, LAYER::SPECIAL_LAYER);

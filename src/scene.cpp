@@ -5,11 +5,11 @@
 #include "vendor/imgui/imgui_impl_glfw.h"
 #include "vendor/imgui/imgui_impl_opengl3.h"
 #include "scene.hpp"
-#include "render.hpp"
+#include "engine.hpp"
 
 void Scene::runtime() {
-    while(!glfwWindowShouldClose(render.glfwWin)) {
-        render.scripts_manager.update();
+    while(!glfwWindowShouldClose(engine.glfwWin)) {
+        engine.scripts_manager.update();
 
         newframe();
 
@@ -25,19 +25,19 @@ void Scene::runtime() {
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-        glfwSwapBuffers(render.glfwWin);
+        glfwSwapBuffers(engine.glfwWin);
         glfwPollEvents();
         flags  = flags & ~(1&2);
     }
 }
 
 void Scene::newframe() {
-    glBindFramebuffer(GL_FRAMEBUFFER, render.FBO_TO);
+    glBindFramebuffer(GL_FRAMEBUFFER, engine.FBO_TO);
 
     glClearColor(1, 0, 0, .5);
     glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    glBindFramebuffer(GL_FRAMEBUFFER, render.FBO_FROM);
+    glBindFramebuffer(GL_FRAMEBUFFER, engine.FBO_FROM);
     glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -54,31 +54,31 @@ void Scene::newframe() {
     // glUniform1i(glGetUniformLocation(shaderProgram,"normalATIVO"),normalATIVO);
     // glUniform1f(glGetUniformLocation(shaderProgram,"normalV"),normalV);
 
-    if( render.assets.framesDelay <= render.assets.delayCounter ) {
-        render.assets.update();
-        render.assets.delayCounter = 0;
+    if( engine.assets.framesDelay <= engine.assets.delayCounter ) {
+        engine.assets.update();
+        engine.assets.delayCounter = 0;
     }
 
-    if( render.render_data.delayCounter == 0 && flags & MODELS_CHANGE_FLAG ) update();
+    if( engine.render_data.delayCounter == 0 && flags & MODELS_CHANGE_FLAG ) update();
 
-    if( render.render_data.delayCounter > 0 ) render.render_data.delayCounter--;
+    if( engine.render_data.delayCounter > 0 ) engine.render_data.delayCounter--;
 
     flags = flags & ~(MODELS_CHANGE_FLAG);
 
-    render.assets.delayCounter++;
+    engine.assets.delayCounter++;
 
-    for(unsigned int i = 0; i < render.draw_group_manager.groups_count; i++){
-        render.draw_group_manager.groups[i].update();
+    for(unsigned int i = 0; i < engine.draw_group_manager.groups_count; i++){
+        engine.draw_group_manager.groups[i].update();
     }
 
 }
 
 void Scene::post_processing() {
-    glUseProgram(render.post_program);
+    glUseProgram(engine.post_program);
     glActiveTexture(GL_TEXTURE10);
-    glBindTexture(GL_TEXTURE_2D,render.texToShowFrom);
-    glUniform1i(glGetUniformLocation(render.post_program,"texToShowFrom"),10);
-    glBindImageTexture(0, render.tex_post, 0, GL_TRUE, 0, GL_READ_WRITE,  GL_RGBA8 );
+    glBindTexture(GL_TEXTURE_2D,engine.texToShowFrom);
+    glUniform1i(glGetUniformLocation(engine.post_program,"texToShowFrom"),10);
+    glBindImageTexture(0, engine.tex_post, 0, GL_TRUE, 0, GL_READ_WRITE,  GL_RGBA8 );
     // glGen
     glDispatchCompute(120,68,1);
     glMemoryBarrier(GL_TEXTURE_FETCH_BARRIER_BIT);
@@ -89,41 +89,41 @@ void Scene::draw() {
 
     for( unsigned short i = 0; i < TEXTURE_HANDLERS_COUNT; i++ ) {
         glActiveTexture(GL_TEXTURE0 + i);
-        glBindTexture(GL_TEXTURE_2D_ARRAY,render.texture_manager.textureHandlers[i].texture);
+        glBindTexture(GL_TEXTURE_2D_ARRAY,engine.texture_manager.textureHandlers[i].texture);
     }
-    glBindFramebuffer(GL_FRAMEBUFFER, render.FBO_FROM);
+    glBindFramebuffer(GL_FRAMEBUFFER, engine.FBO_FROM);
 
     for( unsigned int i = 0; i < COMMON_SSBOS_COUNT; i++ ){
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, render.render_data.ssbos[i]);
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, COMMON_SSBOS[i], render.render_data.ssbos[i]);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, engine.render_data.ssbos[i]);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, COMMON_SSBOS[i], engine.render_data.ssbos[i]);
     }
 
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
-    glBindVertexArray(render.render_data.vao);
-    glBindBuffer(GL_ARRAY_BUFFER, render.render_data.vbo);
+    glBindVertexArray(engine.render_data.vao);
+    glBindBuffer(GL_ARRAY_BUFFER, engine.render_data.vbo);
 
     // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, render_data.ebo);
 
 
-    if(render.transFeed) {
-        glBindBuffer(GL_ARRAY_BUFFER, render.TBO);
-        glBindBufferBase(GL_TRANSFORM_FEEDBACK_BUFFER, 0, render.TBO);
-        glBeginQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN, render.QUERY);
+    if(engine.transFeed) {
+        glBindBuffer(GL_ARRAY_BUFFER, engine.TBO);
+        glBindBufferBase(GL_TRANSFORM_FEEDBACK_BUFFER, 0, engine.TBO);
+        glBeginQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN, engine.QUERY);
         glBeginTransformFeedback(GL_TRIANGLES);
     }
 
-    for(unsigned int i = 0; i < render.draw_group_manager.groups_count; i++ ) {
+    for(unsigned int i = 0; i < engine.draw_group_manager.groups_count; i++ ) {
 
-        DrawGroup& draw_group = render.draw_group_manager.groups[i];
-        // Material& material = render.material_manager.materials[draw_group.material];
+        DrawGroup& draw_group = engine.draw_group_manager.groups[i];
+        // Material& material = engine.material_manager.materials[draw_group.material];
         if(i == 1)
             glDepthMask(GL_FALSE);
 
-        render.shaders_manager.programs[draw_group.program].use();
+        engine.shaders_manager.programs[draw_group.program].use();
 
-        glUniformMatrix4fv(glGetUniformLocation(render.shaderProgram, "view"), 1, GL_FALSE, glm::value_ptr(render.++++++++camera.get_view()));
-        glUniform1ui(glGetUniformLocation(render.shaderProgram, "material_index"), draw_group.material);
+        glUniformMatrix4fv(glGetUniformLocation(engine.shaderProgram, "view"), 1, GL_FALSE, glm::value_ptr(engine.camera.get_view()));
+        glUniform1ui(glGetUniformLocation(engine.shaderProgram, "material_index"), draw_group.material);
 
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, draw_group.ebo);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, SSBOS::TextureVerticesIndexSSBO, draw_group.texture_vertices_index_ssbo);
@@ -138,21 +138,21 @@ void Scene::draw() {
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
-    if(render.transFeed) {
+    if(engine.transFeed) {
         glEndTransformFeedback();
         glEndQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN);
 
         glFlush();
 
         GLuint primitives;
-        glGetQueryObjectuiv(render.QUERY, GL_QUERY_RESULT, &primitives);
+        glGetQueryObjectuiv(engine.QUERY, GL_QUERY_RESULT, &primitives);
 
-        GLfloat *feedback = (GLfloat *)malloc(render.feedbacksize);
-        glGetBufferSubData(GL_TRANSFORM_FEEDBACK_BUFFER, 0, render.feedbacksize, feedback);
+        GLfloat *feedback = (GLfloat *)malloc(engine.feedbacksize);
+        glGetBufferSubData(GL_TRANSFORM_FEEDBACK_BUFFER, 0, engine.feedbacksize, feedback);
 
         printf("%u vecs written!\n\n", primitives);
 
-        for( unsigned int i = 0; i < render.feedbacknumber / 4; i++ )
+        for( unsigned int i = 0; i < engine.feedbacknumber / 4; i++ )
             printf("[%d] = %f %f %f %f\n",
                     i,
                     feedback[4 * i],
@@ -173,8 +173,8 @@ void Scene::draw() {
     glBindVertexArray(0);
 
     {
-        glBindFramebuffer(GL_READ_FRAMEBUFFER, render.FBO_FROM);
-        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, render.FBO_TO);
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, engine.FBO_FROM);
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, engine.FBO_TO);
         glBlitFramebuffer(0, 0, 1920, 1080,
                           0, 0, 1920, 1080,
                           GL_COLOR_BUFFER_BIT, GL_NEAREST);
