@@ -1,4 +1,4 @@
-#include "common.hpp"
+// #include "utils/common.hpp"
 
 #include <cstdlib>
 #include <glm/ext/matrix_transform.hpp>
@@ -6,9 +6,7 @@
 #include <bits/stdc++.h>
 #include <stdio.h>
 
-#include "material.hpp"
-#include "mesh.hpp"
-#include "render_data.hpp"
+#include "ponto.hpp"
 #include "vendor/glad/glad.h"
 #include <GLFW/glfw3.h>
 
@@ -16,115 +14,85 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include "ui.hpp"
 #include "vendor/imgui/imgui.h"
 #include "vendor/imgui/imgui_impl_glfw.h"
 #include "vendor/imgui/imgui_impl_opengl3.h"
 
-#include "engine.hpp"
+#include "vendor/butia/butia.hpp"
+#include "utils/utils.hpp"
+#include "utils/common.hpp"
 GLFWwindow *glfw_window;
 void init();
 
-#include "utils.hpp"
+// #include "utils.hpp"
 // watch set variable engine.draw_group_manager.groups[2].objects_count
 // 4.6 (Core Profile) Mesa 25.1.3-arch1.3
 int main() {
     init();
+    assets.init();
+    logger.terminal.lines.push_back("start");
+    Butia butia(glfw_window);
 
-    engine = Engine(glfw_window);
+    butia.draw_group_manager.get_draw_group (
+            Gen_Shader {
+                .vertex = (char*)"shader.vert",
+                .geometric = (char*)"shader.geom",
+                .fragment = (char*)"color.frag"
+                },MaterialGenData());
 
-    engine.scripts_manager.init();
-    engine.scripts_manager.get_script("/src/caralha/pinto.rs");
+    butia.draw_group_manager.get_draw_group (
+            Gen_Shader {
+                .vertex = (char*)"shader.vert",
+                .geometric = (char*)"shader.geom",
+                .fragment = (char*)"grid.frag"
+                },
+            MaterialGenData());
 
-    engine.scripts_manager.compile();
+    butia.draw_group_manager.get_draw_group (
+            Gen_Shader {
+                .vertex = (char*)"shader.vert",
+                .geometric = (char*)"shader.geom",
+                .fragment = (char*)"texture.frag"
+                },
+            MaterialGenData((char*)"assets/3dmodels/Seta.png"));
 
-    logger.terminal.lines.push_back((char*)"Console Init\n");
-    engine.draw_group_manager.get_draw_group (
-           Gen_Shader {
-               .vertex = (char*)"shader.vert",
-               .geometric = (char*)"shader.geom",
-               .fragment = (char*)"color.frag"
-               },MaterialGenData());
-
-    engine.draw_group_manager.get_draw_group (
-           Gen_Shader {
-               .vertex = (char*)"shader.vert",
-               .geometric = (char*)"shader.geom",
-               .fragment = (char*)"grid.frag"
-               },
-           MaterialGenData());
-
-    engine.draw_group_manager.get_draw_group (
-           Gen_Shader {
-               .vertex = (char*)"shader.vert",
-               .geometric = (char*)"shader.geom",
-               .fragment = (char*)"texture.frag"
-               },
-           MaterialGenData((char*)"assets/3dmodels/Seta.png"));
-
-    engine.draw_group_manager.get_draw_group (
-           Gen_Shader {
-               .vertex = (char*)"shader.vert",
-               .geometric = (char*)"shader.geom",
-               .fragment = (char*)"texture.frag"
-               },
-           MaterialGenData((char*)"assets/3dmodels/Cubemap.jpg"));
+    butia.draw_group_manager.get_draw_group (
+            Gen_Shader {
+                .vertex = (char*)"shader.vert",
+                .geometric = (char*)"shader.geom",
+                .fragment = (char*)"texture.frag"
+                },
+            MaterialGenData((char*)"assets/3dmodels/Cubemap.jpg"));
 
 
-    engine.default_game_objects.grid = engine.addObject("assets/3dmodels/Plane.obj","Grid", 1);
+    butia.addObject("assets/3dmodels/Plane.obj","Grid", 1);
 
-    engine.default_game_objects.seta = engine.addObject("assets/3dmodels/Seta.obj","Seta", 2);
+    butia.addObject("assets/3dmodels/Seta.obj","Seta", 2);
 
-    engine.addObject("assets/3dmodels/Cubemap.obj","Cubemap", 3);
+    butia.addObject("assets/3dmodels/Cubemap.obj","Cubemap", 3);
 
-
-
-
-    // engine.draw_group_manager.get_draw_group (
-    //        Gen_Shader {
-    //            .vertex = (char*)VERTEX_SHADERS_LOCALPATH,
-    //            .geometric = (char*)GEOMETRY_SHADERS_LOCALPATH,
-    //            .fragment = (char*)FRAGMENT_SHADERS_LOCALPATH
-    //            },
-    //        MaterialGenData((char*)"assets/3dmodels/marble_bust_01_diff_4k.jpg")
-    // );
-
-    // engine.draw_group_manager.get_draw_group(
-    //     Gen_Shader {
-    //         .vertex = (char*)VERTEX_SHADERS_LOCALPATH,
-    //         .geometric = (char*)GEOMETRY_SHADERS_LOCALPATH,
-    //         .fragment = (char*)"fShader1.frag"
-    //         },
-    //     MaterialGenData((char*)"assets/3dmodels/cannon_01_diff_4k.jpg")
-    // );
-
-
-    // engine.addObject("Busto","assets/3dmodels/marble_bust_01_4k.obj", 0);
-
-    // engine.addObject("Canhao","assets/3dmodels/cannon_01_4k.obj", 1);
-
+    unsigned int counter = 0;
 
     while(!glfwWindowShouldClose(glfw_window)) {
-        // engine.scripts_manager.update();
-        glClear();
-        engine.newframe();
+        if(counter > 5){
+            counter = 0;
+            assets.update();
+        }
+        glClear(GL_COLOR_BUFFER_BIT);
+        butia.new_frame();
 
-        engine.draw();
+        ui(&butia, glfw_window);
 
-        engine.post_processing();
-
-        engine.ui();
-
-
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
         glfwSwapBuffers(glfw_window);
         glfwPollEvents();
-        flags  = flags & ~(1&2);
+        counter++;
+        // flags  = flags & ~(1&2);
     }
-    engine.free_data();
+    butia.terminate();
     return 0;
 }
 

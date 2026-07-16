@@ -1,0 +1,46 @@
+#pragma once
+
+#include "camera/camera.hpp"
+#include "game_object.hpp"
+#include "vendor/glad/glad.h"
+#include <GLFW/glfw3.h>
+
+#include "draw_group/draw_group_mananger.hpp"
+#include "shader/shader_manager.hpp"
+#include "material/material_mananger.hpp"
+#include "texture/texture_manager.hpp"
+
+
+#include "render_data/render_data.hpp"
+class Draw_Group_Mananger;
+class Butia {
+    public:
+
+    Butia(){}
+    void init_gl_features();
+    unsigned int program, post_processing_program;
+    unsigned int samples = 4;
+    unsigned int ante_fbo, post_fbo, rbo, ante_tex, post_tex, tex_post_processed;
+
+    Program shader_program;
+
+    Camera camera;
+    Draw_Group_Mananger draw_group_manager;
+
+    Render_Data render_data;
+
+    Shaders_Manager shaders_manager;
+    Material_Manager material_manager;
+    Texture_Mananger texture_manager;
+
+    GameObject *objects;
+    unsigned int objects_count = 0;
+    GLFWwindow* window;
+    Butia(GLFWwindow* window);
+    int new_frame();
+    unsigned int addObject(GameObjectGenData genData);
+    unsigned int addObject(GameObjectGenData genData, unsigned int draw_group);
+    unsigned int addObject(const char* mesh, const char* name, unsigned int draw_group);
+    void terminate();
+    void use(Program program);
+};

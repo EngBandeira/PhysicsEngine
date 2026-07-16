@@ -1,0 +1,58 @@
+
+
+
+
+src/butia->cpp: In member function ‘int Butia::new_frame()’:
+src/butia->cpp:104:1: warning: no return statement in function returning non-void [-Wreturn-type]
+  104 | }
+      | ^
+
+
+
+
+
+
+
+
+
+src/material/material_mananger.cpp: In member function ‘unsigned int Material_Manager::get_material(MaterialGenData, bool*)’:
+src/material/material_mananger.cpp:104:11: warning: ‘void* memcpy(void*, const void*, size_t)’ copying an object of non-trivial type ‘struct MaterialCopy’ from an array of ‘class Material’ [-Wclass-memaccess]
+  104 |     memcpy(&material_copy, &material, 64);
+      |     ~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from src/material/material_mananger.hpp:3,
+                 from src/material/material_mananger.cpp:3:
+src/material/material.hpp:14:8: note: ‘struct MaterialCopy’ declared here
+   14 | struct MaterialCopy {
+      |        ^~~~~~~~~~~~
+
+
+
+src/log/persistent_data.cpp: In member function ‘PersistentDataReturn* PersistentData::get(char*)’:
+src/log/persistent_data.cpp:55:1: warning: no return statement in function returning non-void [-Wreturn-type]
+   55 | }
+      | ^
+
+
+
+
+
+src/utils/utils.cpp: In member function ‘unsigned int Utils::sha256(char*)’:
+src/utils/utils.cpp:38:16: warning: ‘int SHA256_Init(SHA256_CTX*)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+   38 |     SHA256_Init(&sha256);
+      |     ~~~~~~~~~~~^~~~~~~~~
+In file included from src/utils/utils.cpp:21:
+/usr/include/openssl/sha.h:73:27: note: declared here
+   73 | OSSL_DEPRECATEDIN_3_0 int SHA256_Init(SHA256_CTX *c);
+      |                           ^~~~~~~~~~~
+src/utils/utils.cpp:39:18: warning: ‘int SHA256_Update(SHA256_CTX*, const void*, size_t)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+   39 |     SHA256_Update(&sha256, str, strlen(str));
+      |     ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~
+/usr/include/openssl/sha.h:74:27: note: declared here
+   74 | OSSL_DEPRECATEDIN_3_0 int SHA256_Update(SHA256_CTX *c,
+      |                           ^~~~~~~~~~~~~
+src/utils/utils.cpp:40:17: warning: ‘int SHA256_Final(unsigned char*, SHA256_CTX*)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+   40 |     SHA256_Final(hash, &sha256);
+      |     ~~~~~~~~~~~~^~~~~~~~~~~~~~~
+/usr/include/openssl/sha.h:76:27: note: declared here
+   76 | OSSL_DEPRECATEDIN_3_0 int SHA256_Final(unsigned char *md, SHA256_CTX *c);
+      |                           ^~~~~~~~~~~~

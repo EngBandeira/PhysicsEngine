@@ -1,0 +1,22 @@
+[
+  {
+    "file": "src/game_object.cpp",
+    "arguments": [
+      "/usr/bin/g++",
+      "-std=c++17",
+      "-Wall",
+      "-Wno-unused",
+      "-Ivendor",
+      "-Isrc",
+      "-I.",
+      "-g",
+      "-ggdb",
+      "src/game_object.cpp",
+      "-c",
+      "-o",
+      "build/src/game_object.o"
+    ],
+    "directory": "/home/bandeira/Documents/GIT/PhysicsEngine/Butia",
+    "output": "build/src/game_object.o"
+  }
+]

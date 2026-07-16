@@ -43,4 +43,5 @@ uniform uint material_index;
 
 void main() {
     fragColor = materials_ssbo[material_index].K[0];
+    //fragColor = vec4(1,0,0,1);
 }

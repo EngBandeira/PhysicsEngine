@@ -12,10 +12,12 @@ GetOptions(
     "asan" => \$asan,
 ) or die "Invalid options\n";
 
+
 my $srcPath = "src";
 my $includePath = "include";
 my $vendorPath = "vendor";
 my $buildPath = "build";
+
 
 my @libs = ("GL","GLU","glfw","X11","ssl","crypto");
 my $formatedLibs = "";
@@ -23,6 +25,8 @@ foreach $lib (@libs)
 {
   $formatedLibs = $formatedLibs .  " -l" . $lib;
 }
+
+system("rm -f -r build/src/*");
 
 my @files;
 find(
@@ -43,34 +47,32 @@ find(
 if($vendor){
     find(
         sub {
-            return unless /\.c$/;
+            return unless /\.cpp$/;
             push @files, $File::Find::name;
         },
         $vendorPath
     );
     find(
         sub {
-            return unless /\.cpp$/;
+            return unless /\.c$/;
             push @files, $File::Find::name;
         },
         $vendorPath
     );
 }
 
-#Dump(\@files);
+my $rn =" -std=c++17 -Wall -Wno-unused -Ivendor -IButia/src -I" . $includePath . " -I." . " -g -ggdb " . $formatedLibs;
 
-# my @files = (split("/\n/",$fileCPP),split("/\n/",$fileC));
-# my $rn ="g++ -Wall -I" . $includePath . " -I" . $vendorPath . " -g -ggdb " . $formatedLibs . " ";
-
-my $rn =" -std=c++17 -Wall -Wno-unused -I" . $includePath . " -I." . " -g -ggdb ";
 if($asan)
 {
- $rn =" -Wall -Wno-unused -fsanitize=address -I" . $includePath . " -I." . " -g -ggdb ";
+ $rn = "-fsanitize=address " . $rn
 }
 
+
 foreach $file (@files){
-    if( $file =~ /(\w*)\/(\w+)\.\w+/g ) {
-        my $command = $rn . $formatedLibs . " "  . $file ." -c -o " . $buildPath . "/$1_$2" . ".o";
+    if( $file =~ /(\S*)\/(\w+).\w+/g ) {
+        system("mkdir -p build/$1");
+        my $command = $rn . $formatedLibs . " "  . $file ." -c -o " . $buildPath . "/$1/$2" . ".o";
         print "\n";
         my $k = system "g++", (split ' ', $command) ;
         if($k != 0){
@@ -85,7 +87,20 @@ foreach $file (@files){
     }
 }
 
-my $fileO = ``;
+
+
+
+
+my $fileO = "";
+
+find(
+    sub {
+        return unless /\.o$/;
+        $fileO .= " " . $File::Find::name;
+    },
+    $vendorPath
+);
+
 find(
     sub {
         return unless /\.o$/;
@@ -94,10 +109,15 @@ find(
     $buildPath
 );
 
-$fileO .= " build/libscripts.a" ;
+#$fileO .= " build/libscripts.a" ;
+$fileO .= " vendor/butia/libbutia.a" ;
+
 $fileO =~ s/\n/ /g;
-my $caraia = $rn . $formatedLibs . " " . $fileO ." -o ".$buildPath ."/final";
+my $caraia = $rn . " " . $fileO ." -o ".$buildPath ."/final";
 my $pinto = system "g++", (split ' ', $caraia);
+
+# print Dumper([split ' ', $caraia]);
+
 
 if($pinto != 0){
     print STDERR "Error3\n";

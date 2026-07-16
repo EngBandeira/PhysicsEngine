@@ -1,18 +1,22 @@
 // #include "vendor/imgui/imgui_internal.h"
 // #include "glm/glm.hpp"
-#include "ui.hpp"
+#include <cstdio>
 #include <glm/gtc/matrix_transform.hpp>
-#include "common.hpp"
-#include "game_object.hpp"
-#include "engine.hpp"
+// #include "game_object.hpp"
+// #include "vendor/butia/butia.hpp"
+#include "utils/common.hpp"
+#include "ui.hpp"
 #include "vendor/imgui/imgui.h"
+// #include "vendor/butia/butia.hpp"
+#include "ponto.hpp"
+#include "assets.hpp"
 
 bool fileWinOpen = 0,terminalOpen = 0;
 unsigned int fileIndexOpen;
 char *filePath;
 ImVec2 delta;
 
-void Engine::ui() {
+void ui(Butia* butia, GLFWwindow *window) {
     ImGuiIO& io = ImGui::GetIO();
     ImGuiViewport *view = ImGui::GetMainViewport();
 
@@ -41,16 +45,16 @@ void Engine::ui() {
         if( ImGui::BeginMenu("Models") ) {
             if( ImGui::BeginMenu("Standarts") ) {
                 if(ImGui::MenuItem("Cube")) {
-                    engine.addObject("assets/3dmodels/Cube.obj","Cube", 0);
+                    butia->addObject("assets/3dmodels/Cube.obj","Cube", 0);
                 }
                 if(ImGui::MenuItem("Sphere High")) {
-                    engine.addObject("assets/3dmodels/SphereHigh.obj","Sphere High", 0);
+                    butia->addObject("assets/3dmodels/SphereHigh.obj","Sphere High", 0);
                 }
                 if(ImGui::MenuItem("Sphere Low")) {
-                    engine.addObject("assets/3dmodels/SphereLow.obj","Sphere Low", 0);
+                    butia->addObject("assets/3dmodels/SphereLow.obj","Sphere Low", 0);
                 }
                 if(ImGui::MenuItem("Monkey")) {
-                    engine.addObject("assets/3dmodels/Monkey.obj","Monkey", 0);
+                    butia->addObject("assets/3dmodels/Monkey.obj","Monkey", 0);
                 }
                 ImGui::EndMenu();
             }
@@ -100,11 +104,10 @@ void Engine::ui() {
         //     }
         // }
 
-        ImGui::Text("GameObjects");
+        ImGui::Text("Objects");
 
-        if( ImGui::BeginTable("GameObjects", 1) ) {
-            for( unsigned int i = 0; i < objects_count; i++ ) {
-
+        if( ImGui::BeginTable("Gamebutia->objects", 1) ) {
+            for( unsigned int i = 0; i < butia->objects_count; i++ ) {
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex(0);
                 if(i == selected_object) {
@@ -113,7 +116,7 @@ void Engine::ui() {
                         IM_COL32(138, 38, 38, 255)
                     );
                 }
-                if(ImGui::Selectable(objects[i].name)) {
+                if(ImGui::Selectable(butia->objects[i].name)) {
                     selected_object = i;
                 }
 
@@ -142,8 +145,8 @@ void Engine::ui() {
 
     ImGui::SetNextWindowDockID(dockspace_id, ImGuiCond_Once);
     if( ImGui::Begin("Game", nullptr, ImGuiWindowFlags_None) ) {
-        input();
-        ImGui::GetWindowDrawList()->AddImage((ImTextureRef)texToShowFrom,
+        input(butia, window);
+        ImGui::GetWindowDrawList()->AddImage((ImTextureRef)butia->post_tex,
                                             ImGui::GetWindowPos(),
                                             ImGui::GetWindowSize() + ImGui::GetWindowPos(),
                                             ImVec2(0, 1),
@@ -236,8 +239,8 @@ void Engine::ui() {
 
     if( ImGui::Begin("Properties") ) {
 
-        if( objects_count > selected_object) {
-            GameObject& selected = objects[selected_object];
+        if( butia->objects_count > selected_object) {
+            GameObject& selected = butia->objects[selected_object];
             glm::vec3 transf[3] = {selected.tranform.get_position(),selected.tranform.get_rotation(),selected.tranform.get_scale()};
 
             ImGui::Text("Transform:");
@@ -263,20 +266,20 @@ void Engine::ui() {
             }
 
         }
-        glm::vec3 pi = camera.get_position();
+        glm::vec3 pi = butia->camera.get_position();
         ImGui::Text("Camera:");
         ImGui::Text("   Position:(%f, %f , %f)",pi.x,pi.y,pi.z);
-        glm::vec3 n = camera.get_foward();
+        glm::vec3 n = butia->camera.get_foward();
         ImGui::Text("   Normal:(%f, %f , %f)",n.x,n.y,n.z);
         ImGui::Text("   Delta %f %f",delta.x,delta.y);
 
-        ImGui::Checkbox("normalA", &normalATIVO);
-        ImGui::SliderFloat("normalV", &normalV,.1, 2);
+        // ImGui::Checkbox("normalA", &normalATIVO);
+        // ImGui::SliderFloat("normalV", &normalV,.1, 2);
     }
 
     ImGui::End();
 
-    if( terminalOpen ) {
+    if( is_terminal_open ) {
 
         ImGui::SetNextWindowSize(ImVec2(600, 600));
         if( ImGui::Begin("Terminal"),terminalOpen) {
@@ -320,15 +323,14 @@ void Engine::ui() {
     ImGui::ShowDemoWindow(&a);
 }
 
-void Engine::input() {
+void input(Butia* butia, GLFWwindow* window) {
     glm::vec3 position(0);
-    glm::vec3 cam_position = camera.get_position();
+    glm::vec3 cam_position = butia->camera.get_position();
         // renderData.positionateModel(renderData.layers[selectedModelLayer].models[selectedModelIndex].getPosition(), 0, LAYER::SPECIAL_LAYER);
         // renderData.setAngleModel(renderData.layers[selectedModelLayer].models[selectedModelIndex].getAngle(), 0, LAYER::SPECIAL_LAYER);
 
     ImGuiIO& io = ImGui::GetIO();
     if( ImGui::IsWindowFocused() && ImGui::GetMousePos().y >= ImGui::GetCursorScreenPos().y ) {
-
         if( io.MouseDown[1] ) {
             ImVec2 mousePos = io.MousePos;
             ImVec2 windowCenter = ImGui::GetWindowSize() * .5f + ImGui::GetWindowPos();
@@ -338,42 +340,42 @@ void Engine::input() {
             ImVec2 mouseDelta = ImVec2(0, 0);
             if( io.MouseDelta.x && io.MouseDelta.y ) mouseDelta = ImVec2(mousePos.x - windowCenter.x,mousePos.y - windowCenter.y);
 
-            glfwSetCursorPos(glfwWin,windowCenter.x,windowCenter.y);
+            glfwSetCursorPos(window,windowCenter.x,windowCenter.y);
             ImGui::Dummy(ImVec2(0, 0));
             delta = mouseDelta;
-            camera.transform.angle.x += MOUSE_SENSI * mouseDelta.x;
-            camera.transform.angle.y += -.5f * MOUSE_SENSI * mouseDelta.y;
-            camera.transform.rotation_matrix = glm::rotate(glm::mat4(1), glm::radians(camera.transform.angle.x), glm::vec3(0, 1, 0));
-            camera.transform.rotation_matrix = glm::rotate(camera.transform.rotation_matrix, glm::radians(camera.transform.angle.y), glm::vec3(camera.get_right()));
+            butia->camera.transform.angle.x += MOUSE_SENSI * mouseDelta.x;
+            butia->camera.transform.angle.y += -.5f * MOUSE_SENSI * mouseDelta.y;
+            butia->camera.transform.rotation_matrix = glm::rotate(glm::mat4(1), glm::radians(butia->camera.transform.angle.x), glm::vec3(0, 1, 0));
+            butia->camera.transform.rotation_matrix = glm::rotate(butia->camera.transform.rotation_matrix, glm::radians(butia->camera.transform.angle.y), glm::vec3(butia->camera.get_right()));
 
             float b = .1;
 
-            objects[default_game_objects.grid].tranform.positionate(glm::vec3(cam_position.x,0,cam_position.z));
-            objects[default_game_objects.grid].tranform.scale(5 * cam_position.y);
-            objects[default_game_objects.seta].tranform.scale(glm::max(0.015f * glm::length(cam_position - objects[default_game_objects.seta].tranform.get_position()),0.f));
-            if(objects_count > selected_object){
+            butia->objects[default_game_objects.grid].tranform.positionate(glm::vec3(cam_position.x,0,cam_position.z));
+            butia->objects[default_game_objects.grid].tranform.scale(5 * cam_position.y);
+            butia->objects[default_game_objects.seta].tranform.scale(glm::max(0.015f * glm::length(cam_position - butia->objects[default_game_objects.seta].tranform.get_position()),0.f));
+            if(butia->objects_count > selected_object){
 
-                if( ImGui::IsKeyPressed(ImGuiKey_LeftArrow)  ) objects[selected_object].tranform.translate(glm::vec3(1, 0, 0));
-                if( ImGui::IsKeyPressed(ImGuiKey_RightArrow) ) objects[selected_object].tranform.translate(glm::vec3(-1,0, 0));
-                if( ImGui::IsKeyPressed(ImGuiKey_UpArrow)    ) objects[selected_object].tranform.translate(glm::vec3(0, 0, 1));
-                if( ImGui::IsKeyPressed(ImGuiKey_DownArrow)  ) objects[selected_object].tranform.translate(glm::vec3(0, 0,-1));
-                if( ImGui::IsKeyPressed(ImGuiKey_H)  ) objects[selected_object].tranform.scale(objects[selected_object].tranform.get_scale() * 2.f);
+                if( ImGui::IsKeyPressed(ImGuiKey_LeftArrow)  ) butia->objects[selected_object].tranform.translate(glm::vec3(1, 0, 0));
+                if( ImGui::IsKeyPressed(ImGuiKey_RightArrow) ) butia->objects[selected_object].tranform.translate(glm::vec3(-1,0, 0));
+                if( ImGui::IsKeyPressed(ImGuiKey_UpArrow)    ) butia->objects[selected_object].tranform.translate(glm::vec3(0, 0, 1));
+                if( ImGui::IsKeyPressed(ImGuiKey_DownArrow)  ) butia->objects[selected_object].tranform.translate(glm::vec3(0, 0,-1));
+                if( ImGui::IsKeyPressed(ImGuiKey_H)  ) butia->objects[selected_object].tranform.scale(butia->objects[selected_object].tranform.get_scale() * 2.f);
             }
 
 
 
-            if( ImGui::IsKeyPressed(ImGuiKey_A) ) position += b * glm::vec3(-camera.get_right());
-            if( ImGui::IsKeyPressed(ImGuiKey_D) ) position += b * glm::vec3(camera.get_right());
-            if( ImGui::IsKeyPressed(ImGuiKey_W) ) position += b * glm::vec3(camera.get_foward());
-            if( ImGui::IsKeyPressed(ImGuiKey_S) ) position += b * glm::vec3(-camera.get_foward());
+            if( ImGui::IsKeyPressed(ImGuiKey_A) ) position += b * glm::vec3(-butia->camera.get_right());
+            if( ImGui::IsKeyPressed(ImGuiKey_D) ) position += b * glm::vec3(butia->camera.get_right());
+            if( ImGui::IsKeyPressed(ImGuiKey_W) ) position += b * glm::vec3(butia->camera.get_foward());
+            if( ImGui::IsKeyPressed(ImGuiKey_S) ) position += b * glm::vec3(-butia->camera.get_foward());
 
 
             if(position.x != 0 || position.y != 0  || position.z != 0)
-                camera.transform.translate(position);
+                butia->camera.transform.translate(position);
         }
 
         if( io.MouseReleased[1] ) ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
     }
 
-    if( ImGui::IsKeyPressed(ImGuiKey_Escape) ) glfwSetWindowShouldClose(glfwWin, true);
+    if( ImGui::IsKeyPressed(ImGuiKey_Escape) ) glfwSetWindowShouldClose(window, true);
 }
